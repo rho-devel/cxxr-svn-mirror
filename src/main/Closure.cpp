@@ -1,4 +1,4 @@
-/*CXXR $Id$
+/*CXXR $Id: Closure.cpp 282 2008-04-28 17:40:24Z arr $
  *CXXR
  *CXXR This file is part of CXXR, a project to refactor the R interpreter
  *CXXR into C++.  It may consist in whole or in part of program code and
@@ -34,21 +34,39 @@
 
 /** @file Closure.cpp
  *
- * At present, this file simply forces the generation of non-inlined
- * versions of inlined functions declared in Closure.h where these
- * are intended to be callable from C.  It is also used to check that
- * Closure.h is self-contained, i.e. \#includes anything it needs, and
- * doesn't rely on anything having been previously \#included in the
- * enclosing source file.
+ * @brief Implementation of class CXXR::Closure and associated C
+ * interface.
  */
 
 #include "CXXR/Closure.h"
 
+using namespace CXXR;
+
+// Force the creation of non-inline embodiments of functions callable
+// from C:
 namespace CXXR {
     namespace ForceNonInline {
 	SEXP (*BODYp)(SEXP x) = BODY;
 	SEXP (*CLOENVp)(SEXP x) = CLOENV;
 	SEXP (*FORMALSp)(SEXP x) = FORMALS;
+	int (*MISSINGp)(SEXP x) = MISSING;
+	void (*SET_CLOENVp)(SEXP x, SEXP v) = SET_CLOENV;
+	void (*SET_MISSINGp)(SEXP x, int v) = SET_MISSING;
 	void (*SET_DEBUGp)(SEXP x, Rboolean v) = SET_DEBUG;
     }
+}
+
+// Closure constructor is in dstruct.cpp (for the time being).
+
+const char* Closure::typeName() const
+{
+    return staticTypeName();
+}
+
+void Closure::visitChildren(const_visitor* v) const
+{
+    RObject::visitChildren(v);
+    if (m_formals) m_formals->conductVisitor(v);
+    if (m_body) m_body->conductVisitor(v);
+    if (m_environment) m_environment->conductVisitor(v);
 }
