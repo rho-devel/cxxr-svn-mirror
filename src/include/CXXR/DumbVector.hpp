@@ -40,6 +40,7 @@
 #ifndef DUMBVECTOR_HPP
 #define DUMBVECTOR_HPP 1
 
+#include <cstdio>
 #include <cstring>
 #include "localization.h"
 #include "R_ext/Error.h"
@@ -47,6 +48,7 @@
 #include "CXXR/VectorBase.h"
 
 namespace CXXR {
+	class Serializer;
     /** @brief Vector of 'plain old data'.
      *
      * This is a templated class to represent an R data vector.
@@ -127,6 +129,10 @@ namespace CXXR {
 	// Virtual functions of RObject:
 	DumbVector<T, ST>* clone() const;
 	const char* typeName() const;
+	bool serialize(Serializer *ser) {
+		return DumbVector<T, ST>::serialize(ser);
+	}
+
     protected:
 	/**
 	 * Declared protected to ensure that DumbVector objects are

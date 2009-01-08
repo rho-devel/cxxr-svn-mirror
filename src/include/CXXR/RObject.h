@@ -43,6 +43,7 @@
 #define ROBJECT_H
 
 #include "R_ext/Boolean.h"
+#include <stdio.h>
 
 #ifdef __cplusplus
 
@@ -119,6 +120,7 @@ extern "C" {
 namespace CXXR {
     class PairList;
     class Symbol;
+		class Serializer;
 
     /** @brief Replacement for CR's SEXPREC.
      *
@@ -509,6 +511,12 @@ namespace CXXR {
 	 * @return ::SEXPTYPE of this object.
 	 */
 	SEXPTYPE sexptype() const {return m_type;}
+
+	/** @brief Serialize this object
+	 *
+	 * @return Success/Failure
+	 */
+	virtual bool serialize(Serializer *ser);
 
 	/** @brief Name within R of this type of object.
 	 *

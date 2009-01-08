@@ -49,6 +49,7 @@
 #include "CXXR/VectorBase.h"
 
 namespace CXXR {
+	class Serializer;
     /** @brief Vector of pointers to RObject.
      *
      * This is a templated class to represent a vector whose elements
@@ -195,8 +196,11 @@ namespace CXXR {
 	 */
 	inline static const char* staticTypeName();
 
-	// Virtual function of RObject:
+	// Virtual functions of RObject:
 	const char* typeName() const;
+	bool serialize(Serializer *ser) {
+		return RObjectVector<T, ST>::serialize(ser);
+	}
 
 	// Virtual function of GCNode:
 	void visitChildren(const_visitor* v) const;

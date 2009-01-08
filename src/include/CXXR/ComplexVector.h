@@ -47,16 +47,26 @@
 
 #ifdef __cplusplus
 
+#include "CXXR/Serializer.hpp"
 #include "CXXR/DumbVector.hpp"
 #include "CXXR/SEXP_downcast.hpp"
+extern "C" { Rcomplex *COMPLEX(SEXP); } // Forward for calling in serialize()
 
 namespace CXXR {
+		class Serializer;
     // Template specialization:
     template <>
     inline const char* DumbVector<Rcomplex, CPLXSXP>::staticTypeName()
     {
-	return "complex";
+			return "complex";
     }
+
+		template <>
+		inline bool DumbVector<Rcomplex, CPLXSXP>::serialize(Serializer *ser) {
+			OutInteger(ser->stream(), size());
+			OutVec(ser->stream(), this, COMPLEX_ELT, OutComplex);
+			return true;
+		}
 
     /** @brief Vector of complex numbers.
      */

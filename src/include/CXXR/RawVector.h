@@ -47,17 +47,25 @@
 typedef unsigned char Rbyte;
 
 #ifdef __cplusplus
+extern "C" { Rbyte *RAW(SEXP); }
 
+#include "CXXR/Serializer.hpp"
 #include "CXXR/DumbVector.hpp"
 #include "CXXR/SEXP_downcast.hpp"
 
 namespace CXXR {
     // Template specialization:
     template <>
-    inline const char* DumbVector<Rbyte, RAWSXP>::staticTypeName()
-    {
-	return "raw";
+    inline const char* DumbVector<Rbyte, RAWSXP>::staticTypeName() {
+			return "raw";
     }
+		
+		template <>
+		inline bool DumbVector<Rbyte, RAWSXP>::serialize(Serializer *ser) {
+			OutInteger(ser->stream(), size());
+			OutVec(ser->stream(), this, RAW_ELT, OutByte);
+			return true;
+		}
 
     /** @brief Vector of 'raw bytes'.
      */

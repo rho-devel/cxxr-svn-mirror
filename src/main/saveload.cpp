@@ -50,6 +50,7 @@
 #include <errno.h>
 #include "CXXR/DottedArgs.hpp"
 #include "CXXR/WeakRef.h"
+#include "CXXR/Streams.h"
 
 using namespace CXXR;
 
@@ -543,7 +544,7 @@ static void RemakeNextSEXP(FILE *fp, NodeInfo *node, int version, InputRoutines 
     case PROMSXP:
     case ENVSXP:
 	Rf_error("Loading pre-version-1 serialization not (yet) supported in CXXR");
-	// All this code needs fixing in CXXR!
+	// FIXME: All this code needs fixing in CXXR!
 	// s = new RObject(type);
 	s->expose();
 	/* skip over CAR, CDR, and TAG */
@@ -1021,8 +1022,12 @@ in version 1 workspaces"));
  The passMethods argument tells it whether to call outfunc with the
  other methods. This is only needed when calling OutCHARSXP
  since it needs to know how to write sub-elements!
+
+ Since the OutVec macro defined in serialize.cpp was moved to
+ CXXR/Streams.h, it is now present in this scope. So to avoid conflict,
+ the following has been renamed OutVecSL (saveload)
 */
-#define OutVec(fp, obj, accessor, outfunc, methods, d)	                \
+#define OutVecSL(fp, obj, accessor, outfunc, methods, d)	                \
 	do {								\
 		int cnt;						\
 		for (cnt = 0; cnt < LENGTH(obj); ++cnt) {		\
@@ -1032,10 +1037,13 @@ in version 1 workspaces"));
 		}							\
 	} while (0)
 
+/* These have been moved to CXXR/Streams.h
 #define LOGICAL_ELT(x,__i__)	LOGICAL(x)[__i__]
 #define INTEGER_ELT(x,__i__)	INTEGER(x)[__i__]
 #define REAL_ELT(x,__i__)	REAL(x)[__i__]
 #define COMPLEX_ELT(x,__i__)	COMPLEX(x)[__i__]
+*/
+
 
 /* Simply outputs the string associated with a CHARSXP, one day this
  * will handle null characters in CHARSXPs and not just blindly call
@@ -1063,13 +1071,13 @@ static void NewWriteVec (SEXP s, SEXP sym_list, SEXP env_list, FILE *fp, OutputR
 	break;
     case LGLSXP:
     case INTSXP:
-	OutVec(fp, s, INTEGER_ELT, m->OutInteger, m, d);
+	OutVecSL(fp, s, INTEGER_ELT, m->OutInteger, m, d);
 	break;
     case REALSXP:
-	OutVec(fp, s, REAL_ELT, m->OutReal, m, d);
+	OutVecSL(fp, s, REAL_ELT, m->OutReal, m, d);
 	break;
     case CPLXSXP:
-	OutVec(fp, s, COMPLEX_ELT, m->OutComplex, m, d);
+	OutVecSL(fp, s, COMPLEX_ELT, m->OutComplex, m, d);
 	break;
     case STRSXP:
 	do {

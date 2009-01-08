@@ -174,6 +174,10 @@ void RObject::setS4Object(bool on)
     m_S4_object = on;
 }
 
+bool RObject::serialize(Serializer *ser) {
+	return false;
+}
+
 const char* RObject::typeName() const
 {
     return Rf_type2char(sexptype());

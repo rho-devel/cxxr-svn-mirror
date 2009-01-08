@@ -45,12 +45,14 @@
 #include <Defn.h>
 #include <Rmath.h>
 #include <Fileio.h>
+#include <stdio.h>
 #include <Rversion.h>
 #include <R_ext/RS.h>           /* for CallocCharBuf, Free */
 #include <errno.h>
 #include "CXXR/ByteCode.hpp"
 #include "CXXR/DottedArgs.hpp"
 #include "CXXR/WeakRef.h"
+#include "CXXR/Serializer.hpp"
 
 
 /* This include is to bring in declarations of R_compress1 and
@@ -181,7 +183,7 @@ using namespace CXXR;
  */
 
 static void OutStringVec(R_outpstream_t stream, SEXP s, SEXP ref_table);
-static void WriteItem (SEXP s, SEXP ref_table, R_outpstream_t stream);
+void WriteItem (SEXP s, SEXP ref_table, R_outpstream_t stream);
 static SEXP ReadItem(SEXP ref_table, R_inpstream_t stream);
 #ifdef BYTECODE
 static void WriteBC(SEXP s, SEXP ref_table, R_outpstream_t stream);
@@ -228,7 +230,7 @@ static int Rsnprintf(char *buf, int size, const char *format, ...)
  * Basic Output Routines
  */
 
-static void OutInteger(R_outpstream_t stream, int i)
+void OutInteger(R_outpstream_t stream, int i)
 {
     char buf[128];
     switch (stream->type) {
@@ -251,7 +253,7 @@ static void OutInteger(R_outpstream_t stream, int i)
     }
 }
 
-static void OutReal(R_outpstream_t stream, double d)
+void OutReal(R_outpstream_t stream, double d)
 {
     char buf[128];
     switch (stream->type) {
@@ -281,13 +283,13 @@ static void OutReal(R_outpstream_t stream, double d)
     }
 }
 
-static void OutComplex(R_outpstream_t stream, Rcomplex c)
+void OutComplex(R_outpstream_t stream, Rcomplex c)
 {
     OutReal(stream, c.r);
     OutReal(stream, c.i);
 }
 
-static void OutByte(R_outpstream_t stream, Rbyte i)
+void OutByte(R_outpstream_t stream, Rbyte i)
 {
     char buf[128];
     switch (stream->type) {
@@ -745,27 +747,27 @@ static int InRefIndex(R_inpstream_t stream, int flags)
  * customized handling of reference objects.
  */
 
-static SEXP GetPersistentName(R_outpstream_t stream, SEXP s)
-{
-    if (stream->OutPersistHookFunc != NULL) {
-	switch (TYPEOF(s)) {
-	case WEAKREFSXP:
-	case EXTPTRSXP: break;
-	case ENVSXP:
-	    if (s == R_GlobalEnv ||
-		s == R_BaseEnv ||
-		s == R_EmptyEnv ||
-		R_IsNamespaceEnv(s) ||
-		R_IsPackageEnv(s))
-		return R_NilValue;
-	    else
-		break;
-	default: return R_NilValue;
+static SEXP GetPersistentName(R_outpstream_t stream, SEXP s) {
+	if (stream->OutPersistHookFunc != NULL) {
+		switch (TYPEOF(s)) {
+		case WEAKREFSXP:
+		case EXTPTRSXP:
+			break;
+		case ENVSXP:
+			if (s == R_GlobalEnv ||
+					s == R_BaseEnv ||
+					s == R_EmptyEnv ||
+					R_IsNamespaceEnv(s) ||
+					R_IsPackageEnv(s))
+				return R_NilValue;
+			else
+				break;
+		default: return R_NilValue;
+		}
+		return stream->OutPersistHookFunc(s, stream->OutPersistHookData);
 	}
-	return stream->OutPersistHookFunc(s, stream->OutPersistHookData);
-    }
-    else
-	return R_NilValue;
+	else
+		return R_NilValue;
 }
 
 static SEXP PersistentRestore(R_inpstream_t stream, SEXP s)
@@ -813,7 +815,7 @@ static void OutStringVec(R_outpstream_t stream, SEXP s, SEXP ref_table)
 }
 
 /* e.g., OutVec(fp, obj, INTEGER, OutInteger) */
-#define OutVec(fp, obj, accessor, outfunc)				\
+/*#define OutVec(fp, obj, accessor, outfunc)				\
 	do {								\
 		int cnt;						\
 		for (cnt = 0; cnt < LENGTH(obj); ++cnt)		\
@@ -825,191 +827,178 @@ static void OutStringVec(R_outpstream_t stream, SEXP s, SEXP ref_table)
 #define REAL_ELT(x,__i__)	REAL(x)[__i__]
 #define COMPLEX_ELT(x,__i__)	COMPLEX(x)[__i__]
 #define RAW_ELT(x,__i__)	RAW(x)[__i__]
+	// Moved to CXXR/Streams.h */
 
-static void WriteItem (SEXP s, SEXP ref_table, R_outpstream_t stream)
-{
-    int i;
-    SEXP t;
+void WriteItem (SEXP s, SEXP ref_table, R_outpstream_t stream) {
+	int i;
+	SEXP t;
+	Serializer ser(stream, ref_table);
 
- tailcall:
-    R_CheckStack();
-    if ((t = GetPersistentName(stream, s)) != R_NilValue) {
-	R_assert(TYPEOF(t) == STRSXP && LENGTH(t) > 0);
-	PROTECT(t);
-	HashAdd(s, ref_table);
-	OutInteger(stream, PERSISTSXP);
-	OutStringVec(stream, t, ref_table);
-	UNPROTECT(1);
-    }
-    else if ((i = SaveSpecialHook(s)) != 0)
-	OutInteger(stream, i);
-    else if ((i = HashGet(s, ref_table)) != 0)
-	OutRefIndex(stream, i);
-    else if (TYPEOF(s) == SYMSXP) {
-	/* Note : NILSXP can't occur here */
-	HashAdd(s, ref_table);
-	OutInteger(stream, SYMSXP);
-	WriteItem(PRINTNAME(s), ref_table, stream);
-    }
-    else if (TYPEOF(s) == ENVSXP) {
-	HashAdd(s, ref_table);
-	if (R_IsPackageEnv(s)) {
-	    SEXP name = R_PackageEnvName(s);
-	    warning(_("'%s' may not be available when loading"),
-		    CHAR(STRING_ELT(name, 0)));
-	    OutInteger(stream, PACKAGESXP);
-	    OutStringVec(stream, name, ref_table);
+	tailcall:
+	R_CheckStack();
+	if ((t = GetPersistentName(stream, s)) != R_NilValue) {
+		R_assert(TYPEOF(t) == STRSXP && LENGTH(t) > 0);
+		PROTECT(t);
+		HashAdd(s, ref_table);
+		OutInteger(stream, PERSISTSXP);
+		OutStringVec(stream, t, ref_table);
+		UNPROTECT(1);
 	}
-	else if (R_IsNamespaceEnv(s)) {
+	else if ((i = SaveSpecialHook(s)) != 0)
+		OutInteger(stream, i);
+	else if ((i = HashGet(s, ref_table)) != 0)
+		OutRefIndex(stream, i);
+	else if (TYPEOF(s) == SYMSXP) {
+		/* Note : NILSXP can't occur here */
+		HashAdd(s, ref_table);
+		OutInteger(stream, SYMSXP);
+		WriteItem(PRINTNAME(s), ref_table, stream);
+	}
+	else if (TYPEOF(s) == ENVSXP) {
+		HashAdd(s, ref_table);
+		if (R_IsPackageEnv(s)) {
+			SEXP name = R_PackageEnvName(s);
+			warning(_("'%s' may not be available when loading"),
+			CHAR(STRING_ELT(name, 0)));
+			OutInteger(stream, PACKAGESXP);
+			OutStringVec(stream, name, ref_table);
+		}
+		else if (R_IsNamespaceEnv(s)) {
 #ifdef WARN_ABOUT_NAME_SPACES_MAYBE_NOT_AVAILABLE
-	    warning(_("namespaces may not be available when loading"));
+			warning(_("namespaces may not be available when loading"));
 #endif
-	    OutInteger(stream, NAMESPACESXP);
-	    OutStringVec(stream, R_NamespaceEnvSpec(s), ref_table);
+			OutInteger(stream, NAMESPACESXP);
+			OutStringVec(stream, R_NamespaceEnvSpec(s), ref_table);
+		}
+		else {
+			OutInteger(stream, ENVSXP);
+			OutInteger(stream, R_EnvironmentIsLocked(s) ? 1 : 0);
+			WriteItem(ENCLOS(s), ref_table, stream);
+			WriteItem(FRAME(s), ref_table, stream);
+			WriteItem(HASHTAB(s), ref_table, stream);
+			WriteItem(ATTRIB(s), ref_table, stream);
+		}
 	}
 	else {
-	    OutInteger(stream, ENVSXP);
-	    OutInteger(stream, R_EnvironmentIsLocked(s) ? 1 : 0);
-	    WriteItem(ENCLOS(s), ref_table, stream);
-	    WriteItem(FRAME(s), ref_table, stream);
-	    WriteItem(HASHTAB(s), ref_table, stream);
-	    WriteItem(ATTRIB(s), ref_table, stream);
-	}
-    }
-    else {
-	int flags, hastag, hasattr;
-	switch(TYPEOF(s)) {
-	case LISTSXP:
-	case LANGSXP:
-	case DOTSXP:
-	    hastag = TAG(s) != R_NilValue;
-	    break;
-	case CLOSXP:
-	    hastag = (CLOENV(s) != 0);
-	    break;
-	case PROMSXP:
-	    hastag = (PRENV(s) != 0);
-	    break;
-	default:
-	    hastag = FALSE;
-	}
+		int flags, hastag, hasattr;
+		switch(TYPEOF(s)) {
+		case LISTSXP:
+		case LANGSXP:
+		case DOTSXP:
+			hastag = TAG(s) != R_NilValue;
+			break;
+		case CLOSXP:
+			hastag = (CLOENV(s) != 0);
+			break;
+		case PROMSXP:
+			hastag = (PRENV(s) != 0);
+			break;
+		default:
+			hastag = FALSE;
+		}
 #ifdef USE_ATTRIB_FIELD_FOR_CHARSXP_CACHE_CHAINS
 	/* With the CHARSXP cache chains maintained through the ATTRIB
 	   field the content of that field must not be serialized, so
 	   we treat it as not there. */
-	hasattr = (TYPEOF(s) != CHARSXP && ATTRIB(s) != R_NilValue);
+		hasattr = (TYPEOF(s) != CHARSXP && ATTRIB(s) != R_NilValue);
 #else
-	hasattr = ATTRIB(s) != R_NilValue;
+		hasattr = ATTRIB(s) != R_NilValue;
 #endif
-	flags = PackFlags(TYPEOF(s), LEVELS(s), OBJECT(s),
-			  hasattr, hastag);
-	OutInteger(stream, flags);
-	switch (TYPEOF(s)) {
-	case LISTSXP:
-	case LANGSXP:
-	case DOTSXP:
+		flags = PackFlags(TYPEOF(s), LEVELS(s), OBJECT(s),
+						hasattr, hastag);
+		OutInteger(stream, flags);
+		switch (TYPEOF(s)) {
+		case LISTSXP:
+		case LANGSXP:
+		case DOTSXP:
 	    /* Dotted pair objects */
 	    /* These write their ATTRIB fields first to allow us to avoid
 	       recursion on the CDR */
-	    if (hasattr)
-		WriteItem(ATTRIB(s), ref_table, stream);
-	    if (TAG(s) != R_NilValue)
-		WriteItem(TAG(s), ref_table, stream);
-	    WriteItem(CAR(s), ref_table, stream);
+			if (hasattr)
+				WriteItem(ATTRIB(s), ref_table, stream);
+			if (TAG(s) != R_NilValue)
+				WriteItem(TAG(s), ref_table, stream);
+			WriteItem(CAR(s), ref_table, stream);
 	    /* now do a tail call to WriteItem to handle the CDR */
-	    s = CDR(s);
-	    goto tailcall;
-	case CLOSXP:
+			s = CDR(s);
+			goto tailcall;
+		case CLOSXP:
 	    /* Dotted pair objects */
 	    /* These write their ATTRIB fields first to allow us to avoid
 	       recursion on the CDR */
-	    if (hasattr)
-		WriteItem(ATTRIB(s), ref_table, stream);
-	    if (CLOENV(s))
-		WriteItem(CLOENV(s), ref_table, stream);
-	    WriteItem(FORMALS(s), ref_table, stream);
-	    /* now do a tail call to WriteItem to handle the CDR */
-	    s = BODY(s);
-	    goto tailcall;
-	case PROMSXP:
+			if (hasattr)
+				WriteItem(ATTRIB(s), ref_table, stream);
+			if (CLOENV(s))
+				WriteItem(CLOENV(s), ref_table, stream);
+			WriteItem(FORMALS(s), ref_table, stream);
+				/* now do a tail call to WriteItem to handle the CDR */
+			s = BODY(s);
+			goto tailcall;
+		case PROMSXP:
 	    /* Dotted pair objects */
 	    /* These write their ATTRIB fields first to allow us to avoid
 	       recursion on the CDR */
-	    if (hasattr)
-		WriteItem(ATTRIB(s), ref_table, stream);
-	    if (PRENV(s))
-		WriteItem(PRENV(s), ref_table, stream);
-	    WriteItem(PRVALUE(s), ref_table, stream);
-	    /* now do a tail call to WriteItem to handle the CDR */
-	    s = PRCODE(s);
-	    goto tailcall;
-	case EXTPTRSXP:
+			if (hasattr)
+				WriteItem(ATTRIB(s), ref_table, stream);
+			if (PRENV(s))
+				WriteItem(PRENV(s), ref_table, stream);
+			WriteItem(PRVALUE(s), ref_table, stream);
+			/* now do a tail call to WriteItem to handle the CDR */
+			s = PRCODE(s);
+			goto tailcall;
+		case EXTPTRSXP:
 	    /* external pointers */
-	    HashAdd(s, ref_table);
-	    WriteItem(EXTPTR_PROT(s), ref_table, stream);
-	    WriteItem(EXTPTR_TAG(s), ref_table, stream);
-	    break;
-	case WEAKREFSXP:
+			HashAdd(s, ref_table);
+			WriteItem(EXTPTR_PROT(s), ref_table, stream);
+			WriteItem(EXTPTR_TAG(s), ref_table, stream);
+			break;
+		case WEAKREFSXP:
 	    /* Weak references */
-	    HashAdd(s, ref_table);
-	    break;
-	case SPECIALSXP:
-	case BUILTINSXP:
+			HashAdd(s, ref_table);
+			break;
+		case SPECIALSXP:
+		case BUILTINSXP:
 	    /* Builtin functions */
-	    OutInteger(stream, strlen(PRIMNAME(s)));
-	    OutString(stream, PRIMNAME(s), strlen(PRIMNAME(s)));
-	    break;
-	case CHARSXP:
-	    if (s == NA_STRING)
-		OutInteger(stream, -1);
-	    else {
-		OutInteger(stream, LENGTH(s));
-		OutString(stream, CHAR(s), LENGTH(s));
-	    }
-	    break;
-	case LGLSXP:
-	case INTSXP:
-	    OutInteger(stream, LENGTH(s));
-	    OutVec(stream, s, INTEGER_ELT, OutInteger);
-	    break;
-	case REALSXP:
-	    OutInteger(stream, LENGTH(s));
-	    OutVec(stream, s, REAL_ELT, OutReal);
-	    break;
-	case CPLXSXP:
-	    OutInteger(stream, LENGTH(s));
-	    OutVec(stream, s, COMPLEX_ELT, OutComplex);
-	    break;
-	case STRSXP:
-	    OutInteger(stream, LENGTH(s));
-	    for (i = 0; i < LENGTH(s); i++)
-		WriteItem(STRING_ELT(s, i), ref_table, stream);
-	    break;
-	case VECSXP:
-	case EXPRSXP:
-	    OutInteger(stream, LENGTH(s));
-	    for (i = 0; i < LENGTH(s); i++)
-		WriteItem(VECTOR_ELT(s, i), ref_table, stream);
-	    break;
-	case BCODESXP:
+			OutInteger(stream, strlen(PRIMNAME(s)));
+			OutString(stream, PRIMNAME(s), strlen(PRIMNAME(s)));
+			break;
+		case CHARSXP:
+			if (s == NA_STRING)
+				OutInteger(stream, -1);
+			else {
+				OutInteger(stream, LENGTH(s));
+				OutString(stream, CHAR(s), LENGTH(s));
+			}
+			break;
+		case LGLSXP:
+		case INTSXP:
+		case REALSXP:
+		case CPLXSXP:
+		case RAWSXP:
+		case STRSXP:
+			s->serialize(&ser);
+			break;
+		case VECSXP:
+		case EXPRSXP:
+			OutInteger(stream, LENGTH(s));
+			for (i = 0; i < LENGTH(s); i++)
+				WriteItem(VECTOR_ELT(s, i), ref_table, stream);
+			break;
+		case BCODESXP:
 #ifdef BYTECODE
-	    WriteBC(s, ref_table, stream);
-	    break;
+			WriteBC(s, ref_table, stream);
+			break;
 #else
-	    error(_("this version of R cannot write byte code objects"));
+			error(_("this version of R cannot write byte code objects"));
 #endif
-	case RAWSXP:
-	    OutInteger(stream, LENGTH(s));
-	    OutVec(stream, s, RAW_ELT, OutByte);
-	    break;
-	case S4SXP:
-	  break; /* only attributes (i.e., slots) count */
-	default:
-	    error(_("WriteItem: unknown type %i"), TYPEOF(s));
+		case S4SXP:
+			break; /* only attributes (i.e., slots) count */
+		default:
+			error(_("WriteItem: unknown type %i"), TYPEOF(s));
+		}
+		if (hasattr)
+			WriteItem(ATTRIB(s), ref_table, stream);
 	}
-	if (hasattr)
-	    WriteItem(ATTRIB(s), ref_table, stream);
-    }
 }
 
 #ifdef BYTECODE

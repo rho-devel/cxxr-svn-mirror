@@ -45,7 +45,9 @@
 #include "CXXR/VectorBase.h"
 
 #ifdef __cplusplus
+extern "C" { double *REAL(SEXP); } // Forward declaration with C-linkage..
 
+#include "CXXR/Serializer.hpp"
 #include "CXXR/DumbVector.hpp"
 #include "CXXR/SEXP_downcast.hpp"
 
@@ -54,8 +56,15 @@ namespace CXXR {
     template <>
     inline const char* DumbVector<double, REALSXP>::staticTypeName()
     {
-	return "numeric";
+			return "numeric";
     }
+
+		template <>
+		inline bool DumbVector<double, REALSXP>::serialize(Serializer *ser) {
+			OutInteger(ser->stream(), size());
+			OutVec(ser->stream(), this, REAL_ELT, OutReal);
+			return true;
+		}
 
     /** @brief Vector of real numbers.
      */

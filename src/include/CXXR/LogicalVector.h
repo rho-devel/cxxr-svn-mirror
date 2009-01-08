@@ -45,23 +45,6 @@
 #include "CXXR/VectorBase.h"
 
 #ifdef __cplusplus
-
-#include "CXXR/DumbVector.hpp"
-#include "CXXR/SEXP_downcast.hpp"
-
-namespace CXXR {
-    // Template specialization:
-    template <>
-    inline const char* DumbVector<int, LGLSXP>::staticTypeName()
-    {
-	return "logical";
-    }
-
-    /** @brief Vector of truth values.
-     */
-    typedef CXXR::DumbVector<int, LGLSXP> LogicalVector;
-}  // namespace CXXR
-
 extern "C" {
 #endif /* __cplusplus */
 
@@ -70,9 +53,9 @@ extern "C" {
      * @return TRUE iff the CXXR::RObject pointed to by \a s is a
      *         logical vector.
      */
-#ifndef __cplusplus
+#ifndef __cplusplus // C
     Rboolean Rf_isLogical(SEXP s);
-#else
+#else // C++
     inline Rboolean Rf_isLogical(SEXP s)
     {
 	return Rboolean(s && TYPEOF(s) == LGLSXP);
@@ -90,6 +73,31 @@ int *LOGICAL(SEXP x);
 
 #ifdef __cplusplus
 }
-#endif
+#include "CXXR/Serializer.hpp"
+#include "CXXR/DumbVector.hpp"
+#include "CXXR/SEXP_downcast.hpp"
+
+namespace CXXR {
+    // Template specialization:
+    template <>
+    inline const char* DumbVector<int, LGLSXP>::staticTypeName()
+    {
+	return "logical";
+    }
+
+		template <>
+		inline bool DumbVector<int, LGLSXP>::serialize(Serializer *ser) {
+		  OutInteger(ser->stream(), size());
+			OutVec(ser->stream(), this, INTEGER_ELT, OutInteger);
+			return true;
+		}
+
+
+    /** @brief Vector of truth values.
+     */
+    typedef CXXR::DumbVector<int, LGLSXP> LogicalVector;
+}  // namespace CXXR
+
+#endif // C++
 
 #endif /* LOGICALVECTOR_H */

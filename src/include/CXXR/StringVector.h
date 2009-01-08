@@ -52,6 +52,7 @@
 #include <iostream>
 #include "CXXR/RObjectVector.hpp"
 #include "CXXR/SEXP_downcast.hpp"
+#include "CXXR/Serializer.hpp"
 
 namespace CXXR {
     // Template specialization:
@@ -87,8 +88,9 @@ namespace CXXR {
 	    : RObjectVector<String, STRSXP>(pattern)
 	{}
 
-	// Virtual function of RObject:
+	// Virtual functions of RObject:
 	StringVector* clone() const;
+	bool serialize(Serializer *);
     private:
 	/**
 	 * Declared private to ensure that StringVector objects are

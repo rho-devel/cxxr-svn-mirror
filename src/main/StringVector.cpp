@@ -38,6 +38,7 @@
  */
 
 #include "CXXR/StringVector.h"
+#include "CXXR/Serializer.hpp"
 
 #include <iostream>
 
@@ -56,6 +57,13 @@ namespace CXXR {
 StringVector* StringVector::clone() const
 {
     return new StringVector(*this);
+}
+
+bool StringVector::serialize(Serializer *ser) {
+	OutInteger(ser->stream(), size());
+	for (unsigned int i=0;i<size();i++)
+		WriteItem(STRING_ELT(this, i), ser->hashtable(), ser->stream());
+	return true;
 }
 
 namespace {

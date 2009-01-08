@@ -42,6 +42,7 @@
 #ifndef VECTORBASE_H
 #define VECTORBASE_H
 
+#include <stdio.h>
 #include "CXXR/RObject.h"
 
 #ifdef __cplusplus
@@ -51,6 +52,7 @@
 typedef CXXR::RObject VECTOR_SEXPREC, *VECSEXP;
 
 namespace CXXR {
+	class Serializer;
     /** @brief Untemplated base class for R vectors.
      */
     class VectorBase : public RObject {
@@ -88,6 +90,8 @@ namespace CXXR {
 	{
 	    return m_size;
 	}
+
+	virtual bool serialize(Serializer *ser) { return false; }
 
 	/** @brief The name by which this type is known in R.
 	 *
