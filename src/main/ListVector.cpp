@@ -51,9 +51,9 @@ using namespace CXXR;
 // Force the creation of non-inline embodiments of functions callable
 // from C:
 namespace CXXR {
-    namespace ForceNonInline {
-	SEXP (*VECTOR_ELTp)(const SEXP x, int i) = VECTOR_ELT;
-    }
+	namespace ForceNonInline {
+		SEXP (*VECTOR_ELTp)(const SEXP x, int i) = VECTOR_ELT;
+	}
 }
 
 ListVector::ListVector(ExpressionVector& ev)
@@ -61,17 +61,24 @@ ListVector::ListVector(ExpressionVector& ev)
 {
     // The following results in unnecessary invocations of
     // propagateAge() on the nodes pointed to.
-    for (unsigned int i = 0; i < size(); ++i)
-	(*this)[i] = ev[i];
-    SEXP names = Rf_getAttrib(const_cast<ExpressionVector*>(&ev),
+	for (unsigned int i = 0; i < size(); ++i)
+		(*this)[i] = ev[i];
+		SEXP names = Rf_getAttrib(const_cast<ExpressionVector*>(&ev),
 			      R_NamesSymbol);
-    if (names)
-	Rf_setAttrib(this, R_NamesSymbol, names);
+		if (names)
+			Rf_setAttrib(this, R_NamesSymbol, names);
 }
 
 ListVector* ListVector::clone() const
 {
     return new ListVector(*this);
+}
+
+bool ListVector::serialize(Serializer *ser) {
+	OutInteger(ser->stream(), size());
+	for (unsigned int i=0; i<size(); i++)
+		WriteItem(VECTOR_ELT(this, i), ser->hashtable(), ser->stream());
+	return true;
 }
 
 // ***** C interface *****

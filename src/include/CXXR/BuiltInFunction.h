@@ -48,6 +48,8 @@
 
 #ifdef __cplusplus
 
+#include "CXXR/Serializer.hpp"
+
 namespace CXXR {
     /** @brief R function implemented within the interpreter.
      *
@@ -91,6 +93,7 @@ namespace CXXR {
 
 	// Virtual function of RObject:
 	const char* typeName() const;
+	bool serialize(Serializer*);
     private:
 	unsigned int m_offset;
     };

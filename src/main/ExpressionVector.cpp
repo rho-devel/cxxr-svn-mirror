@@ -72,6 +72,13 @@ ExpressionVector* ExpressionVector::clone() const
     return new ExpressionVector(*this);
 }
 
+bool ExpressionVector::serialize(Serializer *ser) {
+	OutInteger(ser->stream(),size());
+	for (unsigned int i=0; i<size(); i++)
+		WriteItem(VECTOR_ELT(this, i), ser->hashtable(), ser->stream());
+	return true;
+}
+
 // ***** C interface *****
 
 SEXP SET_XVECTOR_ELT(SEXP x, int i, SEXP v)

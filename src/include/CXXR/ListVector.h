@@ -50,6 +50,7 @@
 
 #include "CXXR/RObjectVector.hpp"
 #include "CXXR/SEXP_downcast.hpp"
+#include "CXXR/Serializer.hpp"
 
 namespace CXXR {
     class ExpressionVector;
@@ -105,6 +106,7 @@ namespace CXXR {
 
 	// Virtual function of RObject:
 	ListVector* clone() const;
+	bool serialize(Serializer*);
     private:
 	// Declared private to ensure that ListVectors are
 	// allocated only using 'new'.

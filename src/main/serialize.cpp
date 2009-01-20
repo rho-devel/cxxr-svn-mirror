@@ -306,7 +306,7 @@ void OutByte(R_outpstream_t stream, Rbyte i)
     }
 }
 
-static void OutString(R_outpstream_t stream, const char *s, int length)
+void OutString(R_outpstream_t stream, const char *s, int length)
 {
     if (stream->type == R_pstream_ascii_format) {
 	int i;
@@ -956,12 +956,6 @@ void WriteItem (SEXP s, SEXP ref_table, R_outpstream_t stream) {
 	    /* Weak references */
 			HashAdd(s, ref_table);
 			break;
-		case SPECIALSXP:
-		case BUILTINSXP:
-	    /* Builtin functions */
-			OutInteger(stream, strlen(PRIMNAME(s)));
-			OutString(stream, PRIMNAME(s), strlen(PRIMNAME(s)));
-			break;
 		case CHARSXP:
 			if (s == NA_STRING)
 				OutInteger(stream, -1);
@@ -976,13 +970,11 @@ void WriteItem (SEXP s, SEXP ref_table, R_outpstream_t stream) {
 		case CPLXSXP:
 		case RAWSXP:
 		case STRSXP:
-			s->serialize(&ser);
-			break;
 		case VECSXP:
 		case EXPRSXP:
-			OutInteger(stream, LENGTH(s));
-			for (i = 0; i < LENGTH(s); i++)
-				WriteItem(VECTOR_ELT(s, i), ref_table, stream);
+		case BUILTINSXP: // Previously the same as 'SPECIALSXP'
+		case SPECIALSXP:
+			s->serialize(&ser);
 			break;
 		case BCODESXP:
 #ifdef BYTECODE

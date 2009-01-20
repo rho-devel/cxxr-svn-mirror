@@ -37,7 +37,8 @@
  * Brief Implementation of class CXXR::BuiltInFunction and associated
  * C interface.
  */
-
+ 
+#include "Defn.h"
 #include "CXXR/BuiltInFunction.h"
 
 using namespace CXXR;
@@ -52,3 +53,10 @@ const char* BuiltInFunction::typeName() const
 {
     return sexptype() == SPECIALSXP ? "special" : "builtin";
 }
+
+bool BuiltInFunction::serialize(Serializer *ser) {
+	OutInteger(ser->stream(), strlen(PRIMNAME(this)));
+	OutString(ser->stream(), PRIMNAME(this), strlen(PRIMNAME(this)));
+	return true;
+}
+
