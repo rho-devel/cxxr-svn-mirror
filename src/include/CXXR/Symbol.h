@@ -45,6 +45,7 @@
 
 #ifdef __cplusplus
 
+#include "CXXR/Serializer.hpp"
 #include "CXXR/BuiltInFunction.h"
 #include "CXXR/GCRoot.h"
 #include "CXXR/SEXP_downcast.hpp"
@@ -211,6 +212,7 @@ namespace CXXR {
 
 	// Virtual function of RObject:
 	const char* typeName() const;
+	bool serialize(Serializer *);
 
 	// Virtual function of GCNode:
 	void visitChildren(const_visitor* v) const;

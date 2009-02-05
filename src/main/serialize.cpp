@@ -618,7 +618,7 @@ static SEXP MakeHashTable(void)
     return val;
 }
 
-static void HashAdd(SEXP obj, SEXP ht)
+void HashAdd(SEXP obj, SEXP ht)
 {
     int pos = PTRHASH(obj) % HASH_TABLE_SIZE(ht);
     int count = HASH_TABLE_COUNT(ht) + 1;
@@ -848,12 +848,8 @@ void WriteItem (SEXP s, SEXP ref_table, R_outpstream_t stream) {
 		OutInteger(stream, i);
 	else if ((i = HashGet(s, ref_table)) != 0)
 		OutRefIndex(stream, i);
-	else if (TYPEOF(s) == SYMSXP) {
-		/* Note : NILSXP can't occur here */
-		HashAdd(s, ref_table);
-		OutInteger(stream, SYMSXP);
-		WriteItem(PRINTNAME(s), ref_table, stream);
-	}
+	else if (TYPEOF(s) == SYMSXP)
+		s->serialize(&ser);
 	else if (TYPEOF(s) == ENVSXP) {
 		HashAdd(s, ref_table);
 		if (R_IsPackageEnv(s)) {

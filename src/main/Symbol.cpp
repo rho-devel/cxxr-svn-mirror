@@ -42,6 +42,9 @@
 
 #include "boost/regex.hpp"
 #include "CXXR/CachedString.h"
+#include "CXXR/Serializer.hpp"
+
+void HashAdd(SEXP obj, SEXP ht);
 
 using namespace CXXR;
 
@@ -90,6 +93,13 @@ Symbol::Symbol(const String& name, RObject* val,
 const char* Symbol::typeName() const
 {
     return staticTypeName();
+}
+
+bool Symbol::serialize(Serializer *ser) {
+	HashAdd(this, ser->hashtable());
+	OutInteger(ser->stream(), SYMSXP);
+	WriteItem(PRINTNAME(this), ser->hashtable(), ser->stream());
+	return true;
 }
 
 void Symbol::visitChildren(const_visitor* v) const
