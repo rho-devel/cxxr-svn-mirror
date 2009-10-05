@@ -16,8 +16,8 @@ namespace CXXR{
             static T NA_value()
             {
                 //find values of:
-                //NA_REAL
-                //NA_INTEGER
+                //NA_REAL = R_ValueOfNA() - see arithmetic.cpp
+                //NA_INTEGER = INT_MIN
                 return 0; //temporary...
             }
 
