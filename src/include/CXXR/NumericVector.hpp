@@ -53,23 +53,39 @@ namespace CXXR{
     //! Naive subtract specilisation for int.
     template<>
     int NumericVector<int,INTSXP>::Subtract::op(int l, int r){
-	// TODO: handling for range.
+	// TODO: handling for result becoming NA_value.
+	//test for NA.
 	if(l==NumericVector<int,INTSXP>::NA_value() ||
 		r==NumericVector<int,INTSXP>::NA_value()){
             return NumericVector<int,INTSXP>::NA_value();
 	}
-	return l-r;
+	int result = l-r;
+	//handle underflow.
+	if(result<=l){
+	    return result;
+	}else{
+	    //TODO: figure best course of action.
+	    return 0;
+	}
     }
 
     //! Naive subtract specilisation for double.
     template<>
     double NumericVector<double,REALSXP>::Subtract::op(double l, double r){
 	//TODO: handling for range.
+	//test for NA.
 	if(l==NumericVector<double,REALSXP>::NA_value() ||
 	        r==NumericVector<double,REALSXP>::NA_value()){
 	    return NumericVector<double,REALSXP>::NA_value();
 	}
-	return l-r;
+	double result = l-r;
+	//handle underflow.
+	if(result<=l){
+	    return result;
+	}else{
+	    //TODO: figure best course of action.
+	    return 0;
+	}
     }
 }
 
