@@ -22,7 +22,7 @@ endif
 
 sources_cxx = Allocatortest.cpp CellPooltest.cpp GCManagertest.cpp \
               HeterogeneousListtest.cpp MemoryBanktest.cpp RObject_sizer.cpp \
-              splice_test.cpp
+              splice_test.cpp NumericVector.cpp
 
 depends = $(sources_cxx:.cpp=.d)
 

@@ -5,7 +5,7 @@ exit;
 
 #include <iostream>
 #include <cstdlib>
-#include "CXXR/NumericVector.hpp"
+#include "CXXR/NumericVector.h"
 int main(){
     return EXIT_SUCCESS;
 }
