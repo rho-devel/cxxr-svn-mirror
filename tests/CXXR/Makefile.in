@@ -27,7 +27,7 @@ sources_cxx = Allocatortest.cpp CellPooltest.cpp GCManagertest.cpp \
 depends = $(sources_cxx:.cpp=.d)
 
 tests = CellPooltest CellHeaptest MemoryBanktest Allocatortest \
-        HeterogeneousListtest splice_test
+        HeterogeneousListtest splice_test NumericVector.sh
 
 check : $(tests:=.ts)
 
@@ -132,6 +132,16 @@ MemoryBanktest.ts : MemoryBanktest MemoryBanktest.save
 	diff MemoryBanktest.save MemoryBanktest.out
 	rm MemoryBanktest.out
 	touch $@
+
+NumericVector_objs = ../../src/main/libR.a NumericVector.o
+
+NumericVector : $(NumericVector_objs)
+	$(LINK.cc) -lboost_regex -L../../lib -lRblas -lgfortran -lm -lreadline -ldl -o $@ $(NumericVector_objs)
+
+NumericVector.o :
+	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) $(valgrind_flags) -c -o $@ $<
+
+NumericVector.sh.ts :
 
 RObject_sizer_objs = RObject_sizer.o CellHeap.o GCNode.o GCRoot.o \
                      MemoryBank.o
