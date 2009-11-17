@@ -48,6 +48,7 @@
 
 #include "CXXR/DumbVector.hpp"
 #include "CXXR/SEXP_downcast.hpp"
+#include "CXXR/NumericVector.hpp"
 
 namespace CXXR {
     // Template specialization:
