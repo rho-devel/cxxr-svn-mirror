@@ -43,7 +43,6 @@ SOURCES_CXX = \
         inspect.cpp IntVector.cpp \
 	ListVector.cpp LogicalVector.cpp \
 	MemoryBank.cpp \
-	NumericVector.cpp \
         PairList.cpp Promise.cpp \
         RAllocStack.cpp RObject.cpp RawVector.cpp Rdynload.cpp RealVector.cpp \
         Renviron.cpp \

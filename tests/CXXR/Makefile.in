@@ -141,7 +141,8 @@ NumericVector : NumericVector.o
 NumericVector.o :
 	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) $(valgrind_flags) -c -o $@ $<
 
-NumericVector.sh.ts :
+NumericVector.sh.ts : NumericVector
+	./NumericVector.sh
 
 RObject_sizer_objs = RObject_sizer.o CellHeap.o GCNode.o GCRoot.o \
                      MemoryBank.o
