@@ -46,21 +46,19 @@
 
 #ifdef __cplusplus
 
-#include "CXXR/DumbVector.hpp"
-#include "CXXR/SEXP_downcast.hpp"
 #include "CXXR/NumericVector.hpp"
+#include "CXXR/SEXP_downcast.hpp"
 
 namespace CXXR {
-    // Template specialization:
-    template <>
-    inline const char* DumbVector<int, INTSXP>::staticTypeName()
-    {
-	return "integer";
-    }
+    //int specialisation.
+	template <>
+	inline const char* DumbVector<int, INTSXP>::staticTypeName(){
+		return "integer";
+	}
 
-    /** @brief Vector of truth values.
+	/** @brief Vector of truth values.
      */
-    typedef CXXR::DumbVector<int, INTSXP> IntVector;
+    typedef CXXR::NumericVector<int, INTSXP> IntVector;
 }  // namespace CXXR
 
 extern "C" {

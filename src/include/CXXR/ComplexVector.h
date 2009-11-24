@@ -49,6 +49,7 @@
 
 #include "CXXR/DumbVector.hpp"
 #include "CXXR/SEXP_downcast.hpp"
+#include "CXXR/NumericVector.hpp"
 
 namespace CXXR {
     // Template specialization:
@@ -60,7 +61,7 @@ namespace CXXR {
 
     /** @brief Vector of complex numbers.
      */
-    typedef CXXR::DumbVector<Rcomplex, CPLXSXP> ComplexVector;
+    typedef CXXR::NumericVector<Rcomplex, CPLXSXP> ComplexVector;
 }  // namespace CXXR
 
 extern "C" {

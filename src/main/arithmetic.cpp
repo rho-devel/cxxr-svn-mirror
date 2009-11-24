@@ -678,11 +678,11 @@ static SEXP integer_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2, SEXP lcall)
 
     switch (code) {
     case PLUSOP:
-	mod_iterate(n1, n2, i1, i2) {
+	mod_iterate(n1, n2, i1, i2) { //mod_iterate used so miss-match length vectors "wrap"
 	    x1 = INTEGER(s1)[i1];
 	    x2 = INTEGER(s2)[i2];
 	    if (x1 == NA_INTEGER || x2 == NA_INTEGER)
-		INTEGER(ans)[i] = NA_INTEGER;
+		INTEGER(ans)[i]= NA_INTEGER;
 	    else {
 		int val = x1 + x2;
 		if (val != NA_INTEGER && GOODISUM(x1, x2, val))

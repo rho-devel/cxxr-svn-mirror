@@ -6,8 +6,10 @@
 #ifndef NUMERICVECTOR_HPP
 #define NUMERICVECTOR_HPP 1
 
+#include <exception>
 #include "CXXR/DumbVector.hpp"
-#include "Defn.h"
+#include "R_ext/Complex.h"
+
 namespace CXXR{
 	template <typename T, SEXPTYPE ST>
 	class NumericVector : public DumbVector<T,ST>{
@@ -27,27 +29,42 @@ namespace CXXR{
 		NumericVector(size_t sz, const T& initializer):
 				DumbVector<T,ST>(sz,initializer){
 		}
+
+		/**
+		 * @brief Class \c CXXR::NumericVector::unexpectedContextException may be thrown when a function is called from
+		 * 			a template instantiation it doesn't expect to be used from.
+		 */
+		class unexpectedContextException : public std::exception{
+			virtual const char* what() const throw(){
+				return "Function was used from an unexpected template instantiation.";
+			}
+		};
+		/**
+		 * @brief Class \c CXXR::NumericVector::rangeException may be thrown by NumericVector when a range error has occured.
+		 */
+		class rangeException : public std::exception{
+			/**
+			 * An explanation for the exception, although this is unlikely to actually be called.
+			 */
+			virtual const char* what() const throw(){
+				return "A range error has occured.";
+			}
+		};
+
+		
 		/**
 		 * @brief Returns the value used internally to represent NA for the given instantiation of \c NumericVector .
 		 * @return NA value for type T.
 		 */
-		static T NA_value(){
+		static T NA_value()throw(unexpectedContextException){
 			//specalisations come later.
-			//Maybe throw exception instead?
+			throw new unexpectedContextException;
 			return NULL;
 		}
+	
 		
 		/**
-		 * @brief Returns the internal type name used by a given instantiation of \c NumericVector .
-		 * @return An internal type name.
-		 */
-		static const char* staticTypeName(){
-			//specalisations come later.
-			//Maybe throw exception instead?
-			return "unknown type";
-		}
-		/**
-		 * @brief Class CXXR::NumericVector::Subtract implements a subtract operation between two \c NumericVector classes.
+		 * @brief Class \c CXXR::NumericVector::Subtract implements a subtract operation between two \c NumericVector classes.
 		 */
 		class Subtract{
 			public:
@@ -62,8 +79,9 @@ namespace CXXR{
 			 * @return the result of l-r. If either l or r were NA, the result is NA. 
 			 * 			If neither were NA, but the result is NA, an error has occured.
 			 */
-			static T op(T l, T r){
-				//should probably throw an exception instead.
+			static T op(T l, T r)throw(unexpectedContextException,rangeException){
+				//this only happens when no specilisation is available.
+				throw new unexpectedContextException;
 				return NULL;
 			}
 		};
@@ -105,24 +123,22 @@ namespace CXXR{
 	//NA_value specilisations.
 	//for integer, return minimum int.
 	template<>
-	int NumericVector<int,INTSXP>::NA_value();
+	int NumericVector<int,INTSXP>::NA_value()throw(unexpectedContextException);
 	//Specilisation for double.
 	template<>
-	double NumericVector<double,REALSXP>::NA_value();
+	double NumericVector<double,REALSXP>::NA_value()throw(unexpectedContextException);
 
-	//staticTypeName specilisations.
-	template<>
-	const char* NumericVector<int,INTSXP>::staticTypeName();
-	template<>
-	const char* NumericVector<double,REALSXP>::staticTypeName();
 
 	//Subtract specilisations.
 	//int
 	template<>
-	int NumericVector<int,INTSXP>::Subtract::op(int l, int r);
+	int NumericVector<int,INTSXP>::Subtract::op(int l, int r)throw(unexpectedContextException,rangeException);
 	//double
 	template<>
-	double NumericVector<double,REALSXP>::Subtract::op(double l, double r);
+	double NumericVector<double,REALSXP>::Subtract::op(double l, double r)throw(unexpectedContextException,rangeException);
+	//complex
+	template<>
+	Rcomplex NumericVector<Rcomplex,CPLXSXP>::Subtract::op(Rcomplex l,Rcomplex r)throw(unexpectedContextException,rangeException);
 
 	//range-check function definitions.
 	#ifndef USES_TWOS_COMPLEMENT

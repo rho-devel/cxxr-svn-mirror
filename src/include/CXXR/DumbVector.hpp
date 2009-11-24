@@ -185,17 +185,18 @@ namespace CXXR {
 #endif
     }
 
-    template <typename T, SEXPTYPE ST>
-    DumbVector<T, ST>* DumbVector<T, ST>::clone() const
-    {
-	return expose(new DumbVector<T, ST>(*this));
-    }
+	template <typename T, SEXPTYPE ST>
+	DumbVector<T, ST>* DumbVector<T, ST>::clone() const
+	{
+		return expose(new DumbVector<T, ST>(*this));
+	}
 
-    template <typename T, SEXPTYPE ST>
-    const char* DumbVector<T, ST>::typeName() const
-    {
-	return DumbVector<T, ST>::staticTypeName();
-    }
+	template <typename T, SEXPTYPE ST>
+	const char* DumbVector<T, ST>::typeName() const
+	{
+		return DumbVector<T, ST>::staticTypeName();
+	}
+	
 }  // namespace CXXR
 
 #endif  // DUMBVECTOR_HPP
