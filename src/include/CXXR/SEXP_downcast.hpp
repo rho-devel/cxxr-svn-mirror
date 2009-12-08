@@ -62,8 +62,9 @@ namespace CXXR {
     Ptr SEXP_downcast(SEXP s)
     {
 	if (!s) return 0;
-	Ptr ans = dynamic_cast<Ptr>(s);
-	if (!ans) SEXP_downcast_error(s->typeName(), ans->staticTypeName());
+	Ptr ans = dynamic_cast< Ptr >(s);
+	if (!ans) 
+		SEXP_downcast_error(s->typeName(), ans->staticTypeName());
 	return ans;
     }
 #endif

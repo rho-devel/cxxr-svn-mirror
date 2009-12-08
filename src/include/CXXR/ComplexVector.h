@@ -61,7 +61,7 @@ namespace CXXR {
 
     /** @brief Vector of complex numbers.
      */
-    typedef CXXR::NumericVector<Rcomplex, CPLXSXP> ComplexVector;
+    typedef CXXR::DumbVector<Rcomplex, CPLXSXP> ComplexVector;
 }  // namespace CXXR
 
 extern "C" {

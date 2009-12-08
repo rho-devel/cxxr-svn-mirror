@@ -58,7 +58,7 @@ namespace CXXR {
 
 	/** @brief Vector of truth values.
      */
-    typedef CXXR::NumericVector<int, INTSXP> IntVector;
+    typedef CXXR::DumbVector<int, INTSXP> IntVector;
 }  // namespace CXXR
 
 extern "C" {

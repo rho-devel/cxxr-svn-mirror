@@ -7,7 +7,7 @@ template<>
 int NumericVector<int,INTSXP>::NA_value(){
 	return INT_MIN;
 }
-//Specilisation for double.
+//Specilisation for double. Note: this creates and returns NaN.
 template<>
 double NumericVector<double,REALSXP>::NA_value(){
 	volatile ieee_double x;
@@ -35,9 +35,6 @@ int NumericVector<int,INTSXP>::Subtract::op(int l, int r)throw(RangeException){
 //double
 template<>
 double NumericVector<double,REALSXP>::Subtract::op(double l, double r)throw(RangeException){
-	if(l==NA_value() ||	r==NA_value()){
-		return NA_value();
-	}
 	return l-r;
 }
 //complex

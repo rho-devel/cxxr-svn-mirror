@@ -136,7 +136,7 @@ MemoryBanktest.ts : MemoryBanktest MemoryBanktest.save
 NumericVector_objs = ../../src/main/libR.a NumericVector.o
 
 NumericVector : NumericVector.o
-	$(LINK.cc) -lboost_regex -L../../lib -lRblas -lgfortran -lm -lreadline -ldl -lm ../../src/main/libR.a -o $@ $<
+	$(LINK.cc) -lboost_regex -L../../lib -lRblas -lgfortran -lm -lreadline -ldl -lm $< ../../src/main/libR.a -o $@
 
 NumericVector.o :
 	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) $(valgrind_flags) -c -o $@ $<
