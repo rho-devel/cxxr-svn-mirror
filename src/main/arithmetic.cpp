@@ -44,7 +44,7 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
-
+#include "CXXR/NumericVector.hpp"
 #include <limits>
 
 #ifdef __OpenBSD__
@@ -678,6 +678,9 @@ static SEXP integer_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2, SEXP lcall)
 
     switch (code) {
     case PLUSOP:
+	ans=CXXR::binary_op<int, INTSXP, CXXR::NumericVector<int,INTSXP>::Add >(SEXP_downcast<CXXR::IntVector*>(s1),
+																	        SEXP_downcast<CXXR::IntVector*>(s2));
+	/*
 	mod_iterate(n1, n2, i1, i2) { //mod_iterate used so miss-match length vectors "wrap"
 	    x1 = INTEGER(s1)[i1];
 	    x2 = INTEGER(s2)[i2];
@@ -696,7 +699,11 @@ static SEXP integer_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2, SEXP lcall)
 	if (naflag)
 	    warningcall(lcall, INTEGER_OVERFLOW_WARNING);
 	break;
+	*/
     case MINUSOP:
+	ans=CXXR::binary_op<int, INTSXP, CXXR::NumericVector<int,INTSXP>::Subtract >(SEXP_downcast<CXXR::IntVector*>(s1),
+																			SEXP_downcast<CXXR::IntVector*>(s2));
+	/*
 	mod_iterate(n1, n2, i1, i2) {
 	    x1 = INTEGER(s1)[i1];
 	    x2 = INTEGER(s2)[i2];
@@ -714,6 +721,7 @@ static SEXP integer_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2, SEXP lcall)
 	}
 	if (naflag)
 	    warningcall(lcall, INTEGER_OVERFLOW_WARNING);
+	*/
 	break;
     case TIMESOP:
 	mod_iterate(n1, n2, i1, i2) {
