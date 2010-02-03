@@ -38,6 +38,14 @@ int main(){
 		status=EXIT_FAILURE;
 	}
 	NumericVector<double, REALSXP>* numericReal = new NumericVector<double, REALSXP>(90);
+	(*numericReal)[0]=0;
+	(*numericReal)[1]=10;
+	NumericVector<double, REALSXP>* numericReal2 = new NumericVector<double, REALSXP>(90);
+	(*numericReal2)[0]=10;
+	(*numericReal2)[1]=-3;
+	NumericVector<double,REALSXP>* ans = CXXR::binary_op<double,REALSXP,NumericVector<double,REALSXP>::Add >(numericReal,numericReal2);
+	//cout << ans->staticTypeName() << endl;
+	NumericVector<double, REALSXP> numericAns = binary_op(numericReal,numericReal2);
 
 	//Just checking NA_value for double is NaN.
 	double d=NumericVector<double, REALSXP>::NA_value();

@@ -678,9 +678,12 @@ static SEXP integer_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2, SEXP lcall)
 
     switch (code) {
     case PLUSOP:
-	ans=CXXR::binary_op<int, INTSXP, CXXR::NumericVector<int,INTSXP>::Add >(SEXP_downcast<CXXR::IntVector*>(s1),
-																	        SEXP_downcast<CXXR::IntVector*>(s2));
-	/*
+/*	CXXR::binary_op<int, INTSXP, CXXR::NumericVector<int,INTSXP>::Add >(
+			SEXP_downcast<CXXR::IntVector*>(s1),
+			SEXP_downcast<CXXR::IntVector*>(s2),
+			SEXP_downcast<CXXR::IntVector*>(ans));
+*/
+
 	mod_iterate(n1, n2, i1, i2) { //mod_iterate used so miss-match length vectors "wrap"
 	    x1 = INTEGER(s1)[i1];
 	    x2 = INTEGER(s2)[i2];
@@ -698,12 +701,15 @@ static SEXP integer_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2, SEXP lcall)
 	}
 	if (naflag)
 	    warningcall(lcall, INTEGER_OVERFLOW_WARNING);
+	
 	break;
-	*/
     case MINUSOP:
-	ans=CXXR::binary_op<int, INTSXP, CXXR::NumericVector<int,INTSXP>::Subtract >(SEXP_downcast<CXXR::IntVector*>(s1),
-																			SEXP_downcast<CXXR::IntVector*>(s2));
-	/*
+/*
+	CXXR::binary_op<int, INTSXP, CXXR::NumericVector<int,INTSXP>::Subtract >(
+			SEXP_downcast<CXXR::IntVector*>(s1),
+			SEXP_downcast<CXXR::IntVector*>(s2),
+			SEXP_downcast<CXXR::IntVector*>(ans));
+*/
 	mod_iterate(n1, n2, i1, i2) {
 	    x1 = INTEGER(s1)[i1];
 	    x2 = INTEGER(s2)[i2];
@@ -717,12 +723,13 @@ static SEXP integer_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2, SEXP lcall)
 		    naflag = TRUE;
 		    INTEGER(ans)[i] = NA_INTEGER;
 		}
-	    }
+		}
 	}
 	if (naflag)
-	    warningcall(lcall, INTEGER_OVERFLOW_WARNING);
-	*/
+		warningcall(lcall, INTEGER_OVERFLOW_WARNING);
+
 	break;
+	
     case TIMESOP:
 	mod_iterate(n1, n2, i1, i2) {
 	    x1 = INTEGER(s1)[i1];
@@ -854,10 +861,24 @@ static SEXP real_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2)
 
     switch (code) {
     case PLUSOP:
+	//TODO
+	/*
+	if(TYPEOF(s1)==INTSXP){
+		NumericVector<double,REALSXP>* temp(LENGTH(s1));
+		CXXR::coerce_vector(temp,
+							SEXP_downcast<CXXR::IntVector*>(s1));
+	}
+	ans=(SEXP)CXXR::binary_op<double, REALSXP, CXXR::NumericVector<double,REALSXP>::Add >(
+			SEXP_downcast<CXXR::RealVector*>(s1),
+			SEXP_downcast<CXXR::RealVector*>(s2),
+			SEXP_downcast<CXXR::RealVector*>(ans)
+		);
+	*/
 	if(TYPEOF(s1) == REALSXP && TYPEOF(s2) == REALSXP) {
-	   mod_iterate(n1, n2, i1, i2) {
-		 REAL(ans)[i] = REAL(s1)[i1] + REAL(s2)[i2];
-	     }
+		CXXR::binary_op<double, REALSXP, CXXR::NumericVector<double,REALSXP>::Add >(SEXP_downcast<CXXR::RealVector*>(s1),SEXP_downcast<CXXR::RealVector*>(s2),SEXP_downcast<CXXR::RealVector*>(ans));
+	   //mod_iterate(n1, n2, i1, i2) {
+		// REAL(ans)[i] = REAL(s1)[i1] + REAL(s2)[i2];
+	     //}
 	} else	if(TYPEOF(s1) == INTSXP ) {
 	   mod_iterate(n1, n2, i1, i2) {
 	       REAL(ans)[i] = R_INTEGER(s1, i1) + REAL(s2)[i2];
@@ -867,13 +888,14 @@ static SEXP real_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2)
 	       REAL(ans)[i] = REAL(s1)[i1] + R_INTEGER(s2, i2);
 	     }
 	}
-
 	break;
     case MINUSOP:
 	if(TYPEOF(s1) == REALSXP && TYPEOF(s2) == REALSXP) {
+	   CXXR::binary_op<double, REALSXP, CXXR::NumericVector<double,REALSXP>::Subtract >(SEXP_downcast<CXXR::RealVector*>(s1),SEXP_downcast<CXXR::RealVector*>(s2),SEXP_downcast<CXXR::RealVector*>(ans));
+	   /*
 	   mod_iterate(n1, n2, i1, i2) {
 	      REAL(ans)[i] = REAL(s1)[i1] - REAL(s2)[i2];
-	   }
+	   }*/
 	} else	if(TYPEOF(s1) == INTSXP ) {
 	   mod_iterate(n1, n2, i1, i2) {
 	       REAL(ans)[i] = R_INTEGER(s1, i1) - REAL(s2)[i2];
@@ -886,9 +908,11 @@ static SEXP real_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2)
 	break;
     case TIMESOP:
 	if(TYPEOF(s1) == REALSXP && TYPEOF(s2) == REALSXP) {
+		CXXR::binary_op<double, REALSXP, CXXR::NumericVector<double,REALSXP>::Multiply >(SEXP_downcast<CXXR::RealVector*>(s1),SEXP_downcast<CXXR::RealVector*>(s2),SEXP_downcast<CXXR::RealVector*>(ans));
+	   /*
 	   mod_iterate(n1, n2, i1, i2) {
 		REAL(ans)[i] = REAL(s1)[i1] * REAL(s2)[i2];
-	    }
+	    }*/
 	} else if(TYPEOF(s1) == INTSXP ) {
 	   mod_iterate(n1, n2, i1, i2) {
 	       REAL(ans)[i] = R_INTEGER(s1, i1) * REAL(s2)[i2];

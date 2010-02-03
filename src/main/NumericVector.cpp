@@ -161,4 +161,14 @@ double NumericVector<double ,REALSXP>::Power::R_pow(double x, double y){
 	return(std::numeric_limits<double>::quiet_NaN());		/* all other cases: (-Inf)^{+-Inf,non-int}; (neg)^{+-Inf} */
 }
 
+//vector coercion
+template<>
+void coerce_vector(NumericVector<double,REALSXP>* dest,
+								const NumericVector<int,INTSXP>* src){
+	if(src->size()!=dest->size())
+		return;
+	for(unsigned int i=0; i < src->size(); i++){
+		(*dest)[i] = ((*src)[i]==NumericVector<int,INTSXP>::NA_value()) ? NumericVector<double,REALSXP>::NA_value() : double((*src)[i]);
+	}
+}
 } /* CXXR namespace */

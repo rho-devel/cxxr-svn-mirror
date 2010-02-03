@@ -172,22 +172,42 @@ namespace CXXR{
 	Rcomplex NumericVector<Rcomplex,CPLXSXP>::Subtract::op(Rcomplex l,Rcomplex r)throw(RangeException);
 
 	/**
+	 * @brief coerce vector src in to the vector dest, performing the necessary type conversions.
+	 */
+	template<typename T, SEXPTYPE ST, typename T2, SEXPTYPE ST2>
+	void coerce_vector(NumericVector<T,ST>* dest,
+										const NumericVector<T2,ST2>* src);
+
+	/**
 	 * @brief CXXR::binary_op is a non-member function that performs operation on \c NumericVector from another
 	 * 		\c NumericVector.
 	 * @return a new NumericVector, which is the answer.
 	 */
 	template<typename T, SEXPTYPE ST, class operation>
-	NumericVector<T, ST>* binary_op(const NumericVector<T, ST>* l, const NumericVector<T, ST>* r){
-		//answer is as large as the longest vector.
+	NumericVector<T, ST>* binary_op(const NumericVector<T,ST>* l,
+									const NumericVector<T,ST>* r){
 		const unsigned int ansSize= (l->size() > r->size()) ? (l->size()) : (r->size());
+		//answer is as large as the longest vector.
 		if(l->size()==0 || r->size()==0){
 			return new NumericVector<T,ST>(0);
 		}
 		NumericVector<T,ST>* ans = new NumericVector<T,ST>(ansSize);
+		//integration with GC required here.
+
+		return binary_op(l,r,ans);
+	}
+
+	/**
+	 * @brief This version of CXXR::binary_op works on the supplied answer vector.
+	 */
+	template<typename T, SEXPTYPE ST, class operation>
+	NumericVector<T, ST>* binary_op(const NumericVector<T, ST>* l,
+									const NumericVector<T, ST>* r,
+									NumericVector<T,ST>* ans){
 		bool overflowed=false;
 		//either r will need to repeat...
-		if(ansSize==l->size()){
-			for(int i, i2=0; i<ansSize; i2=(++i2==r->size())?0:i2, ++i){
+		if(ans->size()==l->size()){
+			for(unsigned int i=0, i2=0; i<ans->size(); i2=(++i2==r->size())?0:i2, ++i){
 				try{
 					(*ans)[i]=operation::op((*l)[i],(*r)[i2]);
 				}catch(...){
@@ -196,7 +216,7 @@ namespace CXXR{
 				}
 			}
 		}else{ //...or l will. Note: this is almost code duplication, but the alternative is to use a #define. (or a less efficient loop.)
-			for(int i,i2=0; i<ansSize; i2=(++i2==l->size())?0:i2, ++i){
+			for(unsigned int i=0,i2=0; i<ans->size(); i2=(++i2==l->size())?0:i2, ++i){
 				try{
 					(*ans)[i]=operation::op((*l)[i2],(*r)[i]);
 				}catch(...){
@@ -208,8 +228,7 @@ namespace CXXR{
 		if(overflowed){
 			//TODO:warning....hmmm
 		}
-		//note:attribute related operations required next.
-
+		//note: attribute related ops may be integrated here later.
 		return ans;
 	}
 
