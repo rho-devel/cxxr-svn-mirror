@@ -162,13 +162,13 @@ double NumericVector<double ,REALSXP>::Power::R_pow(double x, double y){
 }
 
 //vector coercion
+//IntVector -> RealVector
 template<>
-void coerce_vector(NumericVector<double,REALSXP>* dest,
-								const NumericVector<int,INTSXP>* src){
-	if(src->size()!=dest->size())
-		return;
+NumericVector<double, REALSXP>* coerce_vector(const NumericVector<int,INTSXP>* src){
+	GCStackRoot<NumericVector<double, REALSXP> > ans(GCNode::expose(new NumericVector<double, REALSXP>(src->size())));
 	for(unsigned int i=0; i < src->size(); i++){
-		(*dest)[i] = ((*src)[i]==NumericVector<int,INTSXP>::NA_value()) ? NumericVector<double,REALSXP>::NA_value() : double((*src)[i]);
+		(*ans)[i] = ((*src)[i]==NumericVector<int,INTSXP>::NA_value()) ? NumericVector<double,REALSXP>::NA_value() : double((*src)[i]);
 	}
+	return ans;
 }
 } /* CXXR namespace */

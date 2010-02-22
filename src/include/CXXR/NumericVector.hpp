@@ -174,9 +174,8 @@ namespace CXXR{
 	/**
 	 * @brief coerce vector src in to the vector dest, performing the necessary type conversions.
 	 */
-	template<typename T, SEXPTYPE ST, typename T2, SEXPTYPE ST2>
-	void coerce_vector(NumericVector<T,ST>* dest,
-										const NumericVector<T2,ST2>* src);
+	template<typename T, SEXPTYPE ST,typename T2, SEXPTYPE ST2>
+	NumericVector<T2,ST2>* coerce_vector(const NumericVector<T,ST>* src);
 
 	/**
 	 * @brief CXXR::binary_op is a non-member function that performs operation on \c NumericVector from another

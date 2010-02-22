@@ -824,6 +824,47 @@ namespace {
     }
 }
 
+/*static SEXP real_binaryNEW(ARITHOP_TYPE code, SEXP s1, SEXP s2){
+	GCStackRoot<SEXP> ans(NULL);
+	GCStackRoot<CXXR::RealVector> p1(NULL);
+	GCStackRoot<CXXR::RealVector> p2(NULL);
+	if(TYPEOF(s1)==INTSXP){
+		p1 = CXXR::coerce_vector<double, REALSXP>(SEXP_downcast<NumericVector<int, INTSXP>* >(s1));
+	}else{
+		p1=SEXP_downcast<NumericVector<double, REALSXP>* >(s1);
+	}
+	if(TYPEOF(s2)==INTSXP){
+		p2 = CXXR::coerce_vector<double, REALSXP>(SEXP_downcast<NumericVector<int, INTSXP>* >(s2));
+	}else{
+		p2=SEXP_downcast<NumericVector<double, REALSXP>* >(s2);
+	}
+
+	switch(code){
+		case default:;
+		case PLUSOP:
+			//ans = CXXR::binary_op<double, REALSXP, CXXR::NumericVector<double,REALSXP>::Add >(SEXP_downcast<CXXR::RealVector*>(s1),SEXP_downcast<CXXR::RealVector*>(s2));
+		break;
+	}
+
+//NEED TO REFACTOR THE FOLLOWING IN THE FUTURE!
+    if (ATTRIB(s1) == R_NilValue && ATTRIB(s2) == R_NilValue) { // RObject->attributes();
+	return ans;
+    }
+
+
+    if (n1 > n2)
+	copyMostAttrib(s1, ans);
+    else if (n1 == n2) {
+	copyMostAttrib(s2, ans);
+	copyMostAttrib(s1, ans);
+    }
+    else
+	copyMostAttrib(s2, ans);
+
+    return ans;
+
+}*/
+
 static SEXP real_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2)
 {
     int i, i1, i2, n, n1, n2;
@@ -875,10 +916,10 @@ static SEXP real_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2)
 		);
 	*/
 	if(TYPEOF(s1) == REALSXP && TYPEOF(s2) == REALSXP) {
-		CXXR::binary_op<double, REALSXP, CXXR::NumericVector<double,REALSXP>::Add >(SEXP_downcast<CXXR::RealVector*>(s1),SEXP_downcast<CXXR::RealVector*>(s2),SEXP_downcast<CXXR::RealVector*>(ans));
-	   //mod_iterate(n1, n2, i1, i2) {
-		// REAL(ans)[i] = REAL(s1)[i1] + REAL(s2)[i2];
-	     //}
+		//CXXR::binary_op<double, REALSXP, CXXR::NumericVector<double,REALSXP>::Add >(SEXP_downcast<CXXR::RealVector*>(s1),SEXP_downcast<CXXR::RealVector*>(s2),SEXP_downcast<CXXR::RealVector*>(ans));
+	    mod_iterate(n1, n2, i1, i2) {
+		REAL(ans)[i] = REAL(s1)[i1] + REAL(s2)[i2];
+	    }
 	} else	if(TYPEOF(s1) == INTSXP ) {
 	   mod_iterate(n1, n2, i1, i2) {
 	       REAL(ans)[i] = R_INTEGER(s1, i1) + REAL(s2)[i2];
@@ -891,11 +932,11 @@ static SEXP real_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2)
 	break;
     case MINUSOP:
 	if(TYPEOF(s1) == REALSXP && TYPEOF(s2) == REALSXP) {
-	   CXXR::binary_op<double, REALSXP, CXXR::NumericVector<double,REALSXP>::Subtract >(SEXP_downcast<CXXR::RealVector*>(s1),SEXP_downcast<CXXR::RealVector*>(s2),SEXP_downcast<CXXR::RealVector*>(ans));
-	   /*
+	   //CXXR::binary_op<double, REALSXP, CXXR::NumericVector<double,REALSXP>::Subtract >(SEXP_downcast<CXXR::RealVector*>(s1),SEXP_downcast<CXXR::RealVector*>(s2),SEXP_downcast<CXXR::RealVector*>(ans));
+	   
 	   mod_iterate(n1, n2, i1, i2) {
 	      REAL(ans)[i] = REAL(s1)[i1] - REAL(s2)[i2];
-	   }*/
+	   }
 	} else	if(TYPEOF(s1) == INTSXP ) {
 	   mod_iterate(n1, n2, i1, i2) {
 	       REAL(ans)[i] = R_INTEGER(s1, i1) - REAL(s2)[i2];
@@ -908,11 +949,11 @@ static SEXP real_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2)
 	break;
     case TIMESOP:
 	if(TYPEOF(s1) == REALSXP && TYPEOF(s2) == REALSXP) {
-		CXXR::binary_op<double, REALSXP, CXXR::NumericVector<double,REALSXP>::Multiply >(SEXP_downcast<CXXR::RealVector*>(s1),SEXP_downcast<CXXR::RealVector*>(s2),SEXP_downcast<CXXR::RealVector*>(ans));
-	   /*
+		//CXXR::binary_op<double, REALSXP, CXXR::NumericVector<double,REALSXP>::Multiply >(SEXP_downcast<CXXR::RealVector*>(s1),SEXP_downcast<CXXR::RealVector*>(s2),SEXP_downcast<CXXR::RealVector*>(ans));
+	   
 	   mod_iterate(n1, n2, i1, i2) {
 		REAL(ans)[i] = REAL(s1)[i1] * REAL(s2)[i2];
-	    }*/
+	    }
 	} else if(TYPEOF(s1) == INTSXP ) {
 	   mod_iterate(n1, n2, i1, i2) {
 	       REAL(ans)[i] = R_INTEGER(s1, i1) * REAL(s2)[i2];
