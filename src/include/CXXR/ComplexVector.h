@@ -48,6 +48,7 @@
 #ifdef __cplusplus
 
 #include "CXXR/DumbVector.hpp"
+#include "CXXR/NumericVector.hpp"
 #include "CXXR/SEXP_downcast.hpp"
 
 namespace CXXR {

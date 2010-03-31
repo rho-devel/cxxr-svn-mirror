@@ -47,6 +47,7 @@
 #ifdef __cplusplus
 
 #include "CXXR/DumbVector.hpp"
+#include "CXXR/NumericVector.hpp"
 #include "CXXR/SEXP_downcast.hpp"
 
 namespace CXXR {
@@ -59,7 +60,7 @@ namespace CXXR {
 
     /** @brief Vector of real numbers.
      */
-    typedef CXXR::DumbVector<double, REALSXP> RealVector;
+    typedef CXXR::NumericVector<double, REALSXP> RealVector;
 }  // namespace CXXR
 
 extern "C" {

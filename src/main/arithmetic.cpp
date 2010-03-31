@@ -638,8 +638,67 @@ namespace {
 
 #define INTEGER_OVERFLOW_WARNING _("NAs produced by integer overflow")
 #endif
+/*
+template<typedef T, SEXPTYPE ST, class OP>
+inline RObject* CXXR_binary(RObject *s1, RObject *s2)
+{
+	l1 = coerceVector(s1,ST);
+	r1 = coerceVector(s2,ST);
+	preserve = (CXXR::GCNode::expose(
+		    CXXR::binary_op_template<T, ST, OP>(
+		    SEXP_downcast<CXXR::NumericVector<T,ST>*>(l1.get()),
+		    SEXP_downcast<CXXR::NumericVector<T,ST>*>(r1.get())
+		)
+	));
+    	return preserve;	
 
+}*/
+
+static SEXP integer_binary0(ARITHOP_TYPE code, SEXP s1, SEXP s2, SEXP lcall);
 static SEXP integer_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2, SEXP lcall)
+{
+    GCStackRoot<RObject> preserve;
+    switch(code){
+    case PLUSOP:
+    	preserve = CXXR::GCNode::expose(CXXR::binary_op<int, INTSXP, CXXR::NumericVector<int, INTSXP>::Add>(s1,s2));
+	return preserve;
+    break;
+    case MINUSOP:
+    	preserve = CXXR::GCNode::expose(CXXR::binary_op<int, INTSXP, CXXR::NumericVector<int, INTSXP>::Subtract>(s1,s2));
+    	return preserve;	
+	//return integer_binary0(code,s1,s2,lcall);
+    break;
+    case TIMESOP:
+    	preserve = CXXR::GCNode::expose(CXXR::binary_op<int, INTSXP, CXXR::NumericVector<int, INTSXP>::Multiply>(s1,s2));
+	return preserve;
+	//return integer_binary0(code,s1,s2,lcall);
+    break;
+    case DIVOP:
+	preserve = CXXR::GCNode::expose(CXXR::binary_op<double, REALSXP, CXXR::NumericVector<double, REALSXP>::Divide>(s1,s2));
+	return preserve;
+	//return integer_binary0(code,s1,s2,lcall);
+    break;
+    case POWOP:
+    	preserve = CXXR::GCNode::expose(CXXR::binary_op<double, REALSXP, CXXR::NumericVector<double, REALSXP>::Power>(s1,s2));
+        return preserve;
+	//return integer_binary0(code,s1,s2,lcall);
+    break;
+    case MODOP:
+    	preserve = CXXR::GCNode::expose(CXXR::binary_op<int, INTSXP, CXXR::NumericVector<int, INTSXP>::Modulo>(s1,s2));
+	return preserve;
+	//return integer_binary0(code,s1,s2,lcall);
+    break;
+    case IDIVOP:
+    	preserve = CXXR::GCNode::expose(CXXR::binary_op<int, INTSXP, CXXR::NumericVector<int, INTSXP>::IDivide>(s1,s2));
+	return preserve;
+	//return integer_binary0(code,s1,s2,lcall);
+    break;
+    }
+    return NULL;
+}
+
+//The Original.
+static SEXP integer_binary0(ARITHOP_TYPE code, SEXP s1, SEXP s2, SEXP lcall)
 {
     int i, i1, i2, n, n1, n2;
     int x1, x2;
@@ -769,6 +828,7 @@ static SEXP integer_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2, SEXP lcall)
 		INTEGER(ans)[i] = /* till 0.63.2:	x1 % x2 */
 		    (x1 >= 0 && x2 > 0) ? x1 % x2 :
 		    int(myfmod(double(x1), double(x2)));
+		    
 	    }
 	}
 	break;

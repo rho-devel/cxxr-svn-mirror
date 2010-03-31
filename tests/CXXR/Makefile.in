@@ -22,13 +22,13 @@ ifdef valgrind
 valgrind_flags = -DVALGRIND_LEVEL=2
 endif
 
-sources_cxx = ArgMatchertest.cpp Allocatortest.cpp CellPooltest.cpp \
+sources_cxx = Allocatortest.cpp CellPooltest.cpp \
               GCManagertest.cpp HeterogeneousListtest.cpp MemoryBanktest.cpp \
-              RObject_sizer.cpp splice_test.cpp
+              NumericVector.cpp RObject_sizer.cpp splice_test.cpp
 
 depends = $(sources_cxx:.cpp=.d)
 
-tests = CellPooltest CellHeaptest MemoryBanktest Allocatortest \
+tests = CellPooltest MemoryBanktest  \
         HeterogeneousListtest splice_test ArgMatchertest0 ArgMatchertest1 \
 	ArgMatchertest2 ArgMatchertest3 ArgMatchertest4 ArgMatchertest5 \
         ArgMatchertest6 ArgMatchertest7 ArgMatchertest8
@@ -46,7 +46,7 @@ ArgMatchertest : ArgMatchertest.o ../../lib/libR.dylib
 else
 ArgMatchertest : ArgMatchertest.o #../../src/main/libR.a
 	$(LINK.cc) -o $@ $< -L../../lib -L../../src/main -Wl,-rpath,../../lib \
-                   -lR -lRblas -lreadline -ldl $(MAIN_LDFLAGS)
+                   -lR -lRblas -lreadline -ldl -llzma $(MAIN_LDFLAGS)
 endif
 
 # OK match:
