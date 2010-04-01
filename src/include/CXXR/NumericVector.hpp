@@ -283,6 +283,12 @@ namespace CXXR{
 		return ans;
 	}
 
+	//NOTE: things were done this way originally in
+	//arithmetic.cpp
+	//
+	//If USES_TWOS_COMPLEMENT can be discovered by the
+	//configure script, it should be done so, then this define removed.
+	//(and the one in arithmetic.cpp too)
 	#ifndef USES_TWOS_COMPLEMENT
 	#define USES_TWOS_COMPLEMENT
 	#endif

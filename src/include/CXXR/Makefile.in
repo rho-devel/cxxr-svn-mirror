@@ -37,13 +37,13 @@ CXXR_HS = \
   ListVector.h LogicalVector.h PairList.h Promise.h \
   RAllocStack.h RObject.h RawVector.h RealVector.h \
   S4Object.h String.h StringVector.h Symbol.h \
-  UncachedString.h VectorBase.h WeakRef.h uncxxr.h
+  UncachedString.h VectorBase.h WeakRef.h errors.h uncxxr.h
 
 CXXR_HPPS = \
   Allocator.hpp ArgMatcher.hpp CellPool.hpp \
   DumbVector.hpp Frame.hpp GCEdge.hpp GCNode.hpp \
   HandleVector.hpp HeterogeneousList.hpp MemoryBank.hpp \
-  SEXP_downcast.hpp SchwarzCounter.hpp StdFrame.hpp config.hpp
+  NumericVector.hpp SEXP_downcast.hpp SchwarzCounter.hpp StdFrame.hpp config.hpp
 
 CXXR_HEADERS = $(CXXR_HS) $(CXXR_HPPS)
 
