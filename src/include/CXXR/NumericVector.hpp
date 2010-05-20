@@ -13,7 +13,9 @@
 #include "R_ext/Complex.h"
 #include "CXXR/GCStackRoot.h"
 #include "CXXR/errors.h"
-
+#include <limits>
+#include <cmath>
+#include <R_ext/Arith.h>
 
 /*FIXME these following definitions required as: 
  * 	1> there is no coerce.h
@@ -70,17 +72,6 @@ namespace CXXR{
 		 * @return NA value for type T.
 		 */
 		static T NA_value();
-		
-		/**
-		 * @brief All binary arithmetic operation classes should be a subclass of this.
-		 */
-		class Operation{
-		public:
-			static T op(T l, T r);
-			static SEXPTYPE coerceTo(SEXPTYPE l, SEXPTYPE r){
-				return NILSXP;
-			}
-		};
 		
 		/**
 		 * @brief Class \c CXXR::NumericVector::Subtract implements a subtract operation between two values of type T .
@@ -175,7 +166,6 @@ namespace CXXR{
 			static double myfmod(double l, double r);
 		};
 
-//	friend class Power;
 	private:
 		/**
 		 * @brief Private deconstructor; Prevents creation on the stack.
@@ -196,29 +186,7 @@ namespace CXXR{
 		static const int ieee_lw = 0;
 		#endif /* WORDS_BIGENDIAN */
 	};
-	
-	//Note: specilisations defined in NumericVector.cpp
-	
-	//NA_value specilisations.
-	//for integer, return minimum int.
-	template<>
-	int NumericVector<int,INTSXP>::NA_value();
-	//Specilisation for double.
-	template<>
-	double NumericVector<double,REALSXP>::NA_value();
 
-/*
-	//Subtract specilisations.
-	//int
-	template<>
-	int NumericVector<int,INTSXP>::Subtract::op(int l, int r)throw(RangeException);
-	//double
-	template<>
-	double NumericVector<double,REALSXP>::Subtract::op(double l, double r)throw(RangeException);
-	//complex
-	template<>
-	Rcomplex NumericVector<Rcomplex,CPLXSXP>::Subtract::op(Rcomplex l,Rcomplex r)throw(RangeException);
-*/
 
 	/**
 	 * @brief CXXR::binary_op performs binary aritmetic operations
@@ -312,6 +280,118 @@ namespace CXXR{
 		return(double(x) - double(y) == (z));
 	}
 	#endif /* USES_TWOS_COMPLEMENT */
+
+
+//NA_value specilisations.
+//for integer, return minimum int.
+template<>
+int inline NumericVector<int,INTSXP>::NA_value(){
+	return std::numeric_limits<int>::min();
+}
+//Specilisation for double. Note: this creates and returns NaN.
+template<>
+double inline NumericVector<double,REALSXP>::NA_value(){
+	volatile ieee_double x;	//volatile to avoid an obscure bug on some compiler...
+	x.word[ieee_hw] = 0x7ff00000;
+	x.word[ieee_lw] = 1954;
+	return x.value;
+}
+
+//Subtract specilisations.
+//int
+template<>
+int inline NumericVector<int,INTSXP>::Subtract::op(int l, int r)throw(RangeException){
+	if(l==NA_value() || r==NA_value()){
+		return NA_value();
+	}
+	int result = l-r;
+	//if the result has become the internal value used for NA, or a range error has occured, throw the exception.
+	if(result == NumericVector<int,INTSXP>::NA_value() || !goodIDiff(l,r,result)){
+		RangeException rangeException;
+		throw rangeException;
+		//result = NumericVector<int,INTSXP>::NA_value();
+	}
+	return result;
+}
+//double
+template<>
+double inline NumericVector<double,REALSXP>::Subtract::op(double l, double r)throw(RangeException){
+	return (l-r);
+}
+//complex
+template<>
+Rcomplex inline NumericVector<Rcomplex,CPLXSXP>::Subtract::op(Rcomplex l,Rcomplex r)throw(RangeException){
+	l.r -= (r.r);
+	l.i -= (r.i);
+	return l;
+}
+//Add specilisation
+//int
+template<>
+int inline NumericVector<int, INTSXP>::Add::op(int l, int r)throw(RangeException){
+	if(l==NA_value() || r==NA_value()){
+		return NA_value();
+	}
+	int result=(l+r);
+	if(result == NumericVector<int, INTSXP>::NA_value() || !goodISum(l,r,result)){
+		RangeException rangeException;
+		throw rangeException;
+	}
+	return result;
+}
+//double
+template<>
+double inline NumericVector<double,REALSXP>::Add::op(double l, double r)throw(RangeException){
+	return (l+r);
+}
+//complex
+template<>
+Rcomplex inline NumericVector<Rcomplex,CPLXSXP>::Add::op(Rcomplex l, Rcomplex r)throw(RangeException){
+	l.r += r.r;
+	l.i += r.i;
+	return l;
+}
+//Divide specilisations
+//there is no int version.
+//real
+template<>
+double inline NumericVector<double, REALSXP>::Divide::op(double l, double r)throw(RangeException){
+	return l/r;
+}
+//iDiv int
+template<>
+int inline NumericVector<int, INTSXP>::IDivide::op(int l, int r)throw(RangeException){
+	if(l==NA_value() || r==NA_value()){
+		return NA_value();
+	}
+	if(r==0){return 0;}
+	return int(floor(double(l)/double(r)));
+}
+//complex
+// TODO - see complex.c
+
+//multiply
+//int
+template<>
+int inline NumericVector<int, INTSXP>::Multiply::op(int l, int r)throw(RangeException){
+	if(l==NA_value() || r==NA_value()){
+		return NA_value();
+	}
+	int result=l*r;
+	if(result == NumericVector<int, INTSXP>::NA_value() || !goodIProd(l,r,result)){
+		RangeException rangeException;
+		throw rangeException;
+	}
+	return result;
+}
+//double
+template<>
+double inline NumericVector<double, REALSXP>::Multiply::op(double l, double r)throw(RangeException){
+	return l*r;
+}
+
+
+
 }
 extern "C" {
 #endif /* __cplusplus */
