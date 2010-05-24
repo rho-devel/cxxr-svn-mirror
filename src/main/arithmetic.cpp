@@ -666,204 +666,31 @@ static SEXP integer_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2, SEXP lcall)
     case MINUSOP:
     	preserve = CXXR::GCNode::expose(CXXR::binary_op<int, INTSXP, CXXR::NumericVector<int, INTSXP>::Subtract>(s1,s2));
     	return preserve;	
-	//return integer_binary0(code,s1,s2,lcall);
     break;
     case TIMESOP:
     	preserve = CXXR::GCNode::expose(CXXR::binary_op<int, INTSXP, CXXR::NumericVector<int, INTSXP>::Multiply>(s1,s2));
 	return preserve;
-	//return integer_binary0(code,s1,s2,lcall);
     break;
     case DIVOP:
 	preserve = CXXR::GCNode::expose(CXXR::binary_op<double, REALSXP, CXXR::NumericVector<double, REALSXP>::Divide>(s1,s2));
 	return preserve;
-	//return integer_binary0(code,s1,s2,lcall);
     break;
     case POWOP:
     	preserve = CXXR::GCNode::expose(CXXR::binary_op<double, REALSXP, CXXR::NumericVector<double, REALSXP>::Power>(s1,s2));
         return preserve;
-	//return integer_binary0(code,s1,s2,lcall);
     break;
     case MODOP:
     	preserve = CXXR::GCNode::expose(CXXR::binary_op<int, INTSXP, CXXR::NumericVector<int, INTSXP>::Modulo>(s1,s2));
 	return preserve;
-	//return integer_binary0(code,s1,s2,lcall);
     break;
     case IDIVOP:
     	preserve = CXXR::GCNode::expose(CXXR::binary_op<int, INTSXP, CXXR::NumericVector<int, INTSXP>::IDivide>(s1,s2));
 	return preserve;
-	//return integer_binary0(code,s1,s2,lcall);
     break;
     }
     return NULL;
 }
 
-//The Original.
-static SEXP integer_binary0(ARITHOP_TYPE code, SEXP s1, SEXP s2, SEXP lcall)
-{
-    int i, i1, i2, n, n1, n2;
-    int x1, x2;
-    SEXP ans;
-    Rboolean naflag = FALSE;
-
-    n1 = LENGTH(s1);
-    n2 = LENGTH(s2);
-    /* S4-compatibility change: if n1 or n2 is 0, result is of length 0 */
-    if (n1 == 0 || n2 == 0) n = 0; else n = (n1 > n2) ? n1 : n2;
-
-    if (code == DIVOP || code == POWOP)
-	ans = allocVector(REALSXP, n);
-    else
-	ans = allocVector(INTSXP, n);
-    if (n1 == 0 || n2 == 0) return(ans);
-    /* note: code below was surely wrong in DIVOP and POWOP cases,
-       since ans was a REALSXP.
-     */
-
-/*    if (n1 < 1 || n2 < 1) {
-	for (i = 0; i < n; i++)
-	    INTEGER(ans)[i] = NA_INTEGER;
-	return ans;
-	} */
-#ifdef R_MEMORY_PROFILING
-    if (RTRACE(s1) || RTRACE(s2)){
-       if (RTRACE(s1) && RTRACE(s2)){
-	  if (n1>n2)
-	      memtrace_report(s1,ans);
-	  else
-	      memtrace_report(s2, ans);
-       } else if (RTRACE(s1))
-	   memtrace_report(s1,ans);
-       else /* only s2 */
-	   memtrace_report(s2, ans);
-       SET_RTRACE(ans, 1);
-    }
-#endif
-
-    switch (code) {
-    case PLUSOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    x1 = INTEGER(s1)[i1];
-	    x2 = INTEGER(s2)[i2];
-	    if (x1 == NA_INTEGER || x2 == NA_INTEGER)
-		INTEGER(ans)[i] = NA_INTEGER;
-	    else {
-		int val = x1 + x2;
-		if (val != NA_INTEGER && GOODISUM(x1, x2, val))
-		    INTEGER(ans)[i] = val;
-		else {
-		    INTEGER(ans)[i] = NA_INTEGER;
-		    naflag = TRUE;
-		}
-	    }
-	}
-	if (naflag)
-	    warningcall(lcall, INTEGER_OVERFLOW_WARNING);
-	break;
-    case MINUSOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    x1 = INTEGER(s1)[i1];
-	    x2 = INTEGER(s2)[i2];
-	    if (x1 == NA_INTEGER || x2 == NA_INTEGER)
-		INTEGER(ans)[i] = NA_INTEGER;
-	    else {
-		int val = x1 - x2;
-		if (val != NA_INTEGER && GOODIDIFF(x1, x2, val))
-		    INTEGER(ans)[i] = val;
-		else {
-		    naflag = TRUE;
-		    INTEGER(ans)[i] = NA_INTEGER;
-		}
-	    }
-	}
-	if (naflag)
-	    warningcall(lcall, INTEGER_OVERFLOW_WARNING);
-	break;
-    case TIMESOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    x1 = INTEGER(s1)[i1];
-	    x2 = INTEGER(s2)[i2];
-	    if (x1 == NA_INTEGER || x2 == NA_INTEGER)
-		INTEGER(ans)[i] = NA_INTEGER;
-	    else {
-		int val = x1 * x2;
-		if (val != NA_INTEGER && GOODIPROD(x1, x2, val))
-		    INTEGER(ans)[i] = val;
-		else {
-		    naflag = TRUE;
-		    INTEGER(ans)[i] = NA_INTEGER;
-		}
-	    }
-	}
-	if (naflag)
-	    warningcall(lcall, INTEGER_OVERFLOW_WARNING);
-	break;
-    case DIVOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    x1 = INTEGER(s1)[i1];
-	    x2 = INTEGER(s2)[i2];
-	    if (x1 == NA_INTEGER || x2 == NA_INTEGER)
-		    REAL(ans)[i] = NA_REAL;
-		else
-		    REAL(ans)[i] = double( x1) / double( x2);
-	}
-	break;
-    case POWOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    x1 = INTEGER(s1)[i1];
-	    x2 = INTEGER(s2)[i2];
-	    if (x1 == NA_INTEGER || x2 == NA_INTEGER)
-		REAL(ans)[i] = NA_REAL;
-	    else {
-		REAL(ans)[i] = R_pow(double( x1), double( x2));
-	    }
-	}
-	break;
-    case MODOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    x1 = INTEGER(s1)[i1];
-	    x2 = INTEGER(s2)[i2];
-	    if (x1 == NA_INTEGER || x2 == NA_INTEGER || x2 == 0)
-		INTEGER(ans)[i] = NA_INTEGER;
-	    else {
-		INTEGER(ans)[i] = /* till 0.63.2:	x1 % x2 */
-		    (x1 >= 0 && x2 > 0) ? x1 % x2 :
-		    int(myfmod(double(x1), double(x2)));
-		    
-	    }
-	}
-	break;
-    case IDIVOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    x1 = INTEGER(s1)[i1];
-	    x2 = INTEGER(s2)[i2];
-	    if (x1 == NA_INTEGER || x2 == NA_INTEGER)
-		INTEGER(ans)[i] = NA_INTEGER;
-	    else if (x2 == 0)
-		INTEGER(ans)[i] = 0;
-	    else
-	        INTEGER(ans)[i] = int(floor(double(x1) / double(x2)));
-	}
-	break;
-    }
-
-
-    /* quick return if there are no attributes */
-    if (ATTRIB(s1) == R_NilValue && ATTRIB(s2) == R_NilValue)
-	return ans;
-
-    /* Copy attributes from longer argument. */
-
-    if (n1 > n2)
-	copyMostAttrib(s1, ans);
-    else if (n1 == n2) {
-	copyMostAttrib(s2, ans);
-	copyMostAttrib(s1, ans);
-    }
-    else
-	copyMostAttrib(s2, ans);
-
-    return ans;
-}
 
 namespace {
     inline double R_INTEGER(SEXP robj, unsigned int i)
@@ -872,8 +699,47 @@ namespace {
 		      == NA_INTEGER ? NA_REAL : INTEGER(robj)[i]);
     }
 }
-
+static SEXP real_binary0(ARITHOP_TYPE code, SEXP s1, SEXP s2);
 static SEXP real_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2)
+{
+    GCStackRoot<RObject> preserve;
+    switch(code){
+    case PLUSOP:
+    	preserve = CXXR::GCNode::expose(CXXR::binary_op<double, REALSXP, CXXR::NumericVector<double, REALSXP>::Add>(s1,s2));
+	return preserve;
+    break;
+    case MINUSOP:
+    	preserve = CXXR::GCNode::expose(CXXR::binary_op<double, REALSXP, CXXR::NumericVector<double, REALSXP>::Subtract>(s1,s2));
+    	return preserve;	
+    break;
+    case TIMESOP:
+    	preserve = CXXR::GCNode::expose(CXXR::binary_op<double, REALSXP, CXXR::NumericVector<double, REALSXP>::Multiply>(s1,s2));
+	return preserve;
+    break;
+    case DIVOP:
+	preserve = CXXR::GCNode::expose(CXXR::binary_op<double, REALSXP, CXXR::NumericVector<double, REALSXP>::Divide>(s1,s2));
+	return preserve;
+    break;
+    case POWOP:
+    	preserve = CXXR::GCNode::expose(CXXR::binary_op<double, REALSXP, CXXR::NumericVector<double, REALSXP>::Power>(s1,s2));
+        return preserve;
+    break;
+    case MODOP:
+    	return real_binary0(code, s1, s2);
+	//preserve = CXXR::GCNode::expose(CXXR::binary_op<double, REALSXP, CXXR::NumericVector<double, REALSXP>::Modulo>(s1,s2));
+	//return preserve;
+    break;
+    case IDIVOP:
+    	return real_binary0(code, s1, s2);
+	//preserve = CXXR::GCNode::expose(CXXR::binary_op<int, INTSXP, CXXR::NumericVector<int, INTSXP>::IDivide>(s1,s2));
+	//return preserve;
+    break;
+    }
+    return NULL;
+}
+
+
+static SEXP real_binary0(ARITHOP_TYPE code, SEXP s1, SEXP s2)
 {
     int i, i1, i2, n, n1, n2;
     SEXP ans;

@@ -209,28 +209,15 @@ namespace CXXR{
 		}
 		GCStackRoot<NumericVector<T,ST> > ans(GCNode::expose(new NumericVector<T,ST>(ansSize)));
 		bool overflowed=false;
-		//either r will need to repeat...
-		if(ansSize==l->size()){
-			for(unsigned int i=0, i2=0; i<ansSize; i2=(++i2==r->size())?0:i2, ++i){
-				try{
-					(*ans)[i]=operation::op((*l)[i],(*r)[i2]);
-				}catch(...){
-					overflowed = true;
-					(*ans)[i]=NumericVector<T,ST>::NA_value();
-				}
-			}
-		}else{ //...or l will. Note: this is almost code duplication, but the alternative is to use a macro. (or a less efficient loop.)
-			// could also use a sub-templated function.
-			for(unsigned int i=0,i2=0; i<ansSize; i2=(++i2==l->size())?0:i2, ++i){
-				try{
-					(*ans)[i]=operation::op((*l)[i2],(*r)[i]);
-				}catch(...){
-					overflowed=true;
-					(*ans)[i]=NumericVector<T,ST>::NA_value();
-				}
+		// binary operation main loop
+		for(unsigned int i=0; i< ansSize; i++){
+			try{
+				(*ans)[i]=operation::op((*l)[ i % l->size() ],(*r)[ i % r->size() ]);
+			}catch(...){
+				overflowed = true;
+				(*ans)[i]=NumericVector<T,ST>::NA_value();
 			}
 		}
-		
 		//warn about overflow error in the usual way.
 		if(overflowed){
 			Rf_warningcall(0, _("NAs produced by integer overflow"));
@@ -250,6 +237,7 @@ namespace CXXR{
 		}
 		return ans;
 	}
+	
 
 	//NOTE: things were done this way originally in
 	//arithmetic.cpp
