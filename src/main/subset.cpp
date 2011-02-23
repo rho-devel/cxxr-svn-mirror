@@ -364,51 +364,49 @@ static SEXP MatrixSubset(SEXP x, SEXP s, SEXP call, int drop)
 
 static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop)
 {
-    int i, j, k, ii, jj, n;
-    SEXPTYPE mode;
-    int **subs, *indx, *offset, *bound;
-    SEXP dimnames, dimnamesnames, p, q, r, result, xdims;
-    const void *vmaxsave;
+    SEXPTYPE mode = TYPEOF(x);
+    SEXP xdims = getAttrib(x, R_DimSymbol);
+    int k = length(xdims);
 
-    mode = TYPEOF(x);
-    xdims = getAttrib(x, R_DimSymbol);
-    k = length(xdims);
-
-    vmaxsave = vmaxget();
-    subs = static_cast<int**>(CXXR_alloc(k, sizeof(int*)));
-    indx = static_cast<int*>(CXXR_alloc(k, sizeof(int)));
-    offset = static_cast<int*>(CXXR_alloc(k, sizeof(int)));
-    bound = static_cast<int*>(CXXR_alloc(k, sizeof(int)));
+    const void* vmaxsave = vmaxget();
+    int** subs = static_cast<int**>(CXXR_alloc(k, sizeof(int*)));
+    int* indx = static_cast<int*>(CXXR_alloc(k, sizeof(int)));
+    int* offset = static_cast<int*>(CXXR_alloc(k, sizeof(int)));
+    int* bound = static_cast<int*>(CXXR_alloc(k, sizeof(int)));
 
     /* Construct a vector to contain the returned values. */
     /* Store its extents. */
 
-    n = 1;
-    r = s;
-    for (i = 0; i < k; i++) {
-	SETCAR(r, arraySubscript(i, CAR(r), xdims, getAttrib,
-				 (STRING_ELT), x));
-	bound[i] = LENGTH(CAR(r));
-	n *= bound[i];
-	r = CDR(r);
+    int n = 1;
+    {
+	SEXP r = s;
+	for (int i = 0; i < k; i++) {
+	    SETCAR(r, arraySubscript(i, CAR(r), xdims, getAttrib,
+				     (STRING_ELT), x));
+	    bound[i] = LENGTH(CAR(r));
+	    n *= bound[i];
+	    r = CDR(r);
+	}
     }
-    PROTECT(result = allocVector(mode, n));
-    r = s;
-    for (i = 0; i < k; i++) {
-	indx[i] = 0;
-	subs[i] = INTEGER(CAR(r));
-	r = CDR(r);
+    GCStackRoot<> result(allocVector(mode, n));
+    {
+	SEXP r = s;
+	for (int i = 0; i < k; i++) {
+	    indx[i] = 0;
+	    subs[i] = INTEGER(CAR(r));
+	    r = CDR(r);
+	}
     }
     offset[0] = 1;
-    for (i = 1; i < k; i++)
+    for (int i = 1; i < k; i++)
 	offset[i] = offset[i - 1] * INTEGER(xdims)[i - 1];
 
     /* Transfer the subset elements from "x" to "a". */
 
-    for (i = 0; i < n; i++) {
-	ii = 0;
-	for (j = 0; j < k; j++) {
-	    jj = subs[j][indx[j]];
+    for (int i = 0; i < n; i++) {
+	int ii = 0;
+	for (int j = 0; j < k; j++) {
+	    int jj = subs[j][indx[j]];
 	    if (jj == NA_INTEGER) {
 		ii = NA_INTEGER;
 		goto assignLoop;
@@ -470,7 +468,7 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop)
 	    break;
 	}
 	if (n > 1) {
-	    j = 0;
+	    int j = 0;
 	    while (++indx[j] >= bound[j]) {
 		indx[j] = 0;
 		j = (j + 1) % k;
@@ -478,42 +476,41 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop)
 	}
     }
 
-    PROTECT(xdims = allocVector(INTSXP, k));
-    for(i = 0 ; i < k ; i++)
-	INTEGER(xdims)[i] = bound[i];
-    setAttrib(result, R_DimSymbol, xdims);
-    UNPROTECT(1);
+    {
+	GCStackRoot<> newxdims(allocVector(INTSXP, k));
+	for (int i = 0 ; i < k ; i++)
+	    INTEGER(newxdims)[i] = bound[i];
+	setAttrib(result, R_DimSymbol, newxdims);
+    }
 
     /* The array elements have been transferred. */
     /* Now we need to transfer the attributes. */
     /* Most importantly, we need to subset the */
     /* dimnames of the returned value. */
 
-    dimnames = getAttrib(x, R_DimNamesSymbol);
-    dimnamesnames = getAttrib(dimnames, R_NamesSymbol);
+    SEXP dimnames = getAttrib(x, R_DimNamesSymbol);
     if (dimnames != R_NilValue) {
-	/*SEXP xdims;
-	int */ j = 0;
-	PROTECT(xdims = allocVector(VECSXP, k));
+	GCStackRoot<> newxdims(allocVector(VECSXP, k));
+	int j = 0;
 	if (TYPEOF(dimnames) == VECSXP) {
-	    r = s;
-	    for (i = 0; i < k ; i++) {
+	    SEXP r = s;
+	    for (int i = 0; i < k ; i++) {
 		if (bound[i] > 0) {
-		  SET_VECTOR_ELT(xdims, j++,
+		  SET_VECTOR_ELT(newxdims, j++,
 			ExtractSubset(VECTOR_ELT(dimnames, i),
 				      allocVector(STRSXP, bound[i]),
 				      CAR(r), call));
 		} else { /* 0-length dims have NULL dimnames */
-		    SET_VECTOR_ELT(xdims, j++, R_NilValue);
+		    SET_VECTOR_ELT(newxdims, j++, R_NilValue);
 		}
 		r = CDR(r);
 	    }
 	}
 	else {
-	    p = dimnames;
-	    q = xdims;
-	    r = s;
-	    for(i = 0 ; i < k; i++) {
+	    SEXP p = dimnames;
+	    SEXP q = newxdims;
+	    SEXP r = s;
+	    for(int i = 0 ; i < k; i++) {
 		SETCAR(q, allocVector(STRSXP, bound[i]));
 		SETCAR(q, ExtractSubset(CAR(p), CAR(q), CAR(r), call));
 		p = CDR(p);
@@ -521,9 +518,9 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop)
 		r = CDR(r);
 	    }
 	}
-	setAttrib(xdims, R_NamesSymbol, dimnamesnames);
-	setAttrib(result, R_DimNamesSymbol, xdims);
-	UNPROTECT(1);
+	SEXP dimnamesnames = getAttrib(dimnames, R_NamesSymbol);
+	setAttrib(newxdims, R_NamesSymbol, dimnamesnames);
+	setAttrib(result, R_DimNamesSymbol, newxdims);
     }
     /* This was removed for matrices in 1998
        copyMostAttrib(x, result); */
@@ -531,7 +528,6 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop)
     vmaxset(vmaxsave);
     if (drop)
 	DropDims(result);
-    UNPROTECT(1);
     return result;
 }
 
