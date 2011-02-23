@@ -229,42 +229,35 @@ static SEXP VectorSubset(SEXP x, SEXP sarg, SEXP call)
 
 static SEXP MatrixSubset(SEXP x, SEXP s, SEXP call, int drop)
 {
-    SEXP attr, result, sr, sc, dim;
-    int nr, nc, nrs, ncs;
-    int i, j, ii, jj, ij, iijj;
-
-    nr = nrows(x);
-    nc = ncols(x);
+    int nr = nrows(x);
+    int nc = ncols(x);
 
     /* Note that "s" is protected on entry. */
     /* The following ensures that pointers remain protected. */
-    dim = getAttrib(x, R_DimSymbol);
+    SEXP dim = getAttrib(x, R_DimSymbol);
 
-    sr = SETCAR(s, arraySubscript(0, CAR(s), dim, getAttrib,
-				  (STRING_ELT), x));
-    sc = SETCADR(s, arraySubscript(1, CADR(s), dim, getAttrib,
-				   (STRING_ELT), x));
-    nrs = LENGTH(sr);
-    ncs = LENGTH(sc);
-    PROTECT(sr);
-    PROTECT(sc);
-    result = allocVector(TYPEOF(x), nrs*ncs);
-    PROTECT(result);
-    for (i = 0; i < nrs; i++) {
-	ii = INTEGER(sr)[i];
+    GCStackRoot<> sr(SETCAR(s, arraySubscript(0, CAR(s), dim, getAttrib,
+					      (STRING_ELT), x)));
+    GCStackRoot<> sc(SETCADR(s, arraySubscript(1, CADR(s), dim, getAttrib,
+					       (STRING_ELT), x)));
+    int nrs = LENGTH(sr);
+    int ncs = LENGTH(sc);
+    GCStackRoot<> result(allocVector(TYPEOF(x), nrs*ncs));
+    for (int i = 0; i < nrs; i++) {
+	int ii = INTEGER(sr)[i];
 	if (ii != NA_INTEGER) {
 	    if (ii < 1 || ii > nr)
 		errorcall(call, R_MSG_subs_o_b);
 	    ii--;
 	}
-	for (j = 0; j < ncs; j++) {
-	    jj = INTEGER(sc)[j];
+	for (int j = 0; j < ncs; j++) {
+	    int jj = INTEGER(sc)[j];
 	    if (jj != NA_INTEGER) {
 		if (jj < 1 || jj > nc)
 		    errorcall(call, R_MSG_subs_o_b);
 		jj--;
 	    }
-	    ij = i + j * nrs;
+	    int ij = i + j * nrs;
 	    if (ii == NA_INTEGER || jj == NA_INTEGER) {
 		switch (TYPEOF(x)) {
 		case LGLSXP:
@@ -293,7 +286,7 @@ static SEXP MatrixSubset(SEXP x, SEXP s, SEXP call, int drop)
 		}
 	    }
 	    else {
-		iijj = ii + jj * nr;
+		int iijj = ii + jj * nr;
 		switch (TYPEOF(x)) {
 		case LGLSXP:
 		    LOGICAL(result)[ij] = LOGICAL(x)[iijj];
@@ -324,11 +317,10 @@ static SEXP MatrixSubset(SEXP x, SEXP s, SEXP call, int drop)
 	}
     }
     if(nrs >= 0 && ncs >= 0) {
-	PROTECT(attr = allocVector(INTSXP, 2));
+	GCStackRoot<> attr(allocVector(INTSXP, 2));
 	INTEGER(attr)[0] = nrs;
 	INTEGER(attr)[1] = ncs;
 	setAttrib(result, R_DimSymbol, attr);
-	UNPROTECT(1);
     }
 
     /* The matrix elements have been transferred.  Now we need to */
@@ -336,11 +328,10 @@ static SEXP MatrixSubset(SEXP x, SEXP s, SEXP call, int drop)
     /* the dimnames of the returned value. */
 
     if (nrs >= 0 && ncs >= 0) {
-	SEXP dimnames, dimnamesnames, newdimnames;
-	dimnames = getAttrib(x, R_DimNamesSymbol);
-	dimnamesnames = getAttrib(dimnames, R_NamesSymbol);
+	SEXP dimnames = getAttrib(x, R_DimNamesSymbol);
 	if (!isNull(dimnames)) {
-	    PROTECT(newdimnames = allocVector(VECSXP, 2));
+	    GCStackRoot<> newdimnames(allocVector(VECSXP, 2));
+	    SEXP dimnamesnames = getAttrib(dimnames, R_NamesSymbol);
 	    if (TYPEOF(dimnames) == VECSXP) {
 		GCStackRoot<> rv(allocVector(STRSXP, nrs));
 		SET_VECTOR_ELT(newdimnames, 0,
@@ -361,14 +352,12 @@ static SEXP MatrixSubset(SEXP x, SEXP s, SEXP call, int drop)
 	    }
 	    setAttrib(newdimnames, R_NamesSymbol, dimnamesnames);
 	    setAttrib(result, R_DimNamesSymbol, newdimnames);
-	    UNPROTECT(1);
 	}
     }
     /*  Probably should not do this:
     copyMostAttrib(x, result); */
     if (drop)
 	DropDims(result);
-    UNPROTECT(3);
     return result;
 }
 
