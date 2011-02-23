@@ -70,18 +70,16 @@ using namespace CXXR;
 
 static SEXP ExtractSubset(SEXP x, SEXP result, SEXP indx, SEXP call)
 {
-    int i, ii, n, nx, mode;
-    SEXP tmp, tmp2;
-    mode = TYPEOF(x);
-    n = LENGTH(indx);
-    nx = length(x);
-    tmp = result;
+    int mode = TYPEOF(x);
+    int n = LENGTH(indx);
+    int nx = length(x);
+    SEXP tmp = result;
 
     if (x == R_NilValue)
 	return x;
 
-    for (i = 0; i < n; i++) {
-	ii = INTEGER(indx)[i];
+    for (int i = 0; i < n; i++) {
+	int ii = INTEGER(indx)[i];
 	if (ii != NA_INTEGER)
 	    ii--;
 	switch (mode) {
@@ -134,7 +132,7 @@ static SEXP ExtractSubset(SEXP x, SEXP result, SEXP indx, SEXP call)
 	    /* cannot happen: pairlists are coerced to lists */
 	case LANGSXP:
 	    if (0 <= ii && ii < nx && ii != NA_INTEGER) {
-		tmp2 = nthcdr(x, ii);
+		SEXP tmp2 = nthcdr(x, ii);
 		SETCAR(tmp, CAR(tmp2));
 		SET_TAG(tmp, TAG(tmp2));
 	    }
@@ -158,51 +156,46 @@ static SEXP ExtractSubset(SEXP x, SEXP result, SEXP indx, SEXP call)
 
 /* This is for all cases with a single index, including 1D arrays and
    matrix indexing of arrays */
-static SEXP VectorSubset(SEXP x, SEXP s, SEXP call)
+static SEXP VectorSubset(SEXP x, SEXP sarg, SEXP call)
 {
-    int n, stretch = 1;
-    SEXPTYPE mode;
-    SEXP indx, result, attrib, nattrib;
+    GCStackRoot<> s(sarg);
 
     if (s == R_MissingArg) return duplicate(x);
 
-    PROTECT(s);
-    attrib = getAttrib(x, R_DimSymbol);
-
     /* Check to see if we have special matrix subscripting. */
     /* If we do, make a real subscript vector and protect it. */
-
-    if (isMatrix(s) && isArray(x) && ncols(s) == length(attrib)) {
-        if (isString(s)) {
-            s = strmat2intmat(s, GetArrayDimnames(x), call);
-            UNPROTECT(1);
-            PROTECT(s);
-        }
-        if (isInteger(s) || isReal(s)) {
-	    s = mat2indsub(attrib, s, call);
-	    UNPROTECT(1);
-	    PROTECT(s);
+    {
+	SEXP attrib = getAttrib(x, R_DimSymbol);	
+	if (isMatrix(s) && isArray(x) && ncols(s) == length(attrib)) {
+	    if (isString(s)) {
+		s = strmat2intmat(s, GetArrayDimnames(x), call);
+	    }
+	    if (isInteger(s) || isReal(s)) {
+		s = mat2indsub(attrib, s, call);
+	    }
 	}
     }
 
     /* Convert to a vector of integer subscripts */
     /* in the range 1:length(x). */
 
-    PROTECT(indx = makeSubscript(x, s, &stretch, call));
-    n = LENGTH(indx);
+    int stretch = 1;
+    GCStackRoot<> indx(makeSubscript(x, s, &stretch, call));
+    int n = LENGTH(indx);
 
     /* Allocate the result. */
 
-    mode = TYPEOF(x);
+    SEXPTYPE mode = TYPEOF(x);
     /* No protection needed as ExtractSubset does not allocate */
-    result = allocVector(mode, n);
+    GCStackRoot<> result(allocVector(mode, n));
     if (mode == VECSXP || mode == EXPRSXP)
 	/* we do not duplicate the values when extracting the subset,
 	   so to be conservative mark the result as NAMED = 2 */
 	SET_NAMED(result, 2);
 
-    PROTECT(result = ExtractSubset(x, result, indx, call));
+    result = ExtractSubset(x, result, indx, call);
     if (result != R_NilValue) {
+	SEXP attrib;
 	if (
 	    ((attrib = getAttrib(x, R_NamesSymbol)) != R_NilValue) ||
 	    ( /* here we might have an array.  Use row names if 1D */
@@ -212,19 +205,15 @@ static SEXP VectorSubset(SEXP x, SEXP s, SEXP call)
 	     && (attrib = GetRowNames(attrib)) != R_NilValue
 	     )
 	    ) {
-	    nattrib = allocVector(TYPEOF(attrib), n);
-	    PROTECT(nattrib); /* seems unneeded */
+	    GCStackRoot<> nattrib(allocVector(TYPEOF(attrib), n)); /* prot seems unneeded */
 	    nattrib = ExtractSubset(attrib, nattrib, indx, call);
 	    setAttrib(result, R_NamesSymbol, nattrib);
-	    UNPROTECT(1);
 	}
 	if ((attrib = getAttrib(x, R_SrcrefSymbol)) != R_NilValue &&
 	    TYPEOF(attrib) == VECSXP) {
-	    nattrib = allocVector(VECSXP, n);
-	    PROTECT(nattrib); /* seems unneeded */
+	    GCStackRoot<> nattrib(allocVector(VECSXP, n)); /* prot seems unneeded */
 	    nattrib = ExtractSubset(attrib, nattrib, indx, call);
 	    setAttrib(result, R_SrcrefSymbol, nattrib);
-	    UNPROTECT(1);
 	}
 	/* FIXME:  this is wrong, because the slots are gone, so result is an invalid object of the S4 class! JMC 3/3/09 */
 #ifdef _S4_subsettable
@@ -234,7 +223,6 @@ static SEXP VectorSubset(SEXP x, SEXP s, SEXP call)
 	}
 #endif
     }
-    UNPROTECT(3);
     return result;
 }
 
@@ -634,18 +622,17 @@ SEXP attribute_hidden do_subset(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 SEXP attribute_hidden do_subset_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP ans, ax, px, x, subs;
-    int drop, i, nsubs, type;
+    GCStackRoot<> argsrt(args);
 
     /* By default we drop extents of length 1 */
 
     /* Handle case of extracting a single element from a simple vector
        directly to improve speed for this simple case. */
     if (CDDR(args) == R_NilValue) {
-	int i;
 	SEXP x = CAR(args);
 	SEXP s = CADR(args);
 	if (ATTRIB(x) == R_NilValue && ATTRIB(s) == R_NilValue) {
+	    int i;
 	    switch (TYPEOF(x)) {
 	    case REALSXP:
 		switch (TYPEOF(s)) {
@@ -670,76 +657,70 @@ SEXP attribute_hidden do_subset_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	}
     }
 
-    PROTECT(args);
-
-    drop = 1;
+    int drop = 1;
     ExtractDropArg(args, &drop);
-    x = CAR(args);
+    SEXP x = CAR(args);
 
     /* This was intended for compatibility with S, */
     /* but in fact S does not do this. */
     /* FIXME: replace the test by isNull ... ? */
 
     if (x == R_NilValue) {
-	UNPROTECT(1);
 	return x;
     }
-    subs = CDR(args);
-    nsubs = length(subs);
-    type = TYPEOF(x);
+    SEXP subs = CDR(args);
+    int nsubs = length(subs);
 
     /* Here coerce pair-based objects into generic vectors. */
     /* All subsetting takes place on the generic vector form. */
 
-    ax = x;
-    if (isVector(x))
-	PROTECT(ax);
-    else if (isPairList(x)) {
+    GCStackRoot<> ax(x);
+    if (isPairList(x)) {
 	SEXP dim = getAttrib(x, R_DimSymbol);
 	int ndim = length(dim);
 	if (ndim > 1) {
-	    PROTECT(ax = allocArray(VECSXP, dim));
+	    ax = allocArray(VECSXP, dim);
 	    setAttrib(ax, R_DimNamesSymbol, getAttrib(x, R_DimNamesSymbol));
 	    setAttrib(ax, R_NamesSymbol, getAttrib(x, R_DimNamesSymbol));
 	}
 	else {
-	    PROTECT(ax = allocVector(VECSXP, length(x)));
+	    ax = allocVector(VECSXP, length(x));
 	    setAttrib(ax, R_NamesSymbol, getAttrib(x, R_NamesSymbol));
 	}
-	for(px = x, i = 0 ; px != R_NilValue ; px = CDR(px))
+	int i = 0;
+	for (SEXP px = x; px != R_NilValue; px = CDR(px))
 	    SET_VECTOR_ELT(ax, i++, CAR(px));
     }
-    else errorcall(call, R_MSG_ob_nonsub, type2char(TYPEOF(x)));
+    else if (!isVector(x))
+	errorcall(call, R_MSG_ob_nonsub, type2char(TYPEOF(x)));
 
     /* This is the actual subsetting code. */
     /* The separation of arrays and matrices is purely an optimization. */
 
+    GCStackRoot<> ans;
     if(nsubs < 2) {
 	SEXP dim = getAttrib(x, R_DimSymbol);
 	int ndim = length(dim);
-	PROTECT(ans = VectorSubset(ax, (nsubs == 1 ? CAR(subs) : R_MissingArg),
-				   call));
+	ans = VectorSubset(ax, (nsubs == 1 ? CAR(subs) : R_MissingArg), call);
 	/* one-dimensional arrays went through here, and they should
 	   have their dimensions dropped only if the result has
 	   length one and drop == TRUE
 	*/
 	if(ndim == 1) {
-	    SEXP attr, attrib, nattrib;
 	    int len = length(ans);
 
 	    if(!drop || len > 1) {
-		PROTECT(attr = allocVector(INTSXP, 1));
+		GCStackRoot<> attr(allocVector(INTSXP, 1));
+		SEXP attrib = getAttrib(x, R_DimNamesSymbol);
 		INTEGER(attr)[0] = length(ans);
 		setAttrib(ans, R_DimSymbol, attr);
-		UNPROTECT(1);
-		if((attrib = getAttrib(x, R_DimNamesSymbol)) != R_NilValue) {
+		if(attrib) {
 		    /* reinstate dimnames, include names of dimnames */
-		    PROTECT(nattrib = duplicate(attrib));
+		    GCStackRoot<> nattrib(duplicate(attrib));
 		    SET_VECTOR_ELT(nattrib, 0,
 				   getAttrib(ans, R_NamesSymbol));
 		    setAttrib(ans, R_DimNamesSymbol, nattrib);
 		    setAttrib(ans, R_NamesSymbol, R_NilValue);
-		    UNPROTECT(1);
 		}
 	    }
 	}
@@ -750,13 +731,12 @@ SEXP attribute_hidden do_subset_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    ans = MatrixSubset(ax, subs, call, drop);
 	else
 	    ans = ArraySubset(ax, subs, call, drop);
-	PROTECT(ans);
     }
 
     /* Note: we do not coerce back to pair-based lists. */
     /* They are "defunct" in this version of R. */
 
-    if (type == LANGSXP) {
+    if (TYPEOF(x) == LANGSXP) {
 	ax = ans;
 	{
 	    ans = 0;
@@ -765,9 +745,9 @@ SEXP attribute_hidden do_subset_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 		GCStackRoot<PairList> tl(PairList::make(len - 1));
 		ans = CXXR_NEW(Expression(0, tl));
 	    }
-	    PROTECT(ans);
 	}
-	for(px = ans, i = 0 ; px != R_NilValue ; px = CDR(px))
+	int i = 0;
+	for (SEXP px = ans; px != R_NilValue ; px = CDR(px))
 	    SETCAR(px, VECTOR_ELT(ax, i++));
 	if (ans)  // 2007/07/23 arr
 	    {
@@ -778,9 +758,6 @@ SEXP attribute_hidden do_subset_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 		SET_NAMED(ans, NAMED(ax)); /* PR#7924 */
 	    }
     }
-    else {
-	PROTECT(ans);
-    }
     if (ATTRIB(ans) != R_NilValue) { /* remove probably erroneous attr's */
 	setAttrib(ans, R_TspSymbol, R_NilValue);
 #ifdef _S4_subsettable
@@ -788,7 +765,6 @@ SEXP attribute_hidden do_subset_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 #endif
 	    setAttrib(ans, R_ClassSymbol, R_NilValue);
     }
-    UNPROTECT(4);
     return ans;
 }
 
