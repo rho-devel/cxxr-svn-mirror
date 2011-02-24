@@ -143,6 +143,16 @@ namespace CXXR {
 	    return m_data.end();
 	}
 
+	/** @brief Designate an element of the vector to be NA.
+	 *
+	 * @param index Index  (counting from zero) of the element to
+	 *          be designated NA.  No bounds checking is applied.
+	 */
+	inline void setNA(unsigned int index)
+	{
+	    (*this)[index] = 0;
+	}
+
 	/** @brief Name by which this type is known in R.
 	 *
 	 * @return the name by which this type is known in R.

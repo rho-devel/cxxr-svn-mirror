@@ -16,9 +16,6 @@
 
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1999-2006   The R Development Core Team.
- *  Andrew Runnalls (C) 2008
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -35,63 +32,33 @@
  *  http://www.r-project.org/Licenses/
  */
 
-/** @file RawVector.h
- * @brief Class CXXR::RawVector and associated C interface.
+/** @file subset.hpp
+ *
+ * @brief Functions to support subsetting of R vectors, matrices and
+ * arrays.
  */
 
-#ifndef RAWVECTOR_H
-#define RAWVECTOR_H
-
-#include "CXXR/VectorBase.h"
-
-typedef unsigned char Rbyte;
-
-#ifdef __cplusplus
-
-#include "CXXR/DumbVector.hpp"
-#include "CXXR/SEXP_downcast.hpp"
+#ifndef SUBSET_HPP
+#define SUBSET_HPP 1
 
 namespace CXXR {
-    // Template specializations:
-    template <>
-    inline void DumbVector<Rbyte, RAWSXP>::setNA(unsigned int index)
+    template <class V>
+    V* subset(const V* v, const IntVector* indices)
     {
-	(*this)[index] = Rbyte(0);
+	size_t ni = indices->size();
+	GCStackRoot<V> ans(CXXR_NEW(V(ni)));
+	size_t vsize = v->size();
+	// ***** FIXME *****  Currently needed because Handle's
+	// assignment operator takes a non-const RHS:
+	V* vnc = const_cast<V*>(v);
+	for (unsigned int i = 0; i < ni; ++i) {
+	    int ii = (*indices)[i];
+	    if (ii == NA_INTEGER || ii <= 0 || ii > int(vsize))
+		ans->setNA(i);
+	    else (*ans)[i] = (*vnc)[ii - 1];
+	}
+	return ans;
     }
-
-    template <>
-    inline const char* DumbVector<Rbyte, RAWSXP>::staticTypeName()
-    {
-	return "raw";
-    }
-
-    /** @brief Vector of 'raw bytes'.
-     */
-    typedef CXXR::DumbVector<Rbyte, RAWSXP> RawVector;
-}  // namespace CXXR
-
-extern "C" {
-#endif /* __cplusplus */
-
-/**
- * @param x Pointer to a CXXR::RawVector (i.e. a RAWSXP).  An error is
- *          generated if \a x is not a non-null pointer to a
- *          CXXR::RawVector .
- *
- * @return Pointer to element 0 of \a x .
- */
-#ifndef __cplusplus
-Rbyte *RAW(SEXP x);
-#else
-inline Rbyte *RAW(SEXP x)
-{
-    using namespace CXXR;
-    return &(*SEXP_downcast<RawVector*>(x, false))[0];
 }
-#endif
 
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* RAWVECTOR_H */
+#endif  // SUBSET_HPP

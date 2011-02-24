@@ -46,11 +46,18 @@
 
 #ifdef __cplusplus
 
+#include "R_ext/Arith.h"
 #include "CXXR/DumbVector.hpp"
 #include "CXXR/SEXP_downcast.hpp"
 
 namespace CXXR {
-    // Template specialization:
+    // Template specializations:
+    template <>
+    inline void DumbVector<double, REALSXP>::setNA(unsigned int index)
+    {
+	(*this)[index] = NA_REAL;
+    }
+
     template <>
     inline const char* DumbVector<double, REALSXP>::staticTypeName()
     {

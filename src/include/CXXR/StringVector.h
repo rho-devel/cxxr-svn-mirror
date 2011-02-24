@@ -54,7 +54,13 @@
 #include "CXXR/SEXP_downcast.hpp"
 
 namespace CXXR {
-    // Template specialization:
+    // Template specializations:
+    template <>
+    inline void HandleVector<String, STRSXP>::setNA(unsigned int index)
+    {
+	(*this)[index] = String::NA();
+    }
+
     template <>
     inline const char* HandleVector<String, STRSXP>::staticTypeName()
     {

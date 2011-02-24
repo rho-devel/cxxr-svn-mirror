@@ -57,6 +57,7 @@
 #include <stdexcept>
 #include "Defn.h"
 #include "CXXR/GCStackRoot.hpp"
+#include "CXXR/subset.hpp"
 
 using namespace std;
 using namespace CXXR;
@@ -187,13 +188,67 @@ static SEXP VectorSubset(SEXP x, SEXP sarg, SEXP call)
 
     SEXPTYPE mode = TYPEOF(x);
     /* No protection needed as ExtractSubset does not allocate */
-    GCStackRoot<> result(allocVector(mode, n));
+    GCStackRoot<> result;
+    if (x) {
+	const IntVector* indices = SEXP_downcast<IntVector*>(indx.get());
+	switch (mode) {
+	case LGLSXP:
+	    result = subset(static_cast<LogicalVector*>(x), indices);
+	    break;
+	case INTSXP:
+	    result = subset(static_cast<IntVector*>(x), indices);
+	    break;
+	case REALSXP:
+	    result = subset(static_cast<RealVector*>(x), indices);
+	    break;
+	case CPLXSXP:
+	    result = subset(static_cast<ComplexVector*>(x), indices);
+	    break;
+	case RAWSXP:
+	    result = subset(static_cast<RawVector*>(x), indices);
+	    break;
+	case STRSXP:
+	    result = subset(static_cast<StringVector*>(x), indices);
+	    break;
+	case VECSXP:
+	    result = subset(static_cast<ListVector*>(x), indices);
+	    break;
+	case EXPRSXP:
+	    result = subset(static_cast<ExpressionVector*>(x), indices);
+	    break;
+	case LISTSXP:
+	    // Shouldn't happen: LISTSXP will already have been
+	    // converted to VECSXP.
+	    break;
+	case LANGSXP:
+	    {
+		unsigned int nx = length(x);
+		result = allocVector(LANGSXP, n);
+		SEXP tmp = result;
+		for (unsigned int i = 0; int(i) < n; ++i) {
+		    int ii = (*indices)[i];
+		    if (ii == NA_INTEGER || ii <= 0 || ii > int(nx))
+			SETCAR(tmp, 0);
+		    else {
+			SEXP tmp2 = nthcdr(x, ii - 1);
+			SETCAR(tmp, CAR(tmp2));
+			SET_TAG(tmp, TAG(tmp2));
+		    }
+		    tmp = CDR(tmp);
+		}
+	    }
+	    break;
+	default:
+	    errorcall(call, R_MSG_ob_nonsub, type2char(SEXPTYPE(mode)));
+	}
+    }
+    //GCStackRoot<> result(allocVector(mode, n));
     if (mode == VECSXP || mode == EXPRSXP)
 	/* we do not duplicate the values when extracting the subset,
 	   so to be conservative mark the result as NAMED = 2 */
 	SET_NAMED(result, 2);
 
-    result = ExtractSubset(x, result, indx, call);
+    //result = ExtractSubset(x, result, indx, call);
     if (result != R_NilValue) {
 	SEXP attrib;
 	if (

@@ -102,14 +102,28 @@ namespace CXXR {
 	}
 
 	/** @brief Read-only element access.
+	 *
 	 * @param index Index of required element (counting from
 	 *          zero).  No bounds checking is applied.
+	 *
 	 * @return \c const reference to the specified element.
 	 */
 	const T& operator[](unsigned int index) const
 	{
 	    return m_data[index];
 	}
+
+	/** @brief Designate an element of the vector to be NA.
+	 *
+	 * @param index Index  (counting from zero) of the element to
+	 *          be designated NA.  No bounds checking is applied.
+	 *
+	 * @note This function is declared but not defined as part of
+	 * the DumbVector template.  It must be defined as a
+	 * specialization for each instantiation of the template for
+	 * which it or typeName() is used.
+	 */
+	inline void setNA(unsigned int index);
 
 	/** @brief Name by which this type is known in R.
 	 *
