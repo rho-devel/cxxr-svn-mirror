@@ -57,7 +57,7 @@
 #include <stdexcept>
 #include "Defn.h"
 #include "CXXR/GCStackRoot.hpp"
-#include "CXXR/subset.hpp"
+#include "CXXR/Subscripting.hpp"
 
 using namespace std;
 using namespace CXXR;
@@ -184,37 +184,42 @@ static SEXP VectorSubset(SEXP x, SEXP sarg, SEXP call)
     GCStackRoot<> indx(makeSubscript(x, s, &stretch, call));
     int n = LENGTH(indx);
 
-    /* Allocate the result. */
-
     SEXPTYPE mode = TYPEOF(x);
-    /* No protection needed as ExtractSubset does not allocate */
     GCStackRoot<> result;
     if (x) {
 	const IntVector* indices = SEXP_downcast<IntVector*>(indx.get());
 	switch (mode) {
 	case LGLSXP:
-	    result = subset(static_cast<LogicalVector*>(x), indices);
+	    result = Subscripting::extractSubset(static_cast<LogicalVector*>(x),
+						 indices);
 	    break;
 	case INTSXP:
-	    result = subset(static_cast<IntVector*>(x), indices);
+	    result = Subscripting::extractSubset(static_cast<IntVector*>(x),
+						 indices);
 	    break;
 	case REALSXP:
-	    result = subset(static_cast<RealVector*>(x), indices);
+	    result = Subscripting::extractSubset(static_cast<RealVector*>(x),
+						 indices);
 	    break;
 	case CPLXSXP:
-	    result = subset(static_cast<ComplexVector*>(x), indices);
+	    result = Subscripting::extractSubset(static_cast<ComplexVector*>(x),
+						 indices);
 	    break;
 	case RAWSXP:
-	    result = subset(static_cast<RawVector*>(x), indices);
+	    result = Subscripting::extractSubset(static_cast<RawVector*>(x),
+						 indices);
 	    break;
 	case STRSXP:
-	    result = subset(static_cast<StringVector*>(x), indices);
+	    result = Subscripting::extractSubset(static_cast<StringVector*>(x),
+						 indices);
 	    break;
 	case VECSXP:
-	    result = subset(static_cast<ListVector*>(x), indices);
+	    result = Subscripting::extractSubset(static_cast<ListVector*>(x),
+						 indices);
 	    break;
 	case EXPRSXP:
-	    result = subset(static_cast<ExpressionVector*>(x), indices);
+	    result = Subscripting::extractSubset(static_cast<ExpressionVector*>(x),
+						 indices);
 	    break;
 	case LISTSXP:
 	    // Shouldn't happen: LISTSXP will already have been
@@ -242,13 +247,11 @@ static SEXP VectorSubset(SEXP x, SEXP sarg, SEXP call)
 	    errorcall(call, R_MSG_ob_nonsub, type2char(SEXPTYPE(mode)));
 	}
     }
-    //GCStackRoot<> result(allocVector(mode, n));
     if (mode == VECSXP || mode == EXPRSXP)
 	/* we do not duplicate the values when extracting the subset,
 	   so to be conservative mark the result as NAMED = 2 */
 	SET_NAMED(result, 2);
 
-    //result = ExtractSubset(x, result, indx, call);
     if (result != R_NilValue) {
 	SEXP attrib;
 	if (
