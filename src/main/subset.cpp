@@ -216,16 +216,24 @@ static SEXP VectorSubset(SEXP x, SEXP sarg, SEXP call)
 	case VECSXP:
 	    result = Subscripting::extractSubset(static_cast<ListVector*>(x),
 						 indices);
+	    /* we do not duplicate the values when extracting the subset,
+	       so to be conservative mark the result as NAMED = 2 */
+	    SET_NAMED(result, 2);
 	    break;
 	case EXPRSXP:
 	    result = Subscripting::extractSubset(static_cast<ExpressionVector*>(x),
 						 indices);
+	    /* we do not duplicate the values when extracting the subset,
+	       so to be conservative mark the result as NAMED = 2 */
+	    SET_NAMED(result, 2);
 	    break;
 	case LISTSXP:
 	    // Shouldn't happen: LISTSXP will already have been
 	    // converted to VECSXP.
 	    break;
 	case LANGSXP:
+	    // In CXXR, this case needs special handling, not least
+	    // because Expression doesn't inherit from VectorBase.
 	    {
 		unsigned int nx = length(x);
 		result = allocVector(LANGSXP, n);
@@ -241,18 +249,39 @@ static SEXP VectorSubset(SEXP x, SEXP sarg, SEXP call)
 		    }
 		    tmp = CDR(tmp);
 		}
+		// Fix attributes:
+		if (result) {
+		    SEXP attrib;
+		    if (
+			((attrib = getAttrib(x, R_NamesSymbol)) != R_NilValue) ||
+			( /* here we might have an array.  Use row names if 1D */
+			 isArray(x)
+			 && (attrib = getAttrib(x, R_DimNamesSymbol)) != R_NilValue
+			 && LENGTH(attrib) == 1
+			 && (attrib = GetRowNames(attrib)) != R_NilValue
+			 )
+			) {
+			GCStackRoot<> nattrib(allocVector(TYPEOF(attrib), n));
+			nattrib = ExtractSubset(attrib, nattrib, indx, call);
+			setAttrib(result, R_NamesSymbol, nattrib);
+		    }
+		    if ((attrib = getAttrib(x, R_SrcrefSymbol)) != R_NilValue &&
+			TYPEOF(attrib) == VECSXP) {
+			GCStackRoot<> nattrib(allocVector(VECSXP, n));
+			nattrib = ExtractSubset(attrib, nattrib, indx, call);
+			setAttrib(result, R_SrcrefSymbol, nattrib);
+		    }
+		}
 	    }
 	    break;
 	default:
 	    errorcall(call, R_MSG_ob_nonsub, type2char(SEXPTYPE(mode)));
 	}
     }
-    if (mode == VECSXP || mode == EXPRSXP)
-	/* we do not duplicate the values when extracting the subset,
-	   so to be conservative mark the result as NAMED = 2 */
-	SET_NAMED(result, 2);
 
-    if (result != R_NilValue) {
+    // In CXXR, for everything other than LANGSXP, the following will
+    // already have been done in Subscripting::extractSubset():
+    if (result != R_NilValue && mode == LANGSXP) {
 	SEXP attrib;
 	if (
 	    ((attrib = getAttrib(x, R_NamesSymbol)) != R_NilValue) ||
@@ -273,13 +302,6 @@ static SEXP VectorSubset(SEXP x, SEXP sarg, SEXP call)
 	    nattrib = ExtractSubset(attrib, nattrib, indx, call);
 	    setAttrib(result, R_SrcrefSymbol, nattrib);
 	}
-	/* FIXME:  this is wrong, because the slots are gone, so result is an invalid object of the S4 class! JMC 3/3/09 */
-#ifdef _S4_subsettable
-	if(IS_S4_OBJECT(x)) { /* e.g. contains = "list" */
-	    setAttrib(result, R_ClassSymbol, getAttrib(x, R_ClassSymbol));
-	    SET_S4_OBJECT(result);
-	}
-#endif
     }
     return result;
 }
