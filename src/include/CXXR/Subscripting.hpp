@@ -44,6 +44,7 @@
 #include "CXXR/GCStackRoot.hpp"
 #include "CXXR/IntVector.h"
 #include "CXXR/ListVector.h"
+#include "CXXR/PairList.h"
 #include "CXXR/StringVector.h"
 #include "CXXR/Symbol.h"
 
@@ -229,6 +230,67 @@ namespace CXXR {
      */
     class Subscripting {
     public:
+	template <class V>
+	static V* arraySubset(const V* v, const PairList* indices)
+	{
+	    const IntVector* vdims = dimensions(v);
+	    size_t ndims = vdims->size();
+	    size_t resultsize = 1;
+	    std::vector<DimIndexer> dimindexer(ndims);
+	    // Set up the DimIndexer objects:
+	    {
+		const PairList* pl = indices;
+		for (unsigned int d = 0; d < ndims; ++d) {
+		    DimIndexer& di = dimindexer[d];
+		    const IntVector* iv = static_cast<IntVector*>(pl->car());
+		    di.nindices = iv->size();
+		    resultsize *= di.nindices;
+		    di.indices = &(*iv)[0];
+		    pl = pl->tail();
+		}
+		dimindexer[0].stride = 1;
+		for (unsigned int d = 1; d < ndims; ++d)
+		    dimindexer[d].stride
+			= dimindexer[d - 1].stride * (*vdims)[d - 1];
+	    }
+	    GCStackRoot<V> result(CXXR_NEW(V(resultsize)));
+	    // Copy elements across:
+	    {
+		// ***** FIXME *****  Currently needed because Handle's
+		// assignment operator takes a non-const RHS:
+		V* vnc = const_cast<V*>(v);
+		std::vector<unsigned int> indexnum(ndims, 0);
+		for (unsigned int iout = 0; iout < resultsize; ++iout) {
+		    bool naindex = false;
+		    unsigned int iin = 0;
+		    for (unsigned int d = 0; d < ndims; ++d) {
+			const DimIndexer& di = dimindexer[d];
+			int index = di.indices[indexnum[d]];
+			if (index == NA_INTEGER) {
+			    naindex = true;
+			    break;
+			}
+			if (index < 1 || index > (*vdims)[d])
+			    Rf_error(_("subscript out of bounds"));
+			iin += (index - 1)*di.stride;
+		    }
+		    if (naindex)
+			result->setNA(iout);
+		    else (*result)[iout] = (*vnc)[iin];
+		    // Advance index selection:
+		    {
+			unsigned int d = 0;
+			while (d < ndims
+			       && ++indexnum[d] >= dimindexer[d].nindices) {
+			    indexnum[d] = 0;
+			    ++d;
+			}
+		    }
+		}
+	    }
+	    return result;
+	}
+		    
 	/** @brief Extract a subset of an R vector object.
 	 *
 	 * @tparam V A type inheriting from VectorBase.
@@ -253,7 +315,7 @@ namespace CXXR {
 	 * containing the designated subset of \a v .
 	 */
 	template <class V>
-	static V* extractSubset(const V* v, const IntVector* indices)
+	static V* vectorSubset(const V* v, const IntVector* indices)
 	{
 	    size_t ni = indices->size();
 	    GCStackRoot<V> ans(CXXR_NEW(V(ni)));
@@ -272,6 +334,18 @@ namespace CXXR {
 	    return ans;
 	}
     private:
+	// Data structure used in subsetting arrays, containing
+	// information relating to a particular dimension. 
+	struct DimIndexer {
+	    unsigned int nindices;  // Number of index values to be
+	      // extracted along this dimension.
+	    const int* indices;  // Pointer to array containing the index
+	      // values themselves.  The index values count from 1. 
+	    unsigned int stride;  // Number of elements (within the
+	      // linear layout of the source array) separating
+	      // consecutive elements along this dimension.
+	};
+
 	// Not implemented.  Declared private to prevent the
 	// inadvertent creation of Subscripting objects.
 	Subscripting();

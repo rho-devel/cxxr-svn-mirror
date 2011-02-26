@@ -190,38 +190,38 @@ static SEXP VectorSubset(SEXP x, SEXP sarg, SEXP call)
 	const IntVector* indices = SEXP_downcast<IntVector*>(indx.get());
 	switch (mode) {
 	case LGLSXP:
-	    result = Subscripting::extractSubset(static_cast<LogicalVector*>(x),
+	    result = Subscripting::vectorSubset(static_cast<LogicalVector*>(x),
 						 indices);
 	    break;
 	case INTSXP:
-	    result = Subscripting::extractSubset(static_cast<IntVector*>(x),
+	    result = Subscripting::vectorSubset(static_cast<IntVector*>(x),
 						 indices);
 	    break;
 	case REALSXP:
-	    result = Subscripting::extractSubset(static_cast<RealVector*>(x),
+	    result = Subscripting::vectorSubset(static_cast<RealVector*>(x),
 						 indices);
 	    break;
 	case CPLXSXP:
-	    result = Subscripting::extractSubset(static_cast<ComplexVector*>(x),
+	    result = Subscripting::vectorSubset(static_cast<ComplexVector*>(x),
 						 indices);
 	    break;
 	case RAWSXP:
-	    result = Subscripting::extractSubset(static_cast<RawVector*>(x),
+	    result = Subscripting::vectorSubset(static_cast<RawVector*>(x),
 						 indices);
 	    break;
 	case STRSXP:
-	    result = Subscripting::extractSubset(static_cast<StringVector*>(x),
+	    result = Subscripting::vectorSubset(static_cast<StringVector*>(x),
 						 indices);
 	    break;
 	case VECSXP:
-	    result = Subscripting::extractSubset(static_cast<ListVector*>(x),
+	    result = Subscripting::vectorSubset(static_cast<ListVector*>(x),
 						 indices);
 	    /* we do not duplicate the values when extracting the subset,
 	       so to be conservative mark the result as NAMED = 2 */
 	    SET_NAMED(result, 2);
 	    break;
 	case EXPRSXP:
-	    result = Subscripting::extractSubset(static_cast<ExpressionVector*>(x),
+	    result = Subscripting::vectorSubset(static_cast<ExpressionVector*>(x),
 						 indices);
 	    /* we do not duplicate the values when extracting the subset,
 	       so to be conservative mark the result as NAMED = 2 */
@@ -280,7 +280,7 @@ static SEXP VectorSubset(SEXP x, SEXP sarg, SEXP call)
     }
 
     // In CXXR, for everything other than LANGSXP, the following will
-    // already have been done in Subscripting::extractSubset():
+    // already have been done in Subscripting::vectorSubset():
     if (result != R_NilValue && mode == LANGSXP) {
 	SEXP attrib;
 	if (
@@ -314,111 +314,54 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop)
     int k = length(xdims);
 
     const void* vmaxsave = vmaxget();
-    int** subs = static_cast<int**>(CXXR_alloc(k, sizeof(int*)));
-    int* indx = static_cast<int*>(CXXR_alloc(k, sizeof(int)));
-    int* offset = static_cast<int*>(CXXR_alloc(k, sizeof(int)));
     int* bound = static_cast<int*>(CXXR_alloc(k, sizeof(int)));
 
     /* Construct a vector to contain the returned values. */
     /* Store its extents. */
 
-    int n = 1;
     {
 	SEXP r = s;
 	for (int i = 0; i < k; i++) {
 	    SETCAR(r, arraySubscript(i, CAR(r), xdims, getAttrib,
 				     (STRING_ELT), x));
 	    bound[i] = LENGTH(CAR(r));
-	    n *= bound[i];
 	    r = CDR(r);
 	}
     }
-    GCStackRoot<> result(allocVector(mode, n));
-    {
-	SEXP r = s;
-	for (int i = 0; i < k; i++) {
-	    indx[i] = 0;
-	    subs[i] = INTEGER(CAR(r));
-	    r = CDR(r);
-	}
-    }
-    offset[0] = 1;
-    for (int i = 1; i < k; i++)
-	offset[i] = offset[i - 1] * INTEGER(xdims)[i - 1];
-
-    /* Transfer the subset elements from "x" to "a". */
-
-    for (int i = 0; i < n; i++) {
-	int ii = 0;
-	for (int j = 0; j < k; j++) {
-	    int jj = subs[j][indx[j]];
-	    if (jj == NA_INTEGER) {
-		ii = NA_INTEGER;
-		goto assignLoop;
-	    }
-	    if (jj < 1 || jj > INTEGER(xdims)[j])
-		errorcall(call, R_MSG_subs_o_b);
-	    ii += (jj - 1) * offset[j];
-	}
-
-      assignLoop:
-	switch (mode) {
-	case LGLSXP:
-	    if (ii != NA_INTEGER)
-		LOGICAL(result)[i] = LOGICAL(x)[ii];
-	    else
-		LOGICAL(result)[i] = NA_LOGICAL;
-	    break;
-	case INTSXP:
-	    if (ii != NA_INTEGER)
-		INTEGER(result)[i] = INTEGER(x)[ii];
-	    else
-		INTEGER(result)[i] = NA_INTEGER;
-	    break;
-	case REALSXP:
-	    if (ii != NA_INTEGER)
-		REAL(result)[i] = REAL(x)[ii];
-	    else
-		REAL(result)[i] = NA_REAL;
-	    break;
-	case CPLXSXP:
-	    if (ii != NA_INTEGER) {
-		COMPLEX(result)[i] = COMPLEX(x)[ii];
-	    }
-	    else {
-		COMPLEX(result)[i].r = NA_REAL;
-		COMPLEX(result)[i].i = NA_REAL;
-	    }
-	    break;
-	case STRSXP:
-	    if (ii != NA_INTEGER)
-		SET_STRING_ELT(result, i, STRING_ELT(x, ii));
-	    else
-		SET_STRING_ELT(result, i, NA_STRING);
-	    break;
-	case VECSXP:
-	    if (ii != NA_INTEGER)
-		SET_VECTOR_ELT(result, i, VECTOR_ELT(x, ii));
-	    else
-		SET_VECTOR_ELT(result, i, R_NilValue);
-	    break;
-	case RAWSXP:
-	    if (ii != NA_INTEGER)
-		RAW(result)[i] = RAW(x)[ii];
-	    else
-		RAW(result)[i] = Rbyte( 0);
-	    break;
-	default:
-	    errorcall(call, _("array subscripting not handled for this type"));
-	    break;
-	}
-	if (n > 1) {
-	    int j = 0;
-	    while (++indx[j] >= bound[j]) {
-		indx[j] = 0;
-		j = (j + 1) % k;
-	    }
-	}
+    GCStackRoot<> result;
+    const PairList* indices = static_cast<PairList*>(s);
+    switch (mode) {
+    case LGLSXP:
+	result = Subscripting::arraySubset(static_cast<LogicalVector*>(x),
+					   indices);
+	break;
+    case INTSXP:
+	result = Subscripting::arraySubset(static_cast<IntVector*>(x),
+					   indices);
+	break;
+    case REALSXP:
+	result = Subscripting::arraySubset(static_cast<RealVector*>(x),
+					   indices);
+	break;
+    case CPLXSXP:
+	result = Subscripting::arraySubset(static_cast<ComplexVector*>(x),
+					   indices);
+	break;
+    case STRSXP:
+	result = Subscripting::arraySubset(static_cast<StringVector*>(x),
+					   indices);
+	break;
+    case VECSXP:
+	result = Subscripting::arraySubset(static_cast<ListVector*>(x),
+					   indices);
+	break;
+    case RAWSXP:
+	result = Subscripting::arraySubset(static_cast<RawVector*>(x),
+					   indices);
+	break;
+    default:
+	errorcall(call, _("array subscripting not handled for this type"));
+	break;
     }
 
     {
