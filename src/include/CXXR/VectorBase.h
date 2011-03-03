@@ -51,6 +51,56 @@
 typedef CXXR::RObject VECTOR_SEXPREC, *VECSEXP;
 
 namespace CXXR {
+    /** @brief Value to be used if 'not available'.
+     *
+     * @tparam T type used as an element in the CXXR implementation of
+     *           an R vector type.
+     *
+     * @return The value of this type to be used if the actual value
+     * is not available.  This for example is the value that will be
+     * used if an element of a vector of \a T is accessed in R using a
+     * NA index.
+     *
+     * @note For some types, e.g. Rbyte, the value returned is not
+     * distinct from ordinary values of the type.  See
+     * hasDistinctNA().
+     */
+    template <typename T>
+    const T& NA();
+
+    /** @brief Does a value represent a distinct 'not available'
+     *  status?
+     *
+     * @tparam T type used as an element in the CXXR implementation of
+     *           an R vector type.
+     *
+     * @param t A value of type \a T .
+     *
+     * @return true iff \a t has a distinct value (or possibly, one of
+     * a set of distinct values) signifying that the actual value of
+     * this quantity is not available.
+     */
+    template <typename T>
+    inline bool isNA(const T& t)
+    {
+	return t == NA<T>();
+    }
+
+    /** @brief Does a type have a distinct 'not available' value.
+     *
+     * @tparam T type used as an element in the CXXR implementation of
+     *           an R vector type.
+     *
+     * @return true iff the range of type \a T includes a distinct
+     * value to signify that the actual value of the quantity is not
+     * available.
+     */
+    template <typename T>
+    inline bool hasDistinctNA()
+    {
+	return isNA(NA<T>());
+    }
+
     /** @brief Untemplated base class for R vectors.
      */
     class VectorBase : public RObject {

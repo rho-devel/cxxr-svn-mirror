@@ -54,9 +54,16 @@ typedef unsigned char Rbyte;
 namespace CXXR {
     // Template specializations:
     template <>
-    inline void DumbVector<Rbyte, RAWSXP>::setNA(unsigned int index)
+    inline const Rbyte& NA<Rbyte>()
     {
-	(*this)[index] = Rbyte(0);
+	static Rbyte ans(0);
+	return ans;
+    }
+
+    template <>
+    inline bool isNA<Rbyte>(const Rbyte&)
+    {
+	return false;
     }
 
     template <>

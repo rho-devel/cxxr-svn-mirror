@@ -51,13 +51,7 @@
 #include "CXXR/SEXP_downcast.hpp"
 
 namespace CXXR {
-    // Template specializations:
-    template <>
-    inline void DumbVector<int, LGLSXP>::setNA(unsigned int index)
-    {
-	(*this)[index] = NA_LOGICAL;
-    }
-
+    // Template specialization:
     template <>
     inline const char* DumbVector<int, LGLSXP>::staticTypeName()
     {

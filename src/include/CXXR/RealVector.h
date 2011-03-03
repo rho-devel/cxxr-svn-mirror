@@ -53,9 +53,9 @@
 namespace CXXR {
     // Template specializations:
     template <>
-    inline void DumbVector<double, REALSXP>::setNA(unsigned int index)
+    inline const double& NA<double>()
     {
-	(*this)[index] = NA_REAL;
+	return NA_REAL;
     }
 
     template <>

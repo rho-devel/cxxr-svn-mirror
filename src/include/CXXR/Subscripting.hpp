@@ -230,66 +230,30 @@ namespace CXXR {
      */
     class Subscripting {
     public:
+	/** @brief Extract a subset from an R matrix or array.
+	 *
+	 * @tparam V A type inheriting from VectorBase.
+	 *
+	 * @param v Non-null pointer to a \a V object, which is an R
+	 *          matrix or array from which a subset (not
+	 *          necessarily a proper subset) is to be extracted.
+	 *
+	 * @param indices Pointer to a PairList with as many elements
+	 *          as \a v has dimensions.  Each element (car) of the
+	 *          PairList is an IntVector giving the index values
+	 *          (counting from 1) to be selected for the
+	 *          corresponding dimension.  NA_INTEGER is a
+	 *          permissible index value, in which case any
+	 *          corresponding elements of the output array will
+	 *          have an NA valueappropriate to type \a V .
+	 *          Otherwise, all indices must be in range for the
+	 *          relevant dimension of \a v .
+	 *
+	 * @return Pointer to a newly created object of type \a V ,
+	 * containing the designated subset of \a v .
+	 */
 	template <class V>
-	static V* arraySubset(const V* v, const PairList* indices)
-	{
-	    const IntVector* vdims = dimensions(v);
-	    size_t ndims = vdims->size();
-	    size_t resultsize = 1;
-	    std::vector<DimIndexer> dimindexer(ndims);
-	    // Set up the DimIndexer objects:
-	    {
-		const PairList* pl = indices;
-		for (unsigned int d = 0; d < ndims; ++d) {
-		    DimIndexer& di = dimindexer[d];
-		    const IntVector* iv = static_cast<IntVector*>(pl->car());
-		    di.nindices = iv->size();
-		    resultsize *= di.nindices;
-		    di.indices = &(*iv)[0];
-		    pl = pl->tail();
-		}
-		dimindexer[0].stride = 1;
-		for (unsigned int d = 1; d < ndims; ++d)
-		    dimindexer[d].stride
-			= dimindexer[d - 1].stride * (*vdims)[d - 1];
-	    }
-	    GCStackRoot<V> result(CXXR_NEW(V(resultsize)));
-	    // Copy elements across:
-	    {
-		// ***** FIXME *****  Currently needed because Handle's
-		// assignment operator takes a non-const RHS:
-		V* vnc = const_cast<V*>(v);
-		std::vector<unsigned int> indexnum(ndims, 0);
-		for (unsigned int iout = 0; iout < resultsize; ++iout) {
-		    bool naindex = false;
-		    unsigned int iin = 0;
-		    for (unsigned int d = 0; d < ndims; ++d) {
-			const DimIndexer& di = dimindexer[d];
-			int index = di.indices[indexnum[d]];
-			if (index == NA_INTEGER) {
-			    naindex = true;
-			    break;
-			}
-			if (index < 1 || index > (*vdims)[d])
-			    Rf_error(_("subscript out of bounds"));
-			iin += (index - 1)*di.stride;
-		    }
-		    if (naindex)
-			result->setNA(iout);
-		    else (*result)[iout] = (*vnc)[iin];
-		    // Advance index selection:
-		    {
-			unsigned int d = 0;
-			while (d < ndims
-			       && ++indexnum[d] >= dimindexer[d].nindices) {
-			    indexnum[d] = 0;
-			    ++d;
-			}
-		    }
-		}
-	    }
-	    return result;
-	}
+	static V* arraySubset(const V* v, const PairList* indices);
 		    
 	/** @brief Extract a subset of an R vector object.
 	 *
@@ -299,40 +263,23 @@ namespace CXXR {
 	 *          object from which a subset (not necessarily a
 	 *          proper subset) is to be extracted.
 	 *
-	 * @param indices Pointer to a vector of indices (counting 1)
-	 *          designating the elements of \a v to be included as
-	 *          successive elements of the output vector, which
-	 *          will be the same size as \a indices .  NA_INTEGER
-	 *          is a permissible element value, in which case the
-	 *          corresponding element of the output vector will
-	 *          have an NA value appropriate to type \a V .  If an
-	 *          index is out of range with respect to \a v , in
-	 *          which case also the corresponding element of the
-	 *          output vector will have an NA value appropriate to
-	 *          type \a V .
+	 * @param indices Pointer to a vector of indices (counting
+	 *          from 1) designating the elements of \a v to be
+	 *          included as successive elements of the output
+	 *          vector, which will be the same size as \a indices .
+	 *          NA_INTEGER is a permissible index value, in
+	 *          which case the corresponding element of the output
+	 *          vector will have an NA value appropriate to type
+	 *          \a V .  If an index is out of range with respect
+	 *          to \a v , in which case also the corresponding
+	 *          element of the output vector will have an NA value
+	 *          appropriate to type \a V .
 	 *
 	 * @return Pointer to a newly created object of type \a V ,
 	 * containing the designated subset of \a v .
 	 */
 	template <class V>
-	static V* vectorSubset(const V* v, const IntVector* indices)
-	{
-	    size_t ni = indices->size();
-	    GCStackRoot<V> ans(CXXR_NEW(V(ni)));
-	    size_t vsize = v->size();
-	    // ***** FIXME *****  Currently needed because Handle's
-	    // assignment operator takes a non-const RHS:
-	    V* vnc = const_cast<V*>(v);
-	    for (unsigned int i = 0; i < ni; ++i) {
-		int ii = (*indices)[i];
-		// Note that zero and negative indices ought not to occur.
-		if (ii == NA_INTEGER || ii <= 0 || ii > int(vsize))
-		    ans->setNA(i);
-		else (*ans)[i] = (*vnc)[ii - 1];
-	    }
-	    setVectorAttributes(ans, v, indices);
-	    return ans;
-	}
+	static V* vectorSubset(const V* v, const IntVector* indices);
     private:
 	// Data structure used in subsetting arrays, containing
 	// information relating to a particular dimension. 
@@ -373,6 +320,86 @@ namespace CXXR {
 					const VectorBase* source,
 					const IntVector* indices);
     };
-}
+
+    template <class V>
+    V* Subscripting::arraySubset(const V* v, const PairList* indices)
+    {
+	const IntVector* vdims = dimensions(v);
+	size_t ndims = vdims->size();
+	size_t resultsize = 1;
+	std::vector<DimIndexer> dimindexer(ndims);
+	// Set up the DimIndexer objects:
+	{
+	    const PairList* pl = indices;
+	    for (unsigned int d = 0; d < ndims; ++d) {
+		DimIndexer& di = dimindexer[d];
+		const IntVector* iv = static_cast<IntVector*>(pl->car());
+		di.nindices = iv->size();
+		resultsize *= di.nindices;
+		di.indices = &(*iv)[0];
+		pl = pl->tail();
+	    }
+	    dimindexer[0].stride = 1;
+	    for (unsigned int d = 1; d < ndims; ++d)
+		dimindexer[d].stride
+		    = dimindexer[d - 1].stride * (*vdims)[d - 1];
+	}
+	GCStackRoot<V> result(CXXR_NEW(V(resultsize)));
+	// Copy elements across:
+	{
+	    // ***** FIXME *****  Currently needed because Handle's
+	    // assignment operator takes a non-const RHS:
+	    V* vnc = const_cast<V*>(v);
+	    std::vector<unsigned int> indexnum(ndims, 0);
+	    for (unsigned int iout = 0; iout < resultsize; ++iout) {
+		bool naindex = false;
+		unsigned int iin = 0;
+		for (unsigned int d = 0; d < ndims; ++d) {
+		    const DimIndexer& di = dimindexer[d];
+		    int index = di.indices[indexnum[d]];
+		    if (isNA(index)) {
+			naindex = true;
+			break;
+		    }
+		    if (index < 1 || index > (*vdims)[d])
+			Rf_error(_("subscript out of bounds"));
+		    iin += (index - 1)*di.stride;
+		}
+		(*result)[iout]
+		    = naindex ? NA<typename V::value_type>() : (*vnc)[iin];
+		// Advance index selection:
+		{
+		    unsigned int d = 0;
+		    while (d < ndims
+			   && ++indexnum[d] >= dimindexer[d].nindices) {
+			indexnum[d] = 0;
+			++d;
+		    }
+		}
+	    }
+	}
+	return result;
+    }
+
+    template <class V>
+    V* Subscripting::vectorSubset(const V* v, const IntVector* indices)
+    {
+	size_t ni = indices->size();
+	GCStackRoot<V> ans(CXXR_NEW(V(ni)));
+	size_t vsize = v->size();
+	// ***** FIXME *****  Currently needed because Handle's
+	// assignment operator takes a non-const RHS:
+	V* vnc = const_cast<V*>(v);
+	for (unsigned int i = 0; i < ni; ++i) {
+	    int ii = (*indices)[i];
+	    // Note that zero and negative indices ought not to occur.
+	    if (isNA(ii) || ii <= 0 || ii > int(vsize))
+		(*ans)[i] = NA<typename V::value_type>();
+	    else (*ans)[i] = (*vnc)[ii - 1];
+	}
+	setVectorAttributes(ans, v, indices);
+	return ans;
+    }
+}  // namespace CXXR;
 
 #endif  // SUBSCRIPTING_HPP

@@ -59,6 +59,8 @@ namespace CXXR {
     template <typename T, SEXPTYPE ST>
     class DumbVector : public VectorBase {
     public:
+	typedef T value_type;
+
 	/** @brief Create a vector, leaving its contents
 	 *         uninitialized. 
 	 * @param sz Number of elements required.  Zero is
@@ -112,18 +114,6 @@ namespace CXXR {
 	{
 	    return m_data[index];
 	}
-
-	/** @brief Designate an element of the vector to be NA.
-	 *
-	 * @param index Index  (counting from zero) of the element to
-	 *          be designated NA.  No bounds checking is applied.
-	 *
-	 * @note This function is declared but not defined as part of
-	 * the DumbVector template.  It must be defined as a
-	 * specialization for each instantiation of the template for
-	 * which it or typeName() is used.
-	 */
-	inline void setNA(unsigned int index);
 
 	/** @brief Name by which this type is known in R.
 	 *

@@ -54,10 +54,10 @@
 namespace CXXR {
     // Template specializations:
     template <>
-    inline void DumbVector<Rcomplex, CPLXSXP>::setNA(unsigned int index)
+    inline const Rcomplex& NA<Rcomplex>()
     {
-	(*this)[index].r = NA_REAL;
-	(*this)[index].i = NA_REAL;
+	static Rcomplex ans = {NA_REAL, NA_REAL};
+	return ans;
     }
 
     template <>

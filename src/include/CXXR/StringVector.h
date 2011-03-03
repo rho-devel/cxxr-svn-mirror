@@ -56,9 +56,16 @@
 namespace CXXR {
     // Template specializations:
     template <>
-    inline void HandleVector<String, STRSXP>::setNA(unsigned int index)
+    inline const RObject::Handle<String>& NA<RObject::Handle<String> >()
     {
-	(*this)[index] = String::NA();
+	static RObject::Handle<String> ans(String::NA());
+	return ans;
+    }
+
+    template <>
+    inline bool isNA<RObject::Handle<String> >(const RObject::Handle<String>& hs)
+    {
+	return hs == NA<RObject::Handle<String> >();
     }
 
     template <>

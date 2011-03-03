@@ -54,7 +54,21 @@
 namespace CXXR {
     class ExpressionVector;
 
-    // Template specialization:
+    // Template specializations:
+    template <>
+    inline const RObject::Handle<RObject>& NA<RObject::Handle<RObject> >()
+    {
+	static RObject::Handle<RObject> ans(0);
+	return ans;
+    }
+
+    template <>
+    inline bool
+    isNA<RObject::Handle<RObject> >(const RObject::Handle<RObject>&)
+    {
+	return false;
+    }
+
     template <>
     inline const char* HandleVector<RObject, VECSXP>::staticTypeName()
     {

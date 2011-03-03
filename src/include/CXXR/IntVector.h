@@ -57,9 +57,9 @@
 namespace CXXR {
     // Template specializations:
     template <>
-    inline void DumbVector<int, INTSXP>::setNA(unsigned int index)
+    inline const int& NA<int>()
     {
-	(*this)[index] = NA_INTEGER;
+	return NA_INTEGER;
     }
 
     template <>
