@@ -313,18 +313,11 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop)
     SEXP xdims = getAttrib(x, R_DimSymbol);
     int k = length(xdims);
 
-    const void* vmaxsave = vmaxget();
-    int* bound = static_cast<int*>(CXXR_alloc(k, sizeof(int)));
-
-    /* Construct a vector to contain the returned values. */
-    /* Store its extents. */
-
     {
 	SEXP r = s;
 	for (int i = 0; i < k; i++) {
 	    SETCAR(r, arraySubscript(i, CAR(r), xdims, getAttrib,
 				     (STRING_ELT), x));
-	    bound[i] = LENGTH(CAR(r));
 	    r = CDR(r);
 	}
     }
@@ -364,56 +357,6 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop)
 	break;
     }
 
-    {
-	GCStackRoot<> newxdims(allocVector(INTSXP, k));
-	for (int i = 0 ; i < k ; i++)
-	    INTEGER(newxdims)[i] = bound[i];
-	setAttrib(result, R_DimSymbol, newxdims);
-    }
-
-    /* The array elements have been transferred. */
-    /* Now we need to transfer the attributes. */
-    /* Most importantly, we need to subset the */
-    /* dimnames of the returned value. */
-
-    SEXP dimnames = getAttrib(x, R_DimNamesSymbol);
-    if (dimnames != R_NilValue) {
-	GCStackRoot<> newxdims(allocVector(VECSXP, k));
-	int j = 0;
-	if (TYPEOF(dimnames) == VECSXP) {
-	    SEXP r = s;
-	    for (int i = 0; i < k ; i++) {
-		if (bound[i] > 0) {
-		  SET_VECTOR_ELT(newxdims, j++,
-			ExtractSubset(VECTOR_ELT(dimnames, i),
-				      allocVector(STRSXP, bound[i]),
-				      CAR(r), call));
-		} else { /* 0-length dims have NULL dimnames */
-		    SET_VECTOR_ELT(newxdims, j++, R_NilValue);
-		}
-		r = CDR(r);
-	    }
-	}
-	else {
-	    SEXP p = dimnames;
-	    SEXP q = newxdims;
-	    SEXP r = s;
-	    for(int i = 0 ; i < k; i++) {
-		SETCAR(q, allocVector(STRSXP, bound[i]));
-		SETCAR(q, ExtractSubset(CAR(p), CAR(q), CAR(r), call));
-		p = CDR(p);
-		q = CDR(q);
-		r = CDR(r);
-	    }
-	}
-	SEXP dimnamesnames = getAttrib(dimnames, R_NamesSymbol);
-	setAttrib(newxdims, R_NamesSymbol, dimnamesnames);
-	setAttrib(result, R_DimNamesSymbol, newxdims);
-    }
-    /* This was removed for matrices in 1998
-       copyMostAttrib(x, result); */
-    /* Free temporary memory */
-    vmaxset(vmaxsave);
     if (drop)
 	DropDims(result);
     return result;

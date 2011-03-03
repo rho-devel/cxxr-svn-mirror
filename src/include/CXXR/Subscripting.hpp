@@ -286,7 +286,7 @@ namespace CXXR {
 	struct DimIndexer {
 	    unsigned int nindices;  // Number of index values to be
 	      // extracted along this dimension.
-	    const int* indices;  // Pointer to array containing the index
+	    const IntVector* indices;  // Pointer to array containing the index
 	      // values themselves.  The index values count from 1. 
 	    unsigned int indexnum;  // Position (counting from 0) of
 	      // the index within 'indices' currently being processed.
@@ -295,6 +295,8 @@ namespace CXXR {
 	      // consecutive elements along this dimension.
 	};
 
+	typedef std::vector<DimIndexer, Allocator<DimIndexer> > DimIndexerVector;
+
 	// Not implemented.  Declared private to prevent the
 	// inadvertent creation of Subscripting objects.
 	Subscripting();
@@ -302,9 +304,15 @@ namespace CXXR {
 	// Non-templated auxiliary function for arraySubset(), used to
 	// initialise the vector of DimIndexers.  The function returns
 	// the required size of the output vector.
-	static size_t createDimIndexers(std::vector<DimIndexer>* dimindexers,
+	static size_t createDimIndexers(DimIndexerVector* dimindexers,
 					const IntVector* source_dims,
 					const PairList* indices);
+
+	// Non-templated auxiliary function for arraySubset(), used to
+	// set the attributes on the result.
+	static void setArrayAttributes(VectorBase* subset,
+				       const VectorBase* source,
+			               const DimIndexerVector& dimindexers);
 
 	/** @brief Set the attributes on a vector subset.
 	 *
@@ -335,7 +343,7 @@ namespace CXXR {
     {
 	const IntVector* vdims = dimensions(v);
 	size_t ndims = vdims->size();
-	std::vector<DimIndexer> dimindexer(ndims);
+	DimIndexerVector dimindexer(ndims);
 	size_t resultsize = createDimIndexers(&dimindexer, vdims, indices);
 	GCStackRoot<V> result(CXXR_NEW(V(resultsize)));
 	// Copy elements across:
@@ -348,7 +356,7 @@ namespace CXXR {
 		unsigned int iin = 0;
 		for (unsigned int d = 0; d < ndims; ++d) {
 		    const DimIndexer& di = dimindexer[d];
-		    int index = di.indices[di.indexnum];
+		    int index = (*di.indices)[di.indexnum];
 		    if (isNA(index)) {
 			naindex = true;
 			break;
@@ -374,6 +382,7 @@ namespace CXXR {
 		}
 	    }
 	}
+	setArrayAttributes(result, v, dimindexer);
 	return result;
     }
 

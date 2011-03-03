@@ -47,9 +47,9 @@ void setDimensionNames(VectorBase* v, unsigned int d, VectorBase* names)
     (*lv)[d - 1] = names;
 }
 
-size_t Subscripting::createDimIndexers(vector<DimIndexer>* dimindexers,
-				     const IntVector* source_dims,
-				     const PairList* indices)
+size_t Subscripting::createDimIndexers(DimIndexerVector* dimindexers,
+				       const IntVector* source_dims,
+				       const PairList* indices)
 {
     size_t ndims = source_dims->size();
     size_t resultsize = 1;
@@ -59,7 +59,7 @@ size_t Subscripting::createDimIndexers(vector<DimIndexer>* dimindexers,
 	const IntVector* iv = static_cast<IntVector*>(pl->car());
 	di.nindices = iv->size();
 	resultsize *= di.nindices;
-	di.indices = &(*iv)[0];
+	di.indices = iv;
 	di.indexnum = 0;
 	pl = pl->tail();
     }
@@ -68,6 +68,41 @@ size_t Subscripting::createDimIndexers(vector<DimIndexer>* dimindexers,
 	(*dimindexers)[d].stride
 	    = (*dimindexers)[d - 1].stride * (*source_dims)[d - 1];
     return resultsize;
+}
+
+void Subscripting::setArrayAttributes(VectorBase* subset,
+				      const VectorBase* source,
+				      const DimIndexerVector& dimindexers)
+{
+    size_t ndims = dimensions(source)->size();
+    // Dimensions:
+    {
+	GCStackRoot<IntVector> newdims(CXXR_NEW(IntVector(ndims)));
+	for (unsigned int d = 0; d < ndims; ++d)
+	    (*newdims)[d] = dimindexers[d].nindices;
+	setDimensions(subset, newdims);
+    }
+    // Dimnames:
+    {
+	const ListVector* dimnames = dimensionNames(source);
+	if (dimnames) {
+	    GCStackRoot<ListVector> newdimnames(CXXR_NEW(ListVector(ndims)));
+	    for (unsigned int d = 0; d < ndims; ++d) {
+		const DimIndexer& di = dimindexers[d];
+		// 0-length dims have NULL dimnames:
+		if (di.nindices > 0) {
+		    const StringVector* sv
+			= static_cast<const StringVector*>((*dimnames)[d]);
+		    if (sv)
+			(*newdimnames)[d] = vectorSubset(sv, di.indices);
+		}
+	    }
+	    const StringVector* dimnamesnames = names(dimnames);
+	    if (dimnamesnames)
+		setNames(newdimnames, dimnamesnames->clone());
+	    setDimensionNames(subset, newdimnames);
+	}
+    }
 }
 
 void Subscripting::setVectorAttributes(VectorBase* subset,
