@@ -288,6 +288,8 @@ namespace CXXR {
 	      // extracted along this dimension.
 	    const int* indices;  // Pointer to array containing the index
 	      // values themselves.  The index values count from 1. 
+	    unsigned int indexnum;  // Position (counting from 0) of
+	      // the index within 'indices' currently being processed.
 	    unsigned int stride;  // Number of elements (within the
 	      // linear layout of the source array) separating
 	      // consecutive elements along this dimension.
@@ -296,6 +298,13 @@ namespace CXXR {
 	// Not implemented.  Declared private to prevent the
 	// inadvertent creation of Subscripting objects.
 	Subscripting();
+
+	// Non-templated auxiliary function for arraySubset(), used to
+	// initialise the vector of DimIndexers.  The function returns
+	// the required size of the output vector.
+	static size_t createDimIndexers(std::vector<DimIndexer>* dimindexers,
+					const IntVector* source_dims,
+					const PairList* indices);
 
 	/** @brief Set the attributes on a vector subset.
 	 *
@@ -326,37 +335,20 @@ namespace CXXR {
     {
 	const IntVector* vdims = dimensions(v);
 	size_t ndims = vdims->size();
-	size_t resultsize = 1;
 	std::vector<DimIndexer> dimindexer(ndims);
-	// Set up the DimIndexer objects:
-	{
-	    const PairList* pl = indices;
-	    for (unsigned int d = 0; d < ndims; ++d) {
-		DimIndexer& di = dimindexer[d];
-		const IntVector* iv = static_cast<IntVector*>(pl->car());
-		di.nindices = iv->size();
-		resultsize *= di.nindices;
-		di.indices = &(*iv)[0];
-		pl = pl->tail();
-	    }
-	    dimindexer[0].stride = 1;
-	    for (unsigned int d = 1; d < ndims; ++d)
-		dimindexer[d].stride
-		    = dimindexer[d - 1].stride * (*vdims)[d - 1];
-	}
+	size_t resultsize = createDimIndexers(&dimindexer, vdims, indices);
 	GCStackRoot<V> result(CXXR_NEW(V(resultsize)));
 	// Copy elements across:
 	{
 	    // ***** FIXME *****  Currently needed because Handle's
 	    // assignment operator takes a non-const RHS:
 	    V* vnc = const_cast<V*>(v);
-	    std::vector<unsigned int> indexnum(ndims, 0);
 	    for (unsigned int iout = 0; iout < resultsize; ++iout) {
 		bool naindex = false;
 		unsigned int iin = 0;
 		for (unsigned int d = 0; d < ndims; ++d) {
 		    const DimIndexer& di = dimindexer[d];
-		    int index = di.indices[indexnum[d]];
+		    int index = di.indices[di.indexnum];
 		    if (isNA(index)) {
 			naindex = true;
 			break;
@@ -367,14 +359,18 @@ namespace CXXR {
 		}
 		(*result)[iout]
 		    = naindex ? NA<typename V::value_type>() : (*vnc)[iin];
-		// Advance index selection:
+		// Advance the index selection:
 		{
 		    unsigned int d = 0;
-		    while (d < ndims
-			   && ++indexnum[d] >= dimindexer[d].nindices) {
-			indexnum[d] = 0;
-			++d;
-		    }
+		    bool done;
+		    do {
+			done = true;
+			DimIndexer& di = dimindexer[d];
+			if (++di.indexnum >= di.nindices) {
+			    di.indexnum = 0;
+			    done = (++d >= ndims);
+			}
+		    } while (!done);
 		}
 	    }
 	}
