@@ -70,9 +70,93 @@ size_t Subscripting::createDimIndexers(DimIndexerVector* dimindexers,
     return resultsize;
 }
 
+bool Subscripting::dropDimensions(VectorBase* v)
+{
+    GCStackRoot<const IntVector> dims(dimensions(v));
+    if (!dims)
+	return false;
+    size_t ndims = dims->size();
+    // Count the number of dimensions with extent != 1 :
+    size_t ngooddims = 0;
+    for (unsigned int d = 0; d < ndims; ++d)
+	if ((*dims)[d] != 1)
+	    ++ngooddims;
+    if (ngooddims == ndims)
+	return false;
+    ListVector* dimnames = const_cast<ListVector*>(dimensionNames(v));
+    if (ngooddims > 1) {
+	// The result will still be an array/matrix.
+	bool havenames = false;
+	// Set up new dimensions attribute:
+	{
+	    GCStackRoot<IntVector> newdims(CXXR_NEW(IntVector(ngooddims)));
+	    unsigned int dout = 0;
+	    for (unsigned int din = 0; din < ndims; ++din) {
+		size_t dsize = (*dims)[din];
+		if (dsize != 1) {
+		    (*newdims)[dout++] = dsize;
+		    if (dimnames && (*dimnames)[din])
+			havenames = true;
+		}
+	    }
+	    setDimensions(v, newdims);
+	}
+	if (havenames) {
+	    // Set up new dimnames attribute:
+	    StringVector* dimnamesnames
+		= const_cast<StringVector*>(names(dimnames));
+	    GCStackRoot<ListVector> newdimnames(CXXR_NEW(ListVector(ngooddims)));
+	    GCStackRoot<StringVector>
+		newdimnamesnames(CXXR_NEW(StringVector(ngooddims)));
+	    unsigned int dout = 0;
+	    for (unsigned int din = 0; din < ndims; ++din)
+		if ((*dims)[din] != 1) {
+		    (*newdimnames)[dout] = (*dimnames)[din];
+		    if (dimnamesnames)
+			(*newdimnamesnames)[dout] = (*dimnamesnames)[din];
+		    ++dout;
+		}
+	    if (dimnamesnames)
+		setNames(newdimnames, newdimnamesnames);
+	    setDimensionNames(v, newdimnames);
+	}
+    } else if (ngooddims == 1) {
+	// Reduce to a vector.
+	setDimensions(v, 0);
+	setDimensionNames(v, 0);
+	if (dimnames) {
+	    unsigned int d = 0;
+	    while ((*dims)[d] == 1)
+		++d;
+	    setNames(v, static_cast<StringVector*>((*dimnames)[d].get()));
+	}
+    } else /* ngooddims == 0 */ {
+	setDimensions(v, 0);
+	setDimensionNames(v, 0);
+	// In this special case it is ambiguous which dimnames to use
+	// for the sole remaining element, so we set up a name only if
+	// just one dimension has names.
+	if (dimnames) {
+	    StringVector* newnames;
+	    unsigned int count = 0;
+	    for (unsigned int d = 0; d < ndims; ++d) {
+		RObject* dnd = (*dimnames)[d];
+		if (dnd) {
+		    newnames = static_cast<StringVector*>(dnd);
+		    ++count;
+		}
+	    }
+	    if (count == 1)
+		setNames(v, newnames);
+	}
+    }
+    return true;
+}
+
 void Subscripting::setArrayAttributes(VectorBase* subset,
 				      const VectorBase* source,
-				      const DimIndexerVector& dimindexers)
+				      const DimIndexerVector& dimindexers,
+				      bool drop)
 {
     size_t ndims = dimensions(source)->size();
     // Dimensions:
@@ -103,6 +187,8 @@ void Subscripting::setArrayAttributes(VectorBase* subset,
 	    setDimensionNames(subset, newdimnames);
 	}
     }
+    if (drop)
+	dropDimensions(subset);
 }
 
 void Subscripting::setVectorAttributes(VectorBase* subset,

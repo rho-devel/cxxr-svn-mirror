@@ -249,12 +249,45 @@ namespace CXXR {
 	 *          Otherwise, all indices must be in range for the
 	 *          relevant dimension of \a v .
 	 *
+	 * @parak drop true iff any dimensions of unit extent are to
+	 * be removed from the result.
+	 * 
 	 * @return Pointer to a newly created object of type \a V ,
 	 * containing the designated subset of \a v .
 	 */
 	template <class V>
-	static V* arraySubset(const V* v, const PairList* indices);
-		    
+	static V* arraySubset(const V* v, const PairList* indices,
+			      bool drop);
+
+	/** @brief Remove dimensions of unit extent.
+	 *
+	 * If \a v does not point to an R matrix or array, \a v is
+	 * left unchanged and the function returns false.
+	 *
+	 * Otherwise, the function will examine \a v to determine if
+	 * it has any dimensions with just one level, in which case
+	 * those dimensions are removed, and the corresponding
+	 * 'dimnames' (if any) are discarded.
+	 *
+	 * If, after dropping dimensions, only one dimension is left,
+	 * then \a v is converted to a vector, with its 'names'
+	 * attribute taken from the 'dimnames' (if any) of the
+	 * surviving dimension.
+	 *
+	 * If all the original dimensions were of unit extent, then
+	 * again \a v is converted to a vector (with a single
+	 * element).  This vector is given a 'names' attribute only if
+	 * just one of the original dimensions had associated
+	 * 'dimnames', in which case the 'names' are taken from them.
+	 *
+	 * @param v Non-null pointer to the vector whose dimensions
+	 *          are to be examined and if necessary modified.
+	 *
+	 * @return true if any dimensions were dropped, otherwise
+	 * false.
+	 */
+	static bool dropDimensions(VectorBase* v);
+
 	/** @brief Extract a subset of an R vector object.
 	 *
 	 * @tparam V A type inheriting from VectorBase.
@@ -312,7 +345,8 @@ namespace CXXR {
 	// set the attributes on the result.
 	static void setArrayAttributes(VectorBase* subset,
 				       const VectorBase* source,
-			               const DimIndexerVector& dimindexers);
+			               const DimIndexerVector& dimindexers,
+				       bool drop);
 
 	/** @brief Set the attributes on a vector subset.
 	 *
@@ -339,7 +373,8 @@ namespace CXXR {
     };
 
     template <class V>
-    V* Subscripting::arraySubset(const V* v, const PairList* indices)
+    V* Subscripting::arraySubset(const V* v, const PairList* indices,
+				 bool drop)
     {
 	const IntVector* vdims = dimensions(v);
 	size_t ndims = vdims->size();
@@ -382,7 +417,7 @@ namespace CXXR {
 		}
 	    }
 	}
-	setArrayAttributes(result, v, dimindexer);
+	setArrayAttributes(result, v, dimindexer, drop);
 	return result;
     }
 

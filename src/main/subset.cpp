@@ -326,39 +326,36 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop)
     switch (mode) {
     case LGLSXP:
 	result = Subscripting::arraySubset(static_cast<LogicalVector*>(x),
-					   indices);
+					   indices, drop);
 	break;
     case INTSXP:
 	result = Subscripting::arraySubset(static_cast<IntVector*>(x),
-					   indices);
+					   indices, drop);
 	break;
     case REALSXP:
 	result = Subscripting::arraySubset(static_cast<RealVector*>(x),
-					   indices);
+					   indices, drop);
 	break;
     case CPLXSXP:
 	result = Subscripting::arraySubset(static_cast<ComplexVector*>(x),
-					   indices);
+					   indices, drop);
 	break;
     case STRSXP:
 	result = Subscripting::arraySubset(static_cast<StringVector*>(x),
-					   indices);
+					   indices, drop);
 	break;
     case VECSXP:
 	result = Subscripting::arraySubset(static_cast<ListVector*>(x),
-					   indices);
+					   indices, drop);
 	break;
     case RAWSXP:
 	result = Subscripting::arraySubset(static_cast<RawVector*>(x),
-					   indices);
+					   indices, drop);
 	break;
     default:
 	errorcall(call, _("array subscripting not handled for this type"));
 	break;
     }
-
-    if (drop)
-	DropDims(result);
     return result;
 }
 
