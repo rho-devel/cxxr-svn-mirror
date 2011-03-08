@@ -45,6 +45,7 @@
 #include <R_ext/Applic.h> /* for dgemm */
 
 #include "CXXR/GCStackRoot.hpp"
+#include "CXXR/Subscripting.hpp"
 
 using namespace CXXR;
 
@@ -257,105 +258,16 @@ SEXP allocArray(SEXPTYPE mode, SEXP dims)
 /* attribute.  Note that this function mutates x. */
 /* Duplication should occur before this is called. */
 
-SEXP DropDims(SEXP xarg)
+SEXP DropDims(SEXP x)
 {
-    GCStackRoot<> x(xarg);
-    SEXP dims = getAttrib(x, R_DimSymbol);
-    GCStackRoot<> dimnames(getAttrib(x, R_DimNamesSymbol));
-
-    /* Check that dropping will actually do something. */
-    /* (1) Check that there is a "dim" attribute. */
-
-    if (dims == R_NilValue) {
-	return x;
-    }
-    int ndims = LENGTH(dims);
-
-    /* (2) Check whether there are redundant extents */
-    int ngooddims = 0;
-    for (int i = 0; i < ndims; i++)
-	if (INTEGER(dims)[i] != 1) ngooddims++;
-    if (ngooddims == ndims) {
-	return x;
-    }
-
-    if (ngooddims <= 1) {
-	GCStackRoot<> newnames;
-	/* We have reduced to a vector result.
-	   If that has length one, it is ambiguous which dimnames to use,
-	   so use it if there is only one (as from R 2.7.0).
-	 */
-	if (dimnames != R_NilValue) {
-	    if(LENGTH(x) != 1) {
-		for (int i = 0; i < LENGTH(dims); i++) {
-		    if (INTEGER(dims)[i] != 1) {
-			newnames = VECTOR_ELT(dimnames, i);
-			break;
-		    }
-		}
-	    } else { /* drop all dims: keep names if unambiguous */
-		int cnt = 0;
-		for(int i = 0; i < LENGTH(dims); i++)
-		    if(VECTOR_ELT(dimnames, i) != R_NilValue) cnt++;
-		if(cnt == 1)
-		    for (int i = 0; i < LENGTH(dims); i++) {
-			newnames = VECTOR_ELT(dimnames, i);
-			if(newnames != R_NilValue) break;
-		    }
-	    }
-	}
-	setAttrib(x, R_DimNamesSymbol, R_NilValue);
-	setAttrib(x, R_DimSymbol, R_NilValue);
-	setAttrib(x, R_NamesSymbol, newnames);
-	/* FIXME: the following is desirable, but pointless as long as
-	   subset.c & others have a contrary version that leaves the
-	   S4 class in, incorrectly, in the case of vectors.  JMC
-	   3/3/09 */
-/* 	if(IS_S4_OBJECT(x)) {/\* no longer valid subclass of array or
- 	matrix *\/ */
-/* 	    setAttrib(x, R_ClassSymbol, R_NilValue); */
-/* 	    UNSET_S4_OBJECT(x); */
-/* 	} */
-    } else {
-	GCStackRoot<> newnames;
-	/* We have a lower dimensional array. */
-	GCStackRoot<> newnamesnames;
-	SEXP dnn = getAttrib(dimnames, R_NamesSymbol);
-	GCStackRoot<> newdims(allocVector(INTSXP, ngooddims));
-	int n = 0;
-	for (int i = 0; i < ndims; i++)
-	    if (INTEGER(dims)[i] != 1)
-		INTEGER(newdims)[n++] = INTEGER(dims)[i];
-	if (!isNull(dimnames)) {
-	    int havenames = 0;
-	    for (int i = 0; i < ndims; i++)
-		if (INTEGER(dims)[i] != 1 &&
-		    VECTOR_ELT(dimnames, i) != R_NilValue)
-		    havenames = 1;
-	    if (havenames) {
-		newnames = allocVector(VECSXP, n);
-		newnamesnames = allocVector(STRSXP, n);
-		for (int i = 0, n = 0; i < ndims; i++) {
-		    if (INTEGER(dims)[i] != 1) {
-			if(!isNull(dnn))
-			    SET_STRING_ELT(newnamesnames, n,
-					   STRING_ELT(dnn, i));
-			SET_VECTOR_ELT(newnames, n++, VECTOR_ELT(dimnames, i));
-		    }
-		}
-	    }
-	    else dimnames = R_NilValue;
-	}
-	setAttrib(x, R_DimNamesSymbol, R_NilValue);
-	setAttrib(x, R_DimSymbol, newdims);
-	if (dimnames != R_NilValue)
-	{
-	    if(!isNull(dnn))
-		setAttrib(newnames, R_NamesSymbol, newnamesnames);
-	    setAttrib(x, R_DimNamesSymbol, newnames);
-	}
-    }
-    return x;
+    // The following is a kludge.  It is possible that the object
+    // pointed to by x is not actually a VectorBase; however, provided
+    // its 'dims' and/or 'dimnames' attributes, if present, are
+    // configured in the standard way, Subscripting::dropDimensions()
+    // should behave correctly.
+    VectorBase* vb = static_cast<VectorBase*>(x);
+    Subscripting::dropDimensions(vb);
+    return vb;
 }
 
 SEXP attribute_hidden do_drop(SEXP call, SEXP op, SEXP args, SEXP rho)

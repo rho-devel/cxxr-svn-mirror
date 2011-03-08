@@ -321,42 +321,33 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop)
 	    r = CDR(r);
 	}
     }
-    GCStackRoot<> result;
     const PairList* indices = static_cast<PairList*>(s);
     switch (mode) {
     case LGLSXP:
-	result = Subscripting::arraySubset(static_cast<LogicalVector*>(x),
+	return Subscripting::arraySubset(static_cast<LogicalVector*>(x),
 					   indices, drop);
-	break;
     case INTSXP:
-	result = Subscripting::arraySubset(static_cast<IntVector*>(x),
+	return Subscripting::arraySubset(static_cast<IntVector*>(x),
 					   indices, drop);
-	break;
     case REALSXP:
-	result = Subscripting::arraySubset(static_cast<RealVector*>(x),
+	return Subscripting::arraySubset(static_cast<RealVector*>(x),
 					   indices, drop);
-	break;
     case CPLXSXP:
-	result = Subscripting::arraySubset(static_cast<ComplexVector*>(x),
+	return Subscripting::arraySubset(static_cast<ComplexVector*>(x),
 					   indices, drop);
-	break;
     case STRSXP:
-	result = Subscripting::arraySubset(static_cast<StringVector*>(x),
+	return Subscripting::arraySubset(static_cast<StringVector*>(x),
 					   indices, drop);
-	break;
     case VECSXP:
-	result = Subscripting::arraySubset(static_cast<ListVector*>(x),
+	return Subscripting::arraySubset(static_cast<ListVector*>(x),
 					   indices, drop);
-	break;
     case RAWSXP:
-	result = Subscripting::arraySubset(static_cast<RawVector*>(x),
+	return Subscripting::arraySubset(static_cast<RawVector*>(x),
 					   indices, drop);
-	break;
     default:
 	errorcall(call, _("array subscripting not handled for this type"));
-	break;
     }
-    return result;
+    return 0;  // -Wall
 }
 
 
