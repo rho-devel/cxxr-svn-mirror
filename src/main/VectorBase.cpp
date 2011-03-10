@@ -61,6 +61,26 @@ void VectorBase::resize(size_t new_size)
 
 // Rf_allocVector is still in memory.cpp (for the time being).
 
+Rboolean Rf_isVector(SEXP s)
+{
+    switch(TYPEOF(s)) {
+    case LGLSXP:
+    case INTSXP:
+    case REALSXP:
+    case CPLXSXP:
+    case STRSXP:
+    case RAWSXP:
+
+    case VECSXP:
+    case EXPRSXP:
+	return TRUE;
+    case CXXSXP:
+	return Rboolean(dynamic_cast<const VectorBase*>(s) != 0);
+    default:
+	return FALSE;
+    }
+}
+
 void SETLENGTH(SEXP x, int v)
 {
     CXXR::VectorBase* vb = dynamic_cast<CXXR::VectorBase*>(x);

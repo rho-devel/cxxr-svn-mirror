@@ -232,12 +232,26 @@ inline void SET_TRUELENGTH(SEXP x, int v)
  *  Allocate a vector object.  This ensures only validity of
  *  ::SEXPTYPE values representing lists (as the elements must be
  *  initialized).  Initializing of other vector types is done in
- *  do_makevector(). 
+ *  do_makevector().
+ *
  * @param stype The type of vector required.
+ *
  * @param length The length of the vector to be created.
+ *
  * @return Pointer to the created vector.
  */
 SEXP Rf_allocVector(SEXPTYPE stype, R_len_t length);
+
+/** @brief Is an RObject a vector?
+ *
+ * Vector in this context embraces R matrices and arrays.
+ *
+ * @param s Pointer to the RObject to be tested.  The pointer may be
+ *          null, in which case the function returns FALSE.
+ *
+ * @return TRUE iff \a s points to a vector object.
+ */
+Rboolean Rf_isVector(SEXP s);
 
 #ifdef __cplusplus
 }
