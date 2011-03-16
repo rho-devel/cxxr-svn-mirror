@@ -119,7 +119,7 @@ namespace CXXR {
 	 *
 	 * @return the specified element.
 	 */
-	const T* operator[](unsigned int index) const
+	const Handle<T>& operator[](unsigned int index) const
 	{
 	    return m_data[index];
 	}

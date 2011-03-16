@@ -576,38 +576,27 @@ static SEXP VectorAssign(SEXP call, SEXP xarg, SEXP sarg, SEXP yarg)
 	break;
     /* case 1516:  complex   <- character */
     /* case 1519:  complex    <- vector   */
-    case 1610:	/* character <- logical	  */
-    case 1613:	/* character <- integer	  */
-    case 1614:	/* character <- real	  */
-    case 1615:	/* character <- complex	  */
+    /* case 1610:  character <- logical	  */
+    /* case 1613:  character <- integer	  */
+    /* case 1614:  character <- real	  */
+    /* case 1615:  character <- complex	  */
     case 1616:	/* character <- character */
-
-	for (int i = 0; i < n; i++) {
-	    int ii = INTEGER(indx)[i];
-	    if (ii == NA_INTEGER) continue;
-	    ii = ii - 1;
-	    SET_STRING_ELT(x, ii, STRING_ELT(y, i % ny));
-	}
+	x = Subscripting::vectorSubassign(SEXP_downcast<StringVector*>(x.get()),
+					  indices,
+					  SEXP_downcast<const StringVector*>(y.get()));
 	break;
-
     /* case 1619:  character  <- vector   */
     /* case 1910:  vector     <- logical    */
     /* case 1913:  vector     <- integer    */
     /* case 1914:  vector     <- real       */
     /* case 1915:  vector     <- complex    */
     /* case 1916:  vector     <- character  */
-
     case 1919:  /* vector     <- vector     */
-
-	for (int i = 0; i < n; i++) {
-	    int ii = INTEGER(indx)[i];
-	    if (ii == NA_INTEGER) continue;
-	    ii = ii - 1;
-	    SET_VECTOR_ELT(x, ii, VECTOR_ELT(y, i % ny));
-	}
+	x = Subscripting::vectorSubassign(SEXP_downcast<ListVector*>(x.get()),
+					  indices,
+					  SEXP_downcast<const ListVector*>(y.get()));
 	break;
-
-    /* case 2001: */
+    /* case 2001:  expression <- symbol	    */
     /* case 2006:  expression <- language   */
     /* case 2010:  expression <- logical    */
     /* case 2013:  expression <- integer    */
@@ -616,7 +605,6 @@ static SEXP VectorAssign(SEXP call, SEXP xarg, SEXP sarg, SEXP yarg)
     /* case 2016:  expression <- character  */
     case 2019:	/* expression <- vector, needed if we have promoted a
 		   RHS  to a list */
-
 	for (int i = 0; i < n; i++) {
 	    int ii = INTEGER(indx)[i];
 	    if (ii == NA_INTEGER) continue;
@@ -624,34 +612,21 @@ static SEXP VectorAssign(SEXP call, SEXP xarg, SEXP sarg, SEXP yarg)
 	    SET_XVECTOR_ELT(x, ii, VECTOR_ELT(y, i % ny));
 	}
 	break;
-
     case 2020:	/* expression <- expression */
-
-	for (int i = 0; i < n; i++) {
-	    int ii = INTEGER(indx)[i];
-	    if (ii == NA_INTEGER) continue;
-	    ii = ii - 1;
-	    SET_XVECTOR_ELT(x, ii, XVECTOR_ELT(y, i % ny));
-	}
+	x = Subscripting::vectorSubassign(SEXP_downcast<ExpressionVector*>(x.get()),
+					  indices,
+					  SEXP_downcast<const ExpressionVector*>(y.get()));
 	break;
-
     case 1900:  /* vector     <- null       */
     case 2000:  /* expression <- null       */
-
 	x = DeleteListElements(x, indx);
 	return x;
 	break;
-
     case 2424:	/* raw   <- raw	  */
-
-	for (int i = 0; i < n; i++) {
-	    int ii = INTEGER(indx)[i];
-	    if (ii == NA_INTEGER) continue;
-	    ii = ii - 1;
-	    RAW(x)[ii] = RAW(y)[i % ny];
-	}
+	x = Subscripting::vectorSubassign(SEXP_downcast<RawVector*>(x.get()),
+					  indices,
+					  SEXP_downcast<const RawVector*>(y.get()));
 	break;
-
     default:
 	warningcall(call, "sub assignment (*[*] <- *) not done; __bug?__");
     }

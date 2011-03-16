@@ -29,7 +29,7 @@ const StringVector* dimensionNames(const VectorBase* v, unsigned int d)
     const ListVector* lv = dimensionNames(v);
     if (!lv || d > lv->size())
 	return 0;
-    return static_cast<const StringVector*>((*lv)[d - 1]);
+    return static_cast<const StringVector*>((*lv)[d - 1].get());
 }
 
 void setDimensionNames(VectorBase* v, unsigned int d, VectorBase* names)
@@ -176,7 +176,7 @@ void Subscripting::setArrayAttributes(VectorBase* subset,
 		// 0-length dims have NULL dimnames:
 		if (di.nindices > 0) {
 		    const StringVector* sv
-			= static_cast<const StringVector*>((*dimnames)[d]);
+			= static_cast<const StringVector*>((*dimnames)[d].get());
 		    if (sv)
 			(*newdimnames)[d] = vectorSubset(sv, di.indices);
 		}
@@ -202,7 +202,7 @@ void Subscripting::setVectorAttributes(VectorBase* subset,
 	    // Use row names if this is a one-dimensional array:
 	    const ListVector* dimnames = dimensionNames(source);
 	    if (dimnames && dimnames->size() == 1)
-		sourcenames = static_cast<const StringVector*>((*dimnames)[0]);
+		sourcenames = static_cast<const StringVector*>((*dimnames)[0].get());
 	}
 	if (sourcenames)
 	    setNames(subset, vectorSubset(sourcenames, indices));
