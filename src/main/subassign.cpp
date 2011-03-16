@@ -103,6 +103,7 @@
 #include "Defn.h"
 #include <R_ext/RS.h> /* for test of S4 objects */
 #include "CXXR/GCStackRoot.hpp"
+#include "CXXR/Subscripting.hpp"
 
 using namespace std;
 using namespace CXXR;
@@ -506,110 +507,80 @@ static SEXP VectorAssign(SEXP call, SEXP xarg, SEXP sarg, SEXP yarg)
     /* Note that we are now committed. */
     /* Since we are mutating existing objects, */
     /* any changes we make now are (likely to be) permanent.  Beware! */
-
+    const IntVector* indices = static_cast<const IntVector*>(indx.get());
     switch(which) {
 	/* because we have called SubassignTypeFix the commented
 	   values cannot occur (and would be unsafe) */
 
     case 1010:	/* logical   <- logical	  */
-    case 1310:	/* integer   <- logical	  */
+	x = Subscripting::vectorSubassign(SEXP_downcast<LogicalVector*>(x.get()),
+					  indices,
+					  SEXP_downcast<const LogicalVector*>(y.get()));
+	break;
     /* case 1013:  logical   <- integer	  */
-    case 1313:	/* integer   <- integer	  */
-
-	for (int i = 0; i < n; i++) {
-	    int ii = INTEGER(indx)[i];
-	    if (ii == NA_INTEGER) continue;
-	    ii = ii - 1;
-	    INTEGER(x)[ii] = INTEGER(y)[i % ny];
-	}
-	break;
-
-    case 1410:	/* real	     <- logical	  */
-    case 1413:	/* real	     <- integer	  */
-
-	for (int i = 0; i < n; i++) {
-	    int ii = INTEGER(indx)[i];
-	    if (ii == NA_INTEGER) continue;
-	    ii = ii - 1;
-	    int iy = INTEGER(y)[i % ny];
-	    if (iy == NA_INTEGER)
-		REAL(x)[ii] = NA_REAL;
-	    else
-		REAL(x)[ii] = iy;
-	}
-	break;
-
     /* case 1014:  logical   <- real	  */
-    /* case 1314:  integer   <- real	  */
-    case 1414:	/* real	     <- real	  */
-
-	for (int i = 0; i < n; i++) {
-	    int ii = INTEGER(indx)[i];
-	    if (ii == NA_INTEGER) continue;
-	    ii = ii - 1;
-	    REAL(x)[ii] = REAL(y)[i % ny];
-	}
-	break;
-
-    case 1510:	/* complex   <- logical	  */
-    case 1513:	/* complex   <- integer	  */
-
-	for (int i = 0; i < n; i++) {
-	    int ii = INTEGER(indx)[i];
-	    if (ii == NA_INTEGER) continue;
-	    ii = ii - 1;
-	    int iy = INTEGER(y)[i % ny];
-	    if (iy == NA_INTEGER) {
-		COMPLEX(x)[ii].r = NA_REAL;
-		COMPLEX(x)[ii].i = NA_REAL;
-	    }
-	    else {
-		COMPLEX(x)[ii].r = iy;
-		COMPLEX(x)[ii].i = 0.0;
-	    }
-	}
-	break;
-
-    case 1514:	/* complex   <- real	  */
-
-	for (int i = 0; i < n; i++) {
-	    int ii = INTEGER(indx)[i];
-	    if (ii == NA_INTEGER) continue;
-	    ii = ii - 1;
-	    double ry = REAL(y)[i % ny];
-	    if (ISNA(ry)) {
-		COMPLEX(x)[ii].r = NA_REAL;
-		COMPLEX(x)[ii].i = NA_REAL;
-	    }
-	    else {
-		COMPLEX(x)[ii].r = ry;
-		COMPLEX(x)[ii].i = 0.0;
-	    }
-	}
-	break;
-
     /* case 1015:  logical   <- complex	  */
-    /* case 1315:  integer   <- complex	  */
-    /* case 1415:  real	     <- complex	  */
-    case 1515:	/* complex   <- complex	  */
-
-	for (int i = 0; i < n; i++) {
-	    int ii = INTEGER(indx)[i];
-	    if (ii == NA_INTEGER) continue;
-	    ii = ii - 1;
-	    COMPLEX(x)[ii] = COMPLEX(y)[i % ny];
-	}
+    /* case 1016:  logical   <- character */
+    /* case 1019:  logial     <- vector   */
+    case 1310:	/* integer   <- logical	  */
+	x = Subscripting::vectorSubassign(SEXP_downcast<IntVector*>(x.get()),
+					  indices,
+					  SEXP_downcast<const LogicalVector*>(y.get()));
 	break;
-
+    case 1313:	/* integer   <- integer	  */
+	x = Subscripting::vectorSubassign(SEXP_downcast<IntVector*>(x.get()),
+					  indices,
+					  SEXP_downcast<const IntVector*>(y.get()));
+	break;
+    /* case 1314:  integer   <- real	  */
+    /* case 1315:  integer   <- complex	  */
+    /* case 1316:  integer   <- character */
+    /* case 1319:  integer    <- vector   */
+    case 1410:	/* real	     <- logical	  */
+	x = Subscripting::vectorSubassign(SEXP_downcast<RealVector*>(x.get()),
+					  indices,
+					  SEXP_downcast<const LogicalVector*>(y.get()));
+	break;
+    case 1413:	/* real	     <- integer	  */
+	x = Subscripting::vectorSubassign(SEXP_downcast<RealVector*>(x.get()),
+					  indices,
+					  SEXP_downcast<const IntVector*>(y.get()));
+	break;
+    case 1414:	/* real	     <- real	  */
+	x = Subscripting::vectorSubassign(SEXP_downcast<RealVector*>(x.get()),
+					  indices,
+					  SEXP_downcast<const RealVector*>(y.get()));
+	break;
+    /* case 1415:  real	     <- complex	  */
+    /* case 1416:  real	     <- character */
+    /* case 1419:  real       <- vector   */
+    case 1510:	/* complex   <- logical	  */
+	x = Subscripting::vectorSubassign(SEXP_downcast<ComplexVector*>(x.get()),
+					  indices,
+					  SEXP_downcast<const LogicalVector*>(y.get()));
+	break;
+    case 1513:	/* complex   <- integer	  */
+	x = Subscripting::vectorSubassign(SEXP_downcast<ComplexVector*>(x.get()),
+					  indices,
+					  SEXP_downcast<const IntVector*>(y.get()));
+	break;
+    case 1514:	/* complex   <- real	  */
+	x = Subscripting::vectorSubassign(SEXP_downcast<ComplexVector*>(x.get()),
+					  indices,
+					  SEXP_downcast<const RealVector*>(y.get()));
+	break;
+    case 1515:	/* complex   <- complex	  */
+	x = Subscripting::vectorSubassign(SEXP_downcast<ComplexVector*>(x.get()),
+					  indices,
+					  SEXP_downcast<const ComplexVector*>(y.get()));
+	break;
+    /* case 1516:  complex   <- character */
+    /* case 1519:  complex    <- vector   */
     case 1610:	/* character <- logical	  */
     case 1613:	/* character <- integer	  */
     case 1614:	/* character <- real	  */
     case 1615:	/* character <- complex	  */
     case 1616:	/* character <- character */
-    /* case 1016:  logical   <- character */
-    /* case 1316:  integer   <- character */
-    /* case 1416:  real	     <- character */
-    /* case 1516:  complex   <- character */
 
 	for (int i = 0; i < n; i++) {
 	    int ii = INTEGER(indx)[i];
@@ -619,12 +590,7 @@ static SEXP VectorAssign(SEXP call, SEXP xarg, SEXP sarg, SEXP yarg)
 	}
 	break;
 
-    /* case 1019:  logial     <- vector   */
-    /* case 1319:  integer    <- vector   */
-    /* case 1419:  real       <- vector   */
-    /* case 1519:  complex    <- vector   */
     /* case 1619:  character  <- vector   */
-
     /* case 1910:  vector     <- logical    */
     /* case 1913:  vector     <- integer    */
     /* case 1914:  vector     <- real       */

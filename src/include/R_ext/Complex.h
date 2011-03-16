@@ -37,17 +37,39 @@
 #ifndef R_COMPLEX_H
 #define R_COMPLEX_H
 
-#ifdef  __cplusplus
-extern "C" {
-#endif
+#ifndef  __cplusplus
 
 typedef struct {
-	double r;
-	double i;
+    double r;
+    double i;
 } Rcomplex;
 
-#ifdef  __cplusplus
+#else
+
+struct Rcomplex {
+    double r;
+    double i;
+
+    Rcomplex()
+    {}
+
+    Rcomplex(double rl, double im = 0.0)
+	: r(rl), i(im)
+    {}
+
+    Rcomplex& operator=(double rhs)
+    {
+	r = rhs;
+	i = 0;
+	return *this;
+    }
+};
+
+inline bool operator==(const Rcomplex& l, const Rcomplex& r)
+{
+    return (l.r == r.r) && (l.i == r.i);
 }
-#endif
+
+#endif // __cplusplus
 
 #endif /* R_COMPLEX_H */

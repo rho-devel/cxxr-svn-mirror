@@ -288,6 +288,10 @@ namespace CXXR {
 	 */
 	static bool dropDimensions(VectorBase* v);
 
+	template <class VL, class VR>
+	static VL* vectorSubassign(VL* lhs, const IntVector* indices,
+				   const VR* rhs);
+
 	/** @brief Extract a subset of an R vector object.
 	 *
 	 * @tparam V A type inheriting from VectorBase.
@@ -419,6 +423,25 @@ namespace CXXR {
 	}
 	setArrayAttributes(result, v, dimindexer, drop);
 	return result;
+    }
+
+    template <class VL, class VR>
+    VL* Subscripting::vectorSubassign(VL* lhs, const IntVector* indices,
+				      const VR* rhs)
+    {
+	typedef typename VL::value_type Lval;
+	typedef typename VR::value_type Rval;
+	size_t ni = indices->size();
+	size_t rhs_size = rhs->size();
+	GCStackRoot<VL> ans(lhs);
+	for (unsigned int i = 0; i < ni; ++i) {
+	    int ii = (*indices)[i];
+	    if (!isNA(ii)) {
+		const Rval& rval = (*rhs)[i % rhs_size];
+		(*ans)[ii - 1] = (isNA(rval) ? NA<Lval>() : Rval(rval));
+	    }
+	}
+	return ans;
     }
 
     template <class V>

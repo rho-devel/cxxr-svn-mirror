@@ -56,7 +56,7 @@ namespace CXXR {
     template <>
     inline const Rcomplex& NA<Rcomplex>()
     {
-	static Rcomplex ans = {NA_REAL, NA_REAL};
+	static Rcomplex ans(NA_REAL, NA_REAL);
 	return ans;
     }
 
