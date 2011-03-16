@@ -503,11 +503,11 @@ typedef SEXP (*StringEltGetter)(SEXP x, int i);
 
 static SEXP
 stringSubscript(SEXP sarg, int ns, int nx, SEXP namesarg,
-		StringEltGetter strg, int *stretch, Rboolean in, SEXP call)
+		StringEltGetter strg, int *stretch, SEXP call)
 {
     int canstretch = *stretch;
     /* product may overflow, so check factors as well. */
-    bool usehashing = (in && ( ((ns > 1000 && nx) || (nx > 1000 && ns)) || (ns * nx > 15*nx + ns) ));
+    bool usehashing = ( ((ns > 1000 && nx) || (nx > 1000 && ns)) || (ns * nx > 15*nx + ns) );
 
     GCStackRoot<> s(sarg);
     GCStackRoot<> names(namesarg);
@@ -539,9 +539,6 @@ stringSubscript(SEXP sarg, int ns, int nx, SEXP namesarg,
 	    if (names != R_NilValue) {
 		for (int j = 0; j < nnames; j++) {
 		    SEXP names_j = strg(names, j);
-		    if (!in && TYPEOF(names_j) != CHARSXP) {
-			ECALL(call, _("character vector element does not have type CHARSXP"));
-		    }
 		    if (NonNullStringMatch(STRING_ELT(s, i), names_j)) {
 			sub = j + 1;
 			SET_VECTOR_ELT(indexnames, i, R_NilValue);
@@ -595,7 +592,7 @@ typedef SEXP AttrGetter(SEXP x, SEXP data);
 
 static SEXP
 int_arraySubscript(int dim, SEXP s, SEXP dims, AttrGetter dng,
-		   StringEltGetter strg, SEXP x, Rboolean in, SEXP call)
+		   StringEltGetter strg, SEXP x)
 {
     int stretch = 0;
     int ns = length(s);
@@ -605,33 +602,29 @@ int_arraySubscript(int dim, SEXP s, SEXP dims, AttrGetter dng,
     case NILSXP:
 	return allocVector(INTSXP, 0);
     case LGLSXP:
-	return logicalSubscript(s, ns, nd, &stretch, call);
+	return logicalSubscript(s, ns, nd, &stretch, 0);
     case INTSXP:
-	return integerSubscript(s, ns, nd, &stretch, call);
+	return integerSubscript(s, ns, nd, &stretch, 0);
     case REALSXP:
 	{
 	    GCStackRoot<> tmp(coerceVector(s, INTSXP));
-	    tmp = integerSubscript(tmp, ns, nd, &stretch, call);
+	    tmp = integerSubscript(tmp, ns, nd, &stretch, 0);
 	    return tmp;
 	}
     case STRSXP:
 	{
 	    SEXP dnames = dng(x, R_DimNamesSymbol);
 	    if (dnames == R_NilValue) {
-		ECALL(call, _("no 'dimnames' attribute for array"));
+		ECALL(0, _("no 'dimnames' attribute for array"));
 	    }
 	    dnames = VECTOR_ELT(dnames, dim);
-	    return stringSubscript(s, ns, nd, dnames, strg, &stretch, in, call);
+	    return stringSubscript(s, ns, nd, dnames, strg, &stretch, 0);
 	}
     case SYMSXP:
 	if (s == R_MissingArg)
 	    return nullSubscript(nd);
     default:
-	if (call == R_NilValue)
 	    error(_("invalid subscript type '%s'"), type2char(TYPEOF(s)));
-	else
-	    errorcall(call, _("invalid subscript type '%s'"),
-		      type2char(TYPEOF(s)));
     }
     return R_NilValue;
 }
@@ -642,7 +635,7 @@ SEXP
 arraySubscript(int dim, SEXP s, SEXP dims, AttrGetter dng,
 	       StringEltGetter strg, SEXP x)
 {
-    return int_arraySubscript(dim, s, dims, dng, strg, x, TRUE, R_NilValue);
+    return int_arraySubscript(dim, s, dims, dng, strg, x);
 }
 
 /* Subscript creation.  The first thing we do is check to see */
@@ -677,7 +670,7 @@ SEXP attribute_hidden makeSubscript(SEXP x, SEXP s, int *stretch, SEXP call)
 
 static SEXP
 int_vectorSubscript(int nx, SEXP sarg, int *stretch, AttrGetter dng,
-		    StringEltGetter strg, SEXP x, Rboolean in, SEXP call)
+		    StringEltGetter strg, SEXP x, SEXP call)
 {
     SEXP ans = R_NilValue;
 
@@ -716,7 +709,7 @@ int_vectorSubscript(int nx, SEXP sarg, int *stretch, AttrGetter dng,
 	{
 	    SEXP names = dng(x, R_NamesSymbol);
 	    /* *stretch = 0; */
-	    ans = stringSubscript(s, ns, nx, names, strg, stretch, in, call);
+	    ans = stringSubscript(s, ns, nx, names, strg, stretch, call);
 	}
 	break;
     case SYMSXP:
@@ -740,5 +733,5 @@ SEXP attribute_hidden
 vectorSubscript(int nx, SEXP s, int *stretch, AttrGetter dng,
 		StringEltGetter strg, SEXP x, SEXP call)
 {
-    return int_vectorSubscript(nx, s, stretch, dng, strg, x, TRUE, call);
+    return int_vectorSubscript(nx, s, stretch, dng, strg, x, call);
 }
