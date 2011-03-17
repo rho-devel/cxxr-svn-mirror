@@ -19,6 +19,7 @@
  * Implementation of class CXXR::Subscripting and associated functions.
  */
 
+#include <set>
 #include "CXXR/Subscripting.hpp"
 
 using namespace std;
@@ -45,6 +46,69 @@ void setDimensionNames(VectorBase* v, unsigned int d, VectorBase* names)
 	v->setAttribute(DimNamesSymbol, lv);
     }
     (*lv)[d - 1] = names;
+}
+
+pair<const IntVector*, size_t>
+Subscripting::canonicalize(const IntVector* raw_indices, size_t vector_size)
+{
+    const size_t rawsize = raw_indices->size();
+    bool anyNA = false;
+    bool anyneg = false;
+    unsigned int zeroes = 0;
+    unsigned int max_index = 0;
+    for (unsigned int i = 0; i < rawsize; ++i) {
+	int index = (*raw_indices)[i];
+	if (isNA(index))
+	    anyNA = true;
+	else if (index < 0)
+	    anyneg = true;
+	else if (index == 0)
+	    ++zeroes;
+	else if (index > int(max_index))
+	    max_index = index;
+    }
+    if (!anyneg) {
+	if (zeroes == 0)  // Already canonical
+	    return make_pair(raw_indices, max_index);
+	// Otherwise suppress zeroes:
+	GCStackRoot<IntVector> ans(CXXR_NEW(IntVector(rawsize - zeroes)));
+	unsigned int iout = 0;
+	for (unsigned int iin = 0; iin < rawsize; ++iin) {
+	    int index = (*raw_indices)[iin];
+	    if (index != 0) {
+		if (iout >= ans->size())
+		    abort();
+		(*ans)[iout++] = index;
+	    }
+	}
+	return pair<const IntVector*, size_t>(ans, max_index);
+    } else {  // Negative subscripts
+	if (anyNA || max_index > 0)
+	    Rf_error(_("only 0's may be mixed with negative subscripts"));
+	set<unsigned int> excluded;
+	// Build set of excluded values:
+	for (unsigned int i = 0; i < rawsize; ++i) {
+	    int index = -(*raw_indices)[i];
+	    if (index != 0 && index <= int(vector_size))
+		excluded.insert(index);
+	}
+	GCStackRoot<IntVector>
+	    ans(CXXR_NEW(IntVector(vector_size - excluded.size())));
+	// Fill answer and recompute max_index:
+	{
+	    unsigned int iout = 0;
+	    max_index = 0;
+	    for (int index = 1; index <= int(vector_size); ++index) {
+		if (excluded.count(index) == 0) {
+		    if (iout >= ans->size())
+			abort();
+		    (*ans)[iout++] = index;
+		    max_index = index;
+		}
+	    }
+	}
+	return pair<const IntVector*, size_t>(ans, max_index);
+    }
 }
 
 size_t Subscripting::createDimIndexers(DimIndexerVector* dimindexers,

@@ -54,7 +54,9 @@
 #include <Defn.h>
 
 #include "CXXR/GCStackRoot.hpp"
+#include "CXXR/Subscripting.hpp"
 
+using namespace std;
 using namespace CXXR;
 
 /* We might get a call with R_NilValue from subassignment code */
@@ -418,70 +420,18 @@ static SEXP logicalSubscript(SEXP s, int ns, int nx, int *stretch, SEXP call)
     return indx;
 }
 
-static SEXP negativeSubscript(SEXP s, int ns, int nx, SEXP call)
-{
-    int stretch = 0;
-    GCStackRoot<> indx(allocVector(LGLSXP, nx));
-    for (int i = 0; i < nx; i++)
-	LOGICAL(indx)[i] = 1;
-    for (int i = 0; i < ns; i++) {
-	int ix = INTEGER(s)[i];
-	if (ix != 0 && ix != NA_INTEGER && -ix <= nx)
-	    LOGICAL(indx)[-ix - 1] = 0;
-    }
-    s = logicalSubscript(indx, nx, nx, &stretch, call);
-    return s;
-}
-
-static SEXP positiveSubscript(SEXP s, int ns, int nx)
-{
-    int zct = 0;
-    for (int i = 0; i < ns; i++) {
-	if (INTEGER(s)[i] == 0)
-	    zct++;
-    }
-    if (zct) {
-	SEXP indx = allocVector(INTSXP, (ns - zct));
-	int ii = 0;
-	for (int i = 0; i < ns; i++)
-	    if (INTEGER(s)[i] != 0)
-		INTEGER(indx)[ii++] = INTEGER(s)[i];
-	return indx;
-    }
-    else
-	return s;
-}
-
 static SEXP integerSubscript(SEXP s, int ns, int nx, int *stretch, SEXP call)
 {
-    Rboolean isna = FALSE;
-    int canstretch = *stretch;
+    bool canstretch = (*stretch != 0);
     *stretch = 0;
-    int min = 0;
-    int max = 0;
-    for (int i = 0; i < ns; i++) {
-	int ii = INTEGER(s)[i];
-	if (ii != NA_INTEGER) {
-	    if (ii < min)
-		min = ii;
-	    if (ii > max)
-		max = ii;
-	} else isna = TRUE;
-    }
-    if (max > nx) {
-	if(canstretch) *stretch = max;
-	else {
+    pair<const IntVector*, size_t> pr
+	= Subscripting::canonicalize(SEXP_downcast<IntVector*>(s), nx);
+    if (int(pr.second) > nx) {
+	if (!canstretch) {
 	    ECALL(call, _("subscript out of bounds"));
-	}
+	} else *stretch = pr.second;
     }
-    if (min < 0) {
-	if (max == 0 && !isna) return negativeSubscript(s, ns, nx, call);
-	else {
-	    ECALL(call, _("only 0's may be mixed with negative subscripts"));
-	}
-    }
-    else return positiveSubscript(s, ns, nx);
-    return R_NilValue;
+    return const_cast<IntVector*>(pr.first);
 }
 
 typedef SEXP (*StringEltGetter)(SEXP x, int i);
