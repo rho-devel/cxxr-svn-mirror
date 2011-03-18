@@ -49,7 +49,7 @@ void setDimensionNames(VectorBase* v, unsigned int d, VectorBase* names)
 }
 
 pair<const IntVector*, size_t>
-Subscripting::canonicalize(const IntVector* raw_indices, size_t vector_size,
+Subscripting::canonicalize(const IntVector* raw_indices, size_t range_size,
 			   bool keep_overshoot)
 {
     const size_t rawsize = raw_indices->size();
@@ -70,7 +70,7 @@ Subscripting::canonicalize(const IntVector* raw_indices, size_t vector_size,
     }
     if (!anyneg) {
 	// Check if raw_indices is already in the required form:
-	if (zeroes == 0 && (keep_overshoot || max_index <= vector_size))
+	if (zeroes == 0 && (keep_overshoot || max_index <= range_size))
 	    return make_pair(raw_indices, max_index);
 	// Otherwise suppress zeroes and apply keep_overshoot:
 	GCStackRoot<IntVector> ans(CXXR_NEW(IntVector(rawsize - zeroes)));
@@ -85,7 +85,7 @@ Subscripting::canonicalize(const IntVector* raw_indices, size_t vector_size,
 	    for (unsigned int iin = 0; iin < rawsize; ++iin) {
 		int index = (*raw_indices)[iin];
 		if (index != 0) {
-		    if (!isNA(index) && index > int(vector_size))
+		    if (!isNA(index) && index > int(range_size))
 			index = NA<int>();
 		    (*ans)[iout++] = index;
 		}
@@ -95,38 +95,26 @@ Subscripting::canonicalize(const IntVector* raw_indices, size_t vector_size,
     } else {  // Negative subscripts
 	if (anyNA || max_index > 0)
 	    Rf_error(_("only 0's may be mixed with negative subscripts"));
-	set<unsigned int> excluded;
-	// Build set of excluded values:
+	// Create a LogicalVector to show which elements are to be retained:
+	GCStackRoot<LogicalVector>
+	    lgvec(CXXR_NEW(LogicalVector(range_size, 1)));
 	for (unsigned int i = 0; i < rawsize; ++i) {
 	    int index = -(*raw_indices)[i];
-	    if (index != 0 && index <= int(vector_size))
-		excluded.insert(index);
+	    if (index != 0 && index <= int(range_size))
+		(*lgvec)[index - 1] = 0;
 	}
-	GCStackRoot<IntVector>
-	    ans(CXXR_NEW(IntVector(vector_size - excluded.size())));
-	// Fill answer and recompute max_index:
-	{
-	    unsigned int iout = 0;
-	    max_index = 0;
-	    for (int index = 1; index <= int(vector_size); ++index) {
-		if (excluded.count(index) == 0) {
-		    (*ans)[iout++] = index;
-		    max_index = index;
-		}
-	    }
-	}
-	return pair<const IntVector*, size_t>(ans, max_index);
+	return canonicalize(lgvec, range_size, false);
     }
 }
 
 pair<const IntVector*, size_t>
-Subscripting::canonicalize(const LogicalVector* raw_indices, size_t vector_size,
+Subscripting::canonicalize(const LogicalVector* raw_indices, size_t range_size,
 			   bool keep_overshoot)
 {
     const size_t rawsize = raw_indices->size();
     if (rawsize == 0)
 	return make_pair(CXXR_NEW(IntVector(0)), 0);
-    unsigned int nmax = vector_size;
+    unsigned int nmax = range_size;
     if (keep_overshoot && rawsize > nmax)
 	nmax = rawsize;
     // Determine size of answer:
@@ -135,7 +123,7 @@ Subscripting::canonicalize(const LogicalVector* raw_indices, size_t vector_size,
 	if ((*raw_indices)[i%rawsize] != 0)
 	    ++anssize;
     }
-    // Create canonical vector:
+    // Create canonical index vector:
     GCStackRoot<IntVector> ans(CXXR_NEW(IntVector(anssize)));
     {
 	unsigned int iout = 0;
