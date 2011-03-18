@@ -119,6 +119,37 @@ Subscripting::canonicalize(const IntVector* raw_indices, size_t vector_size,
     }
 }
 
+pair<const IntVector*, size_t>
+Subscripting::canonicalize(const LogicalVector* raw_indices, size_t vector_size,
+			   bool keep_overshoot)
+{
+    const size_t rawsize = raw_indices->size();
+    if (rawsize == 0)
+	return make_pair(CXXR_NEW(IntVector(0)), 0);
+    unsigned int nmax = vector_size;
+    if (keep_overshoot && rawsize > nmax)
+	nmax = rawsize;
+    // Determine size of answer:
+    size_t anssize = 0;
+    for (unsigned int i = 0; i < nmax; ++i) {
+	if ((*raw_indices)[i%rawsize] != 0)
+	    ++anssize;
+    }
+    // Create canonical vector:
+    GCStackRoot<IntVector> ans(CXXR_NEW(IntVector(anssize)));
+    {
+	unsigned int iout = 0;
+	for (unsigned int iin = 0; iin < nmax; ++iin) {
+	    int logical = (*raw_indices)[iin % rawsize];
+	    if (isNA(logical))
+		(*ans)[iout++] = NA<int>();
+	    else if (logical != 0)
+		(*ans)[iout++] = iin + 1;
+	}
+    }
+    return pair<const IntVector*, size_t>(ans, nmax);
+}
+
 size_t Subscripting::createDimIndexers(DimIndexerVector* dimindexers,
 				       const IntVector* source_dims,
 				       const PairList* indices)

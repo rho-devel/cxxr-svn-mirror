@@ -391,33 +391,16 @@ static SEXP nullSubscript(int n)
 
 static SEXP logicalSubscript(SEXP s, int ns, int nx, int *stretch, SEXP call)
 {
-    SEXP indx;
-    int canstretch = *stretch;
-    if (!canstretch && ns > nx) {
-	ECALL(call, _("(subscript) logical subscript too long"));
+    bool canstretch = (*stretch != 0);
+    *stretch = 0;
+    pair<const IntVector*, size_t> pr
+	= Subscripting::canonicalize(SEXP_downcast<LogicalVector*>(s), nx, true);
+    if (int(pr.second) > nx) {
+	if (!canstretch) {
+	    ECALL(call, _("subscript out of bounds"));
+	} else *stretch = pr.second;
     }
-    int nmax = (ns > nx) ? ns : nx;
-    *stretch = (ns > nx) ? ns : 0;
-    if (ns == 0)
-	return(allocVector(INTSXP, 0));
-    {
-	int count = 0;
-	for (int i = 0; i < nmax; i++)
-	    if (LOGICAL(s)[i%ns])
-		count++;
-	indx = allocVector(INTSXP, count);
-    }
-    {
-	int count = 0;
-	for (int i = 0; i < nmax; i++)
-	    if (LOGICAL(s)[i%ns]) {
-		if (LOGICAL(s)[i%ns] == NA_LOGICAL)
-		    INTEGER(indx)[count++] = NA_INTEGER;
-		else
-		    INTEGER(indx)[count++] = i + 1;
-	    }
-    }
-    return indx;
+    return const_cast<IntVector*>(pr.first);
 }
 
 static SEXP integerSubscript(SEXP s, int ns, int nx, int *stretch, SEXP call)
