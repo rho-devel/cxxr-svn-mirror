@@ -49,7 +49,8 @@ void setDimensionNames(VectorBase* v, unsigned int d, VectorBase* names)
 }
 
 pair<const IntVector*, size_t>
-Subscripting::canonicalize(const IntVector* raw_indices, size_t vector_size)
+Subscripting::canonicalize(const IntVector* raw_indices, size_t vector_size,
+			   bool keep_overshoot)
 {
     const size_t rawsize = raw_indices->size();
     bool anyNA = false;
@@ -68,17 +69,26 @@ Subscripting::canonicalize(const IntVector* raw_indices, size_t vector_size)
 	    max_index = index;
     }
     if (!anyneg) {
-	if (zeroes == 0)  // Already canonical
+	// Check if raw_indices is already in the required form:
+	if (zeroes == 0 && (keep_overshoot || max_index <= vector_size))
 	    return make_pair(raw_indices, max_index);
-	// Otherwise suppress zeroes:
+	// Otherwise suppress zeroes and apply keep_overshoot:
 	GCStackRoot<IntVector> ans(CXXR_NEW(IntVector(rawsize - zeroes)));
 	unsigned int iout = 0;
-	for (unsigned int iin = 0; iin < rawsize; ++iin) {
-	    int index = (*raw_indices)[iin];
-	    if (index != 0) {
-		if (iout >= ans->size())
-		    abort();
-		(*ans)[iout++] = index;
+	if (keep_overshoot) {
+	    for (unsigned int iin = 0; iin < rawsize; ++iin) {
+		int index = (*raw_indices)[iin];
+		if (index != 0)
+		    (*ans)[iout++] = index;
+	    }
+	} else {
+	    for (unsigned int iin = 0; iin < rawsize; ++iin) {
+		int index = (*raw_indices)[iin];
+		if (index != 0) {
+		    if (!isNA(index) && index > int(vector_size))
+			index = NA<int>();
+		    (*ans)[iout++] = index;
+		}
 	    }
 	}
 	return pair<const IntVector*, size_t>(ans, max_index);
@@ -100,8 +110,6 @@ Subscripting::canonicalize(const IntVector* raw_indices, size_t vector_size)
 	    max_index = 0;
 	    for (int index = 1; index <= int(vector_size); ++index) {
 		if (excluded.count(index) == 0) {
-		    if (iout >= ans->size())
-			abort();
 		    (*ans)[iout++] = index;
 		    max_index = index;
 		}

@@ -425,7 +425,7 @@ static SEXP integerSubscript(SEXP s, int ns, int nx, int *stretch, SEXP call)
     bool canstretch = (*stretch != 0);
     *stretch = 0;
     pair<const IntVector*, size_t> pr
-	= Subscripting::canonicalize(SEXP_downcast<IntVector*>(s), nx);
+	= Subscripting::canonicalize(SEXP_downcast<IntVector*>(s), nx, true);
     if (int(pr.second) > nx) {
 	if (!canstretch) {
 	    ECALL(call, _("subscript out of bounds"));

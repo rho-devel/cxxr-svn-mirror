@@ -271,35 +271,40 @@ namespace CXXR {
 	 * @param raw_indices Non-null pointer to an IntVector.  An
 	 *          error is raised if this vector is not of one of
 	 *          the two legal forms: (i) consisting entirely of
-	 *          non-negative integers and NAs; or (ii) consisting
+	 *          non-negative integers and/or NAs; or (ii) consisting
 	 *          entirely of non-positive integers with no NAs.  In
-	 *          case (i) the returned vector is obtained simply by
-	 *          omitting any zeroes from \a raw_indices .  In case
-	 *          (ii) the returned vector is the sequence (possibly
-	 *          empty) from 1 to \a vector_size, omitting any
-	 *          values which appear (negated) within \a
-	 *          raw_indices.
+	 *          case (i) the returned vector is obtained by
+	 *          omitting any zeroes from \a raw_indices and, if \a
+	 *          keep_overshoot is false, converting indices that
+	 *          exceed \a vector_size to NA .  In case (ii) the
+	 *          returned vector is the sequence (possibly empty)
+	 *          from 1 to \a vector_size, omitting any values
+	 *          which appear (negated) within \a raw_indices.
 	 *
 	 * @param vector_size The size of the vector into which
-	 *          indexing is being performed.  Note that in case
-	 *          (i) above, no error is raised if an index within
-	 *          \a raw_indices exceeds \a vector_size : that index
-	 *          is carried through into the returned vector.
-	 *          Similarly, in case (ii) above it is legal for the
-	 *          absolute value of an index to exceed \a
-	 *          vector_size ; such indices are simply ignored in
-	 *          generating the result.
+	 *          indexing is being performed.
+	 *
+	 * @param keep_overshoot In case (i), if \a keep_overshoot is
+	 *          false, indices that exceed \a vector_size are
+	 *          converted to NA; if \a keep_overshoot is true,
+	 *          they are retained in the returned value.  This
+	 *          parameter has no effect in case (ii): if the
+	 *          absolute value of a negative index exceeds \a
+	 *          vector_size, it is simply ignored in generating
+	 *          the result.
 	 *
 	 * @return The first element of the returned value is a
 	 * pointer to the canonicalised index vector.  The second
 	 * element is the maximum non-NA index value that occurs
 	 * within the canonicalised index vector, or zero if this
-	 * vector is empty or consists entirely of NAs.  Calling code
-	 * can compare this value to \a vector_size to determine if
-	 * there were any out-of-range indices.
+	 * vector is empty or consists entirely of NAs.  (If \a
+	 * keep_overshoot is true, calling code can then compare this
+	 * value to \a vector_size to determine if there were any
+	 * out-of-range indices.)
 	 */
 	static std::pair<const IntVector*, size_t>
-	canonicalize(const IntVector* raw_indices, size_t vector_size);
+	canonicalize(const IntVector* raw_indices, size_t vector_size,
+		     bool keep_overshoot);
 
 	/** @brief Remove dimensions of unit extent.
 	 *
