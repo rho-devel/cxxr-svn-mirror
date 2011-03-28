@@ -605,12 +605,9 @@ static SEXP VectorAssign(SEXP call, SEXP xarg, SEXP sarg, SEXP yarg)
     /* case 2016:  expression <- character  */
     case 2019:	/* expression <- vector, needed if we have promoted a
 		   RHS  to a list */
-	for (int i = 0; i < n; i++) {
-	    int ii = INTEGER(indx)[i];
-	    if (ii == NA_INTEGER) continue;
-	    ii = ii - 1;
-	    SET_XVECTOR_ELT(x, ii, VECTOR_ELT(y, i % ny));
-	}
+	x = Subscripting::vectorSubassign(SEXP_downcast<ExpressionVector*>(x.get()),
+					  indices,
+					  SEXP_downcast<const ListVector*>(y.get()));
 	break;
     case 2020:	/* expression <- expression */
 	x = Subscripting::vectorSubassign(SEXP_downcast<ExpressionVector*>(x.get()),

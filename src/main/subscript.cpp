@@ -428,12 +428,6 @@ typedef SEXP (*StringEltGetter)(SEXP x, int i);
  * setting the element of the newnames vector to NULL.
 */
 
-/* The original code (pre 2.0.0) used a ns x nx loop that was too
- * slow.  So now we hash.  Hashing is expensive on memory (up to 32nx
- * bytes) so it is only worth doing if ns * nx is large.  If nx is
- * large, then it will be too slow unless ns is very small.
- */
-
 static SEXP
 stringSubscript(SEXP sarg, int ns, int nx, SEXP namesarg,
 		StringEltGetter strg, int *stretch, SEXP call)
@@ -447,81 +441,6 @@ stringSubscript(SEXP sarg, int ns, int nx, SEXP namesarg,
     if (int(pr.second) > nx)
 	*stretch = pr.second;
     return const_cast<IntVector*>(pr.first);
-#ifdef FALSE
-    int canstretch = *stretch;
-    /* product may overflow, so check factors as well. */
-    bool usehashing = ( ((ns > 1000 && nx) || (nx > 1000 && ns)) || (ns * nx > 15*nx + ns) );
-
-    GCStackRoot<> s(sarg);
-    GCStackRoot<> names(namesarg);
-    GCStackRoot<> indexnames(allocVector(VECSXP, ns));
-
-    /* Process each of the subscripts. First we compare with the names
-     * on the vector and then (if there is no match) with each of the
-     * previous subscripts, since (if assigning) we may have already
-     * added an element of that name. (If we are not assigning, any
-     * nonmatch will have given an error.)
-     */
-
-    GCStackRoot<> indx;
-    int nnames = nx;
-    if(usehashing) {
-	/* must be internal, so names contains a character vector */
-	/* NB: this does not behave in the same way with respect to ""
-	   and NA names: they will match */
-	indx = match(names, s, 0);
-	/* second pass to correct this */
-	for (int i = 0; i < ns; i++)
-	    if(STRING_ELT(s, i) == NA_STRING || !CHAR(STRING_ELT(s, i))[0])
-		INTEGER(indx)[i] = 0;
-	for (int i = 0; i < ns; i++) SET_VECTOR_ELT(indexnames, i, R_NilValue);
-    } else {
-	indx = allocVector(INTSXP, ns);
-	for (int i = 0; i < ns; i++) {
-	    int sub = 0;
-	    if (names != R_NilValue) {
-		for (int j = 0; j < nnames; j++) {
-		    SEXP names_j = strg(names, j);
-		    if (NonNullStringMatch(STRING_ELT(s, i), names_j)) {
-			sub = j + 1;
-			SET_VECTOR_ELT(indexnames, i, R_NilValue);
-			break;
-		    }
-		}
-	    }
-	    INTEGER(indx)[i] = sub;
-	}
-    }
-
-    int extra = nnames;
-    for (int i = 0; i < ns; i++) {
-	int sub = INTEGER(indx)[i];
-	if (sub == 0) {
-	    for (int j = 0 ; j < i ; j++)
-		if (NonNullStringMatch(STRING_ELT(s, i), STRING_ELT(s, j))) {
-		    sub = INTEGER(indx)[j];
-		    SET_VECTOR_ELT(indexnames, i, STRING_ELT(s, j));
-		    break;
-		}
-	}
-	if (sub == 0) {
-	    if (!canstretch) {
-		ECALL(call, _("subscript out of bounds"));
-	    }
-	    extra += 1;
-	    sub = extra;
-	    SET_VECTOR_ELT(indexnames, i, STRING_ELT(s, i));
-	}
-	INTEGER(indx)[i] = sub;
-    }
-    /* We return the new names as the names attribute of the returned
-       subscript vector. */
-    if (extra != nnames)
-	setAttrib(indx, R_UseNamesSymbol, indexnames);
-    if (canstretch)
-	*stretch = extra;
-    return indx;
-#endif
 }
 
 /* Array Subscripts.
