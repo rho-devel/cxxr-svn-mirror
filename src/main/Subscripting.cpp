@@ -51,8 +51,7 @@ void setDimensionNames(VectorBase* v, unsigned int d, VectorBase* names)
 }
 
 pair<const IntVector*, size_t>
-Subscripting::canonicalize(const IntVector* raw_indices, size_t range_size,
-			   bool keep_overshoot)
+Subscripting::canonicalize(const IntVector* raw_indices, size_t range_size)
 {
     const size_t rawsize = raw_indices->size();
     bool anyNA = false;
@@ -72,26 +71,15 @@ Subscripting::canonicalize(const IntVector* raw_indices, size_t range_size,
     }
     if (!anyneg) {
 	// Check if raw_indices is already in the required form:
-	if (zeroes == 0 && (keep_overshoot || max_index <= range_size))
+	if (zeroes == 0)
 	    return make_pair(raw_indices, max_index);
-	// Otherwise suppress zeroes and apply keep_overshoot:
+	// Otherwise suppress zeroes:
 	GCStackRoot<IntVector> ans(CXXR_NEW(IntVector(rawsize - zeroes)));
 	unsigned int iout = 0;
-	if (keep_overshoot) {
-	    for (unsigned int iin = 0; iin < rawsize; ++iin) {
-		int index = (*raw_indices)[iin];
-		if (index != 0)
-		    (*ans)[iout++] = index;
-	    }
-	} else {
-	    for (unsigned int iin = 0; iin < rawsize; ++iin) {
-		int index = (*raw_indices)[iin];
-		if (index != 0) {
-		    if (!isNA(index) && index > int(range_size))
-			index = NA<int>();
-		    (*ans)[iout++] = index;
-		}
-	    }
+	for (unsigned int iin = 0; iin < rawsize; ++iin) {
+	    int index = (*raw_indices)[iin];
+	    if (index != 0)
+		(*ans)[iout++] = index;
 	}
 	return pair<const IntVector*, size_t>(ans, max_index);
     } else {  // Negative subscripts
@@ -105,26 +93,22 @@ Subscripting::canonicalize(const IntVector* raw_indices, size_t range_size,
 	    if (index != 0 && index <= int(range_size))
 		(*lgvec)[index - 1] = 0;
 	}
-	return canonicalize(lgvec, range_size, false);
+	return canonicalize(lgvec, range_size);
     }
 }
 
 pair<const IntVector*, size_t>
-Subscripting::canonicalize(const LogicalVector* raw_indices, size_t range_size,
-			   bool keep_overshoot)
+Subscripting::canonicalize(const LogicalVector* raw_indices, size_t range_size)
 {
     const size_t rawsize = raw_indices->size();
     if (rawsize == 0)
 	return make_pair(CXXR_NEW(IntVector(0)), 0);
-    unsigned int nmax = range_size;
-    if (keep_overshoot && rawsize > nmax)
-	nmax = rawsize;
+    unsigned int nmax = max(range_size, rawsize);
     // Determine size of answer:
     size_t anssize = 0;
-    for (unsigned int i = 0; i < nmax; ++i) {
+    for (unsigned int i = 0; i < nmax; ++i)
 	if ((*raw_indices)[i%rawsize] != 0)
 	    ++anssize;
-    }
     // Create canonical index vector:
     GCStackRoot<IntVector> ans(CXXR_NEW(IntVector(anssize)));
     {
@@ -142,8 +126,7 @@ Subscripting::canonicalize(const LogicalVector* raw_indices, size_t range_size,
 
 pair<const IntVector*, size_t>
 Subscripting::canonicalize(const StringVector* raw_indices, size_t range_size,
-			   const StringVector* range_names,
-			   bool allow_new_names)
+			   const StringVector* range_names)
 {
     const size_t rawsize = raw_indices->size();
     unsigned int max_index = range_size;
@@ -173,8 +156,6 @@ Subscripting::canonicalize(const StringVector* raw_indices, size_t range_size,
     }
     GCStackRoot<IntVector> ans(CXXR_NEW(IntVector(rawsize)));
     GCStackRoot<ListVector> use_names;  // For the use.names attribute
-    if (allow_new_names)
-	use_names = CXXR_NEW(ListVector(rawsize));
     // Process the subscripts:
     for (unsigned int i = 0; i < rawsize; ++i) {
 	String* name = (*raw_indices)[i];
@@ -191,9 +172,9 @@ Subscripting::canonicalize(const StringVector* raw_indices, size_t range_size,
 	    Nmap::const_iterator it = names_map.find(cname);
 	    if (it != names_map.end())
 		(*ans)[i] = (*it).second;
-	    else if (!allow_new_names)
-		Rf_error(_("subscript out of bounds"));
 	    else {
+		if (!use_names)
+		    use_names = CXXR_NEW(ListVector(rawsize));
 		++max_index;
 		(*use_names)[i] = cname;
 		(*ans)[i] = max_index;
@@ -202,7 +183,7 @@ Subscripting::canonicalize(const StringVector* raw_indices, size_t range_size,
 	}
     }
     // Set up the use.names attribute if necessary:
-    if (max_index != range_size)
+    if (max_index > range_size)
 	ans->setAttribute(UseNamesSymbol, use_names);
     return pair<const IntVector*, size_t>(ans, max_index);
 }

@@ -394,7 +394,7 @@ static SEXP logicalSubscript(SEXP s, int ns, int nx, int *stretch, SEXP call)
     bool canstretch = (*stretch != 0);
     *stretch = 0;
     pair<const IntVector*, size_t> pr
-	= Subscripting::canonicalize(SEXP_downcast<LogicalVector*>(s), nx, true);
+	= Subscripting::canonicalize(SEXP_downcast<LogicalVector*>(s), nx);
     if (int(pr.second) > nx) {
 	if (!canstretch) {
 	    ECALL(call, _("subscript out of bounds"));
@@ -408,7 +408,7 @@ static SEXP integerSubscript(SEXP s, int ns, int nx, int *stretch, SEXP call)
     bool canstretch = (*stretch != 0);
     *stretch = 0;
     pair<const IntVector*, size_t> pr
-	= Subscripting::canonicalize(SEXP_downcast<IntVector*>(s), nx, true);
+	= Subscripting::canonicalize(SEXP_downcast<IntVector*>(s), nx);
     if (int(pr.second) > nx) {
 	if (!canstretch) {
 	    ECALL(call, _("subscript out of bounds"));
@@ -436,10 +436,12 @@ stringSubscript(SEXP sarg, int ns, int nx, SEXP namesarg,
     *stretch = 0;
     pair<const IntVector*, size_t> pr
 	= Subscripting::canonicalize(SEXP_downcast<StringVector*>(sarg), nx,
-				     SEXP_downcast<StringVector*>(namesarg),
-				     canstretch);
-    if (int(pr.second) > nx)
-	*stretch = pr.second;
+				     SEXP_downcast<StringVector*>(namesarg));
+    if (int(pr.second) > nx) {
+	if (!canstretch) {
+	    ECALL(call, _("subscript out of bounds"));
+	} else *stretch = pr.second;
+    }
     return const_cast<IntVector*>(pr.first);
 }
 
