@@ -495,15 +495,6 @@ static SEXP VectorAssign(SEXP call, SEXP xarg, SEXP sarg, SEXP yarg)
 	    warning(_("number of items to replace is not a multiple of replacement length"));
     }
 
-
-    /* When array elements are being permuted the RHS */
-    /* must be duplicated or the elements get trashed. */
-    /* FIXME : this should be a shallow copy for list */
-    /* objects.  A full duplication is wasteful. */
-
-    if (x == y)
-	y = duplicate(y);
-
     /* Note that we are now committed. */
     /* Since we are mutating existing objects, */
     /* any changes we make now are (likely to be) permanent.  Beware! */
@@ -627,41 +618,6 @@ static SEXP VectorAssign(SEXP call, SEXP xarg, SEXP sarg, SEXP yarg)
     default:
 	warningcall(call, "sub assignment (*[*] <- *) not done; __bug?__");
     }
-    Subscripting::processUseNames(SEXP_downcast<VectorBase*>(x.get()), indices);
-#ifdef FALSE
-    /* Check for additional named elements. */
-    /* Note makeSubscript passes the additional names back as the use.names
-       attribute (a vector list) of the generated subscript vector */
-    SEXP newnames = getAttrib(indx, R_UseNamesSymbol);
-    if (newnames != R_NilValue) {
-	SEXP oldnames = getAttrib(x, R_NamesSymbol);
-	if (oldnames != R_NilValue) {
-	    for (int i = 0; i < n; i++) {
-		if (VECTOR_ELT(newnames, i) != R_NilValue) {
-		    int ii = INTEGER(indx)[i];
-		    if (ii == NA_INTEGER) continue;
-		    ii = ii - 1;
-		    SET_STRING_ELT(oldnames, ii, VECTOR_ELT(newnames, i));
-		}
-	    }
-	}
-	else {
-	    int nx = length(x);
-	    GCStackRoot<> names(allocVector(STRSXP, nx));
-	    for (int i = 0; i < nx; i++)
-		SET_STRING_ELT(names, i, R_BlankString);
-	    for (int i = 0; i < n; i++) {
-		if (VECTOR_ELT(newnames, i) != R_NilValue) {
-		    int ii = INTEGER(indx)[i];
-		    if (ii == NA_INTEGER) continue;
-		    ii = ii - 1;
-		    SET_STRING_ELT(names, ii, VECTOR_ELT(newnames, i));
-		}
-	    }
-	    setAttrib(x, R_NamesSymbol, names);
-	}
-    }
-#endif
     return x;
 }
 

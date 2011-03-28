@@ -443,10 +443,6 @@ namespace CXXR {
 	 */
 	static bool dropDimensions(VectorBase* v);
 
-	// If 'indices' has a 'use.names' attribute, use this to
-	// update the 'names' attribute of 'v'.
-	static void processUseNames(VectorBase* v, const IntVector* indices);
-
 	template <class VL, class VR>
 	static VL* vectorSubassign(VL* lhs, const IntVector* indices,
 				   const VR* rhs);
@@ -503,6 +499,10 @@ namespace CXXR {
 	static size_t createDimIndexers(DimIndexerVector* dimindexers,
 					const IntVector* source_dims,
 					const PairList* indices);
+
+	// If 'indices' has a 'use.names' attribute, use this to
+	// update the 'names' attribute of 'v'.
+	static void processUseNames(VectorBase* v, const IntVector* indices);
 
 	// Non-templated auxiliary function for arraySubset(), used to
 	// set the attributes on the result.
@@ -593,13 +593,18 @@ namespace CXXR {
 	size_t ni = indices->size();
 	size_t rhs_size = rhs->size();
 	GCStackRoot<VL> ans(lhs);
+	// Make sure we don't modify rhs.  (FIXME: ideally this should
+	// be a shallow copy for HandleVectors.)
+	if (static_cast<VectorBase*>(lhs) == rhs)
+	    ans = lhs->clone();
 	for (unsigned int i = 0; i < ni; ++i) {
-	    int ii = (*indices)[i];
-	    if (!isNA(ii)) {
+	    int index = (*indices)[i];
+	    if (!isNA(index)) {
 		const Rval& rval = (*rhs)[i % rhs_size];
-		(*ans)[ii - 1] = (isNA(rval) ? NA<Lval>() : Rval(rval));
+		(*ans)[index - 1] = (isNA(rval) ? NA<Lval>() : Rval(rval));
 	    }
 	}
+	processUseNames(ans, indices);
 	return ans;
     }
 
@@ -613,11 +618,11 @@ namespace CXXR {
 	// assignment operator takes a non-const RHS:
 	V* vnc = const_cast<V*>(v);
 	for (unsigned int i = 0; i < ni; ++i) {
-	    int ii = (*indices)[i];
+	    int index = (*indices)[i];
 	    // Note that zero and negative indices ought not to occur.
-	    if (isNA(ii) || ii <= 0 || ii > int(vsize))
+	    if (isNA(index) || index <= 0 || index > int(vsize))
 		(*ans)[i] = NA<typename V::value_type>();
-	    else (*ans)[i] = (*vnc)[ii - 1];
+	    else (*ans)[i] = (*vnc)[index - 1];
 	}
 	setVectorAttributes(ans, v, indices);
 	return ans;
