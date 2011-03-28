@@ -356,6 +356,58 @@ namespace CXXR {
 	canonicalize(const LogicalVector* raw_indices, size_t range_size,
 		     bool keep_overshoot);
 
+	/** @brief Obtain canonical index vector from an StringVector.
+	 *
+	 * @param raw_indices Non-null pointer to a StringVector.  Any
+	 *          element of this which is blank or NA will be
+	 *          mapped to NA in the resulting canonical index
+	 *          vector.  Any non-blank, non-NA element which
+	 *          matches a name in \a range_names will be mapped to
+	 *          the corresponding index.  (If there are duplicate
+	 *          names in \a range_names it will be mapped to the
+	 *          lowest corresponding index.)  See the description
+	 *          of \a allow_new_names for the handling of
+	 *          non-matching names.
+	 *
+	 * @param range_size The size of the vector or dimension into
+	 *          which indexing is being performed.
+	 *
+	 * @param range_names Pointer, possibly null, to the vector of
+	 *          names associated with the vector or dimension into
+	 *          which indexing is being performed.  If present,
+	 *          the size of this vector must be equal to \a
+	 *          range_size .
+	 *
+	 * @param allow_new_names If false, any non-blank, non-NA
+	 *          names in \a raw_indices which does not also occur
+	 *          in \a range_names will give rise to an error.
+	 *          Otherwise, each new name will be considered to be
+	 *          associated with a supplementary element of the
+	 *          vector into which indexing is being performed.
+	 *
+	 * @return The first element of the returned value is a
+	 * pointer to the canonicalised index vector.  The second
+	 * element is normally equal to the size of \a range_names .
+	 * However, if \a allow_new_names is true and \a raw_indices
+	 * contained at least one non-blank, non-null name unmatched
+	 * in \a range_names , then the second element of the return
+	 * value will exceed the size of \a range_names by the number
+	 * of such names encountered, each of which will have been
+	 * mapped to a supplementary element of the vector being
+	 * indexed.  In that case, the first element of the return
+	 * value will have the attribute 'use.names' set to a
+	 * ListVector of the same size as \a raw_indices .  All the
+	 * elements of this ListVector are NULL, except where the
+	 * corresponding element of \a raw_indices was mapped into a
+	 * supplementary vector element, in which case the ListVector
+	 * element will be a CachedString giving the name of that
+	 * supplementary vector element.
+	 */
+	static std::pair<const IntVector*, size_t>
+	canonicalize(const StringVector* raw_indices, size_t range_size,
+		     const StringVector* range_names,
+		     bool allow_new_names);
+
 	/** @brief Remove dimensions of unit extent.
 	 *
 	 * If \a v does not point to an R matrix or array, \a v is

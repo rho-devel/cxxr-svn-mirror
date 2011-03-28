@@ -438,6 +438,16 @@ static SEXP
 stringSubscript(SEXP sarg, int ns, int nx, SEXP namesarg,
 		StringEltGetter strg, int *stretch, SEXP call)
 {
+    bool canstretch = (*stretch != 0);
+    *stretch = 0;
+    pair<const IntVector*, size_t> pr
+	= Subscripting::canonicalize(SEXP_downcast<StringVector*>(sarg), nx,
+				     SEXP_downcast<StringVector*>(namesarg),
+				     canstretch);
+    if (int(pr.second) > nx)
+	*stretch = pr.second;
+    return const_cast<IntVector*>(pr.first);
+#ifdef FALSE
     int canstretch = *stretch;
     /* product may overflow, so check factors as well. */
     bool usehashing = ( ((ns > 1000 && nx) || (nx > 1000 && ns)) || (ns * nx > 15*nx + ns) );
@@ -511,6 +521,7 @@ stringSubscript(SEXP sarg, int ns, int nx, SEXP namesarg,
     if (canstretch)
 	*stretch = extra;
     return indx;
+#endif
 }
 
 /* Array Subscripts.
@@ -640,7 +651,9 @@ int_vectorSubscript(int nx, SEXP sarg, int *stretch, AttrGetter dng,
 	break;
     case STRSXP:
 	{
-	    SEXP names = dng(x, R_NamesSymbol);
+	    // If x is a pairlist, names will be created on the fly,
+	    // and so needs protecting:
+	    GCStackRoot<> names(dng(x, R_NamesSymbol));
 	    /* *stretch = 0; */
 	    ans = stringSubscript(s, ns, nx, names, strg, stretch, call);
 	}

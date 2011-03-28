@@ -20,6 +20,8 @@
  */
 
 #include <set>
+#include <tr1/unordered_map>
+#include "CXXR/RAllocStack.h"
 #include "CXXR/Subscripting.hpp"
 
 using namespace std;
@@ -136,6 +138,73 @@ Subscripting::canonicalize(const LogicalVector* raw_indices, size_t range_size,
 	}
     }
     return pair<const IntVector*, size_t>(ans, nmax);
+}
+
+pair<const IntVector*, size_t>
+Subscripting::canonicalize(const StringVector* raw_indices, size_t range_size,
+			   const StringVector* range_names,
+			   bool allow_new_names)
+{
+    const size_t rawsize = raw_indices->size();
+    unsigned int max_index = range_size;
+    typedef tr1::unordered_map<GCRoot<CachedString>, unsigned int> Nmap;
+    Nmap names_map;
+    if (range_names) {
+	if (range_names->size() != range_size)
+	    Rf_error(_("internal error: names vector has wrong size"));
+	// Build a mapping from names to indices.  Do this backwards so
+	// that in the case of duplicated names, the first occurrence
+	// prevails:
+	for (int i = range_size - 1; i >= 0; --i) {
+	    String* name = (*range_names)[i];
+	    if (name != String::NA()) {
+		GCRoot<CachedString> cname(SEXP_downcast<CachedString*>(name));
+		if (cname != CachedString::blank()) {
+		    // Coerce to UTF8 if necessary:
+		    if (cname->encoding() != CE_UTF8) {
+			RAllocStack::Scope scope;
+			const char* utf8s = Rf_translateCharUTF8(cname);
+			cname = CachedString::obtain(utf8s, CE_UTF8);
+		    }
+		    names_map[cname] = i + 1;
+		}
+	    }
+	}
+    }
+    GCStackRoot<IntVector> ans(CXXR_NEW(IntVector(rawsize)));
+    GCStackRoot<ListVector> use_names;  // For the use.names attribute
+    if (allow_new_names)
+	use_names = CXXR_NEW(ListVector(rawsize));
+    // Process the subscripts:
+    for (unsigned int i = 0; i < rawsize; ++i) {
+	String* name = (*raw_indices)[i];
+	if (name == String::NA())
+	    (*ans)[i] = NA<int>();
+	else {
+	    GCRoot<CachedString> cname(SEXP_downcast<CachedString*>(name));
+	    // Coerce to UTF8 if necessary:
+	    if (cname->encoding() != CE_UTF8) {
+		RAllocStack::Scope scope;
+		const char* utf8s = Rf_translateCharUTF8(cname);
+		cname = CachedString::obtain(utf8s, CE_UTF8);
+	    }
+	    Nmap::const_iterator it = names_map.find(cname);
+	    if (it != names_map.end())
+		(*ans)[i] = (*it).second;
+	    else if (!allow_new_names)
+		Rf_error(_("subscript out of bounds"));
+	    else {
+		++max_index;
+		(*use_names)[i] = cname;
+		(*ans)[i] = max_index;
+		names_map[cname] = max_index;
+	    }
+	}
+    }
+    // Set up the use.names attribute if necessary:
+    if (max_index != range_size)
+	ans->setAttribute(UseNamesSymbol, use_names);
+    return pair<const IntVector*, size_t>(ans, max_index);
 }
 
 size_t Subscripting::createDimIndexers(DimIndexerVector* dimindexers,
