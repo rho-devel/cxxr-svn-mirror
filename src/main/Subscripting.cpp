@@ -129,56 +129,66 @@ Subscripting::canonicalize(const StringVector* raw_indices, size_t range_size,
 			   const StringVector* range_names)
 {
     const size_t rawsize = raw_indices->size();
-    unsigned int max_index = range_size;
     typedef tr1::unordered_map<GCRoot<CachedString>, unsigned int> Nmap;
     Nmap names_map;
-    if (range_names) {
-	if (range_names->size() != range_size)
-	    Rf_error(_("internal error: names vector has wrong size"));
-	// Build a mapping from names to indices.  Do this backwards so
-	// that in the case of duplicated names, the first occurrence
-	// prevails:
-	for (int i = range_size - 1; i >= 0; --i) {
-	    String* name = (*range_names)[i];
-	    if (name != String::NA()) {
-		GCRoot<CachedString> cname(SEXP_downcast<CachedString*>(name));
-		if (cname != CachedString::blank()) {
-		    // Coerce to UTF8 if necessary:
-		    if (cname->encoding() != CE_UTF8) {
-			RAllocStack::Scope scope;
-			const char* utf8s = Rf_translateCharUTF8(cname);
-			cname = CachedString::obtain(utf8s, CE_UTF8);
-		    }
-		    names_map[cname] = i + 1;
-		}
-	    }
-	}
-    }
+    unsigned int max_index = (range_names ? 0 : range_size);
     GCStackRoot<IntVector> ans(CXXR_NEW(IntVector(rawsize)));
     GCStackRoot<ListVector> use_names;  // For the use.names attribute
-    // Process the subscripts:
-    for (unsigned int i = 0; i < rawsize; ++i) {
-	String* name = (*raw_indices)[i];
-	if (name == String::NA())
-	    (*ans)[i] = NA<int>();
+    // Process the supplied subscripts in order:
+    for (unsigned int iraw = 0; iraw < rawsize; ++iraw) {
+	String* subscript = (*raw_indices)[iraw];
+	if (subscript == String::NA())
+	    (*ans)[iraw] = NA<int>();
 	else {
-	    GCRoot<CachedString> cname(SEXP_downcast<CachedString*>(name));
+	    GCRoot<CachedString>
+		csubscript(SEXP_downcast<CachedString*>(subscript));
 	    // Coerce to UTF8 if necessary:
-	    if (cname->encoding() != CE_UTF8) {
+	    if (csubscript->encoding() != CE_UTF8) {
 		RAllocStack::Scope scope;
-		const char* utf8s = Rf_translateCharUTF8(cname);
-		cname = CachedString::obtain(utf8s, CE_UTF8);
+		const char* utf8s = Rf_translateCharUTF8(csubscript);
+		csubscript = CachedString::obtain(utf8s, CE_UTF8);
 	    }
-	    Nmap::const_iterator it = names_map.find(cname);
-	    if (it != names_map.end())
-		(*ans)[i] = (*it).second;
-	    else {
-		if (!use_names)
-		    use_names = CXXR_NEW(ListVector(rawsize));
-		++max_index;
-		(*use_names)[i] = cname;
-		(*ans)[i] = max_index;
-		names_map[cname] = max_index;
+	    // Have we met this name already?
+	    Nmap::const_iterator it = names_map.find(csubscript);
+	    if (it != names_map.end())  // Yes
+		(*ans)[iraw] = (*it).second;
+	    else {  // No
+		// If we haven't yet worked right through range_names,
+		// continue searching for a match from where we left
+		// off, in the process continuing to build a mapping
+		// from names to indices:
+		bool found = false;
+		while (max_index < range_size && !found) {
+		    String* name = (*range_names)[max_index++];
+		    if (name != String::NA()) {
+			GCRoot<CachedString>
+			    cname(SEXP_downcast<CachedString*>(name));
+			if (cname != CachedString::blank()) {
+			    // Coerce to UTF8 if necessary:
+			    if (cname->encoding() != CE_UTF8) {
+				RAllocStack::Scope scope;
+				const char* utf8s = Rf_translateCharUTF8(cname);
+				cname = CachedString::obtain(utf8s, CE_UTF8);
+			    }
+			    // Insert this name into names_map
+			    // provided it isn't already there:
+			    Nmap::const_iterator nmit = names_map.find(cname);
+			    if (nmit == names_map.end())
+				names_map[cname] = max_index;
+			    found = (cname == csubscript);
+			}
+		    }
+		}
+		if (found) 
+		    (*ans)[iraw] = max_index;
+		else { // The supplied subscript is a new name:
+		    if (!use_names)
+			use_names = CXXR_NEW(ListVector(rawsize));
+		    ++max_index;
+		    (*use_names)[iraw] = csubscript;
+		    (*ans)[iraw] = max_index;
+		    names_map[csubscript] = max_index;
+		}
 	    }
 	}
     }
