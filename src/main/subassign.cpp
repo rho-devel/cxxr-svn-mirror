@@ -627,6 +627,8 @@ static SEXP VectorAssign(SEXP call, SEXP xarg, SEXP sarg, SEXP yarg)
     default:
 	warningcall(call, "sub assignment (*[*] <- *) not done; __bug?__");
     }
+    Subscripting::processUseNames(SEXP_downcast<VectorBase*>(x.get()), indices);
+#ifdef FALSE
     /* Check for additional named elements. */
     /* Note makeSubscript passes the additional names back as the use.names
        attribute (a vector list) of the generated subscript vector */
@@ -659,6 +661,7 @@ static SEXP VectorAssign(SEXP call, SEXP xarg, SEXP sarg, SEXP yarg)
 	    setAttrib(x, R_NamesSymbol, names);
 	}
     }
+#endif
     return x;
 }
 

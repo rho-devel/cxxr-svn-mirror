@@ -234,6 +234,12 @@ namespace CXXR {
      * index into a vector counting from one).  Various
      * <tt>canonicalize()</tt> functions are provided to convert other
      * forms of subscripting to the canonical form.
+     *
+     * @note Under certain circumstances, a canonical index vector may
+     * have a <tt>use.names</tt> attribute.  This attribute should be
+     * regarded as private to the Subscripting class, because its
+     * implementation (or indeed its use at all) may change in the
+     * future.
      */
     class Subscripting {
     public:
@@ -436,6 +442,10 @@ namespace CXXR {
 	 * false.
 	 */
 	static bool dropDimensions(VectorBase* v);
+
+	// If 'indices' has a 'use.names' attribute, use this to
+	// update the 'names' attribute of 'v'.
+	static void processUseNames(VectorBase* v, const IntVector* indices);
 
 	template <class VL, class VR>
 	static VL* vectorSubassign(VL* lhs, const IntVector* indices,

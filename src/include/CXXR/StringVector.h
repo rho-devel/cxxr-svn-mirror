@@ -81,7 +81,8 @@ namespace CXXR {
 	/** @brief Create a StringVector.
 	 *
 	 * @param sz Number of elements required.  Zero is
-	 *          permissible.
+	 *          permissible.  The elements are initialized with
+	 *          CachedString::blank().
 	 */
 	explicit StringVector(size_t sz)
 	    : HandleVector<String, STRSXP>(sz, CachedString::blank())

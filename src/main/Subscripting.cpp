@@ -313,6 +313,33 @@ bool Subscripting::dropDimensions(VectorBase* v)
     return true;
 }
 
+void Subscripting::processUseNames(VectorBase* v, const IntVector* indices)
+{
+    const ListVector* usenames;
+    {
+	RObject* unmattr = indices->getAttribute(UseNamesSymbol);
+	usenames = SEXP_downcast<const ListVector*>(unmattr);
+    }
+    if (!usenames)
+	return;
+    GCStackRoot<StringVector> newnames;
+    {
+	RObject* nmattr = v->getAttribute(NamesSymbol);
+	if (nmattr)
+	    newnames = SEXP_downcast<StringVector*>(nmattr);
+	else newnames = CXXR_NEW(StringVector(v->size()));
+    }
+    for (unsigned int i = 0; i < usenames->size(); ++i) {
+	RObject* newname = (*usenames)[i];
+	if (newname) {
+	    int index = (*indices)[i];
+	    if (!isNA(index))
+		(*newnames)[index - 1] = SEXP_downcast<String*>(newname);
+	}
+    }
+    v->setAttribute(NamesSymbol, newnames);
+}
+
 void Subscripting::setArrayAttributes(VectorBase* subset,
 				      const VectorBase* source,
 				      const DimIndexerVector& dimindexers,
