@@ -191,38 +191,38 @@ static SEXP VectorSubset(SEXP x, SEXP sarg, SEXP call)
 	switch (mode) {
 	case LGLSXP:
 	    result = Subscripting::vectorSubset(static_cast<LogicalVector*>(x),
-						 indices);
+						s);
 	    break;
 	case INTSXP:
 	    result = Subscripting::vectorSubset(static_cast<IntVector*>(x),
-						 indices);
+						s);
 	    break;
 	case REALSXP:
 	    result = Subscripting::vectorSubset(static_cast<RealVector*>(x),
-						 indices);
+						s);
 	    break;
 	case CPLXSXP:
 	    result = Subscripting::vectorSubset(static_cast<ComplexVector*>(x),
-						 indices);
+						s);
 	    break;
 	case RAWSXP:
 	    result = Subscripting::vectorSubset(static_cast<RawVector*>(x),
-						 indices);
+						s);
 	    break;
 	case STRSXP:
 	    result = Subscripting::vectorSubset(static_cast<StringVector*>(x),
-						 indices);
+						s);
 	    break;
 	case VECSXP:
 	    result = Subscripting::vectorSubset(static_cast<ListVector*>(x),
-						 indices);
+						 s);
 	    /* we do not duplicate the values when extracting the subset,
 	       so to be conservative mark the result as NAMED = 2 */
 	    SET_NAMED(result, 2);
 	    break;
 	case EXPRSXP:
 	    result = Subscripting::vectorSubset(static_cast<ExpressionVector*>(x),
-						 indices);
+						s);
 	    /* we do not duplicate the values when extracting the subset,
 	       so to be conservative mark the result as NAMED = 2 */
 	    SET_NAMED(result, 2);

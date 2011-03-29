@@ -22,6 +22,7 @@
 #include <set>
 #include <tr1/unordered_map>
 #include "CXXR/RAllocStack.h"
+#include "CXXR/RealVector.h"
 #include "CXXR/Subscripting.hpp"
 
 using namespace std;
@@ -196,6 +197,51 @@ Subscripting::canonicalize(const StringVector* raw_indices, size_t range_size,
     if (max_index > range_size)
 	ans->setAttribute(UseNamesSymbol, use_names);
     return pair<const IntVector*, size_t>(ans, max_index);
+}
+
+pair<const IntVector*, size_t>
+Subscripting::canonicalizeVectorSubscript(const VectorBase* v,
+					  const RObject* subscripts)
+{
+    if (!subscripts)
+	return pair<const IntVector*, size_t>(CXXR_NEW(IntVector(0)), 0);
+    switch (subscripts->sexptype()) {
+    case LGLSXP:
+	return canonicalize(static_cast<const LogicalVector*>(subscripts),
+			    v->size());
+    case INTSXP:
+	return canonicalize(static_cast<const IntVector*>(subscripts),
+			    v->size());
+    case REALSXP:
+	{
+	    const RealVector* rsub = static_cast<const RealVector*>(subscripts);
+	    size_t rawsize = rsub->size();
+	    GCStackRoot<IntVector> isub(CXXR_NEW(IntVector(rawsize)));
+	    for (unsigned int i = 0; i < rawsize; ++i)
+		(*isub)[i] = (*rsub)[i];
+	    return canonicalize(isub, v->size());
+	}
+    case STRSXP:
+	return canonicalize(static_cast<const StringVector*>(subscripts),
+			    v->size(), names(v));
+    case SYMSXP:
+	{
+	    const Symbol* sym = static_cast<const Symbol*>(subscripts);
+	    if (sym == Symbol::missingArgument()) {
+		// If a subscript argument is missing, we take this as
+		// meaning 'select everything':
+		size_t vsize = v->size();
+		GCStackRoot<IntVector> ivec(CXXR_NEW(IntVector(vsize)));
+		for (unsigned int i = 0; i < vsize; ++i)
+		    (*ivec)[i] = i + 1;
+		return pair<const IntVector*, size_t>(ivec, vsize);
+	    }
+	    // Else deliberate fall through to default case:
+	}
+    default:
+	Rf_error(_("invalid subscript type '%s'"), subscripts->typeName());
+    }
+    return pair<const IntVector*, size_t>(0, 0); // -Wall
 }
 
 size_t Subscripting::createDimIndexers(DimIndexerVector* dimindexers,

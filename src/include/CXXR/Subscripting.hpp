@@ -390,6 +390,36 @@ namespace CXXR {
 	canonicalize(const StringVector* raw_indices, size_t range_size,
 		     const StringVector* range_names);
 
+	/** Canonicalize a subscript object for indexing an R vector.
+	 *
+	 * @param v Non-null pointer to the VectorBase to which
+	 *          subscripting is to be applied.
+	 *
+	 * @param subscripts Pointer, possibly null, to an RObject.
+	 *          If the type and contents of this object are legal
+	 *          for subscripting, canonicalization will be
+	 *          performed accordingly; otherwise an error will be
+	 *          raised.
+	 *
+	 * @return The first element of the returned value is a
+	 * pointer to the canonicalised index vector.  The second
+	 * element is the minimum size implied by \a subscripts for
+	 * the vector into which indexing is being performed.  If this
+	 * exceeds the size of \a v it means that an attempt is being
+	 * made to read or write from elements beyond the end of the
+	 * vector.
+	 *
+	 * @note At present this function does not handle the special
+	 * case (described in sec. 3.4.2 of the R Language Definition)
+	 * where \a v is an array, and \a subscripts is a matrix with
+	 * as many columns as \a v has dimensions, each row of the
+	 * matrix being used to pick out a single element of the
+	 * array.
+	 */
+	static std::pair<const IntVector*, size_t>
+	canonicalizeVectorSubscript(const VectorBase* v,
+				    const RObject* subscripts);
+
 	/** @brief Remove dimensions of unit extent.
 	 *
 	 * If \a v does not point to an R matrix or array, \a v is
@@ -431,23 +461,47 @@ namespace CXXR {
 	 *          object from which a subset (not necessarily a
 	 *          proper subset) is to be extracted.
 	 *
-	 * @param indices Pointer to a vector of indices (counting
-	 *          from 1) designating the elements of \a v to be
-	 *          included as successive elements of the output
-	 *          vector, which will be the same size as \a indices .
-	 *          NA_INTEGER is a permissible index value, in
-	 *          which case the corresponding element of the output
-	 *          vector will have an NA value appropriate to type
-	 *          \a V .  If an index is out of range with respect
-	 *          to \a v , in which case also the corresponding
-	 *          element of the output vector will have an NA value
-	 *          appropriate to type \a V .
+	 * @param indices Non-null pointer to a canonical index vector
+	 *          designating the elements of \a v to be included as
+	 *          successive elements of the output vector, which
+	 *          will be the same size as \a indices .  NA_INTEGER
+	 *          is a permissible index value, in which case the
+	 *          corresponding element of the output vector will
+	 *          have an NA value appropriate to type \a V .  If an
+	 *          index is out of range with respect to \a v , in
+	 *          that case also the corresponding element of the
+	 *          output vector will have an NA value appropriate to
+	 *          type \a V .
 	 *
 	 * @return Pointer to a newly created object of type \a V ,
 	 * containing the designated subset of \a v .
 	 */
 	template <class V>
 	static V* vectorSubset(const V* v, const IntVector* indices);
+
+	/** @brief Extract a subset of an R vector object.
+	 *
+	 * @tparam V A type inheriting from VectorBase.
+	 *
+	 * @param v Non-null pointer to a \a V object, which is the
+	 *          object from which a subset (not necessarily a
+	 *          proper subset) is to be extracted.
+	 *
+	 * @param subscripts Pointer, possibly null, to an RObject  If
+	 *          the type and contents of this object are legal for
+	 *          subscripting, subsetting will be performed
+	 *          accordingly; otherwise an error will be raised.
+	 *
+	 * @return Pointer to a newly created object of type \a V ,
+	 * containing the designated subset of \a v .
+	 */
+	template <class V>
+	static V* vectorSubset(const V* v, const RObject* subscripts)
+	{
+	    GCStackRoot<const IntVector>
+		indices(canonicalizeVectorSubscript(v, subscripts).first);
+	    return vectorSubset(v, indices);
+	}
     private:
 	// Data structure used in subsetting arrays, containing
 	// information relating to a particular dimension. 
@@ -509,7 +563,7 @@ namespace CXXR {
 	static void setVectorAttributes(VectorBase* subset,
 					const VectorBase* source,
 					const IntVector* indices);
-    };
+    };  // class Subscripting
 
     template <class V>
     V* Subscripting::arraySubset(const V* v, const PairList* indices,
