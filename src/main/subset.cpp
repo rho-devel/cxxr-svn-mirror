@@ -159,9 +159,12 @@ static SEXP ExtractSubset(SEXP x, SEXP result, SEXP indx, SEXP call)
    matrix indexing of arrays */
 static SEXP VectorSubset(SEXP x, SEXP sarg, SEXP call)
 {
+    if (!x)
+	return 0;
     GCStackRoot<> s(sarg);
 
-    if (s == R_MissingArg) return duplicate(x);
+    if (s == R_MissingArg)
+	return duplicate(x);
 
     /* Check to see if we have special matrix subscripting. */
     /* If we do, make a real subscript vector and protect it. */
@@ -177,111 +180,71 @@ static SEXP VectorSubset(SEXP x, SEXP sarg, SEXP call)
 	}
     }
 
+    SEXPTYPE mode = TYPEOF(x);
+    switch (mode) {
+    case LGLSXP:
+	return Subscripting::vectorSubset(static_cast<LogicalVector*>(x), s);
+    case INTSXP:
+	return Subscripting::vectorSubset(static_cast<IntVector*>(x), s);
+    case REALSXP:
+	return Subscripting::vectorSubset(static_cast<RealVector*>(x), s);
+    case CPLXSXP:
+	return Subscripting::vectorSubset(static_cast<ComplexVector*>(x), s);
+    case RAWSXP:
+	return Subscripting::vectorSubset(static_cast<RawVector*>(x), s);
+    case STRSXP:
+	return Subscripting::vectorSubset(static_cast<StringVector*>(x), s);
+    case VECSXP:
+	{
+	    ListVector* result
+		= Subscripting::vectorSubset(static_cast<ListVector*>(x), s);
+	    /* we do not duplicate the values when extracting the subset,
+	       so to be conservative mark the result as NAMED = 2 */
+	    SET_NAMED(result, 2);
+	    return result;
+	}
+    case EXPRSXP:
+	{
+	    ExpressionVector* result
+		= Subscripting::vectorSubset(static_cast<ExpressionVector*>(x), s);
+	    /* we do not duplicate the values when extracting the subset,
+	       so to be conservative mark the result as NAMED = 2 */
+	    SET_NAMED(result, 2);
+	    return result;
+	}
+    case LANGSXP:
+	break;
+    default:
+	errorcall(call, R_MSG_ob_nonsub, type2char(SEXPTYPE(mode)));
+    }
+
+    // If we get to here, this must be a LANGSXP.  In CXXR, this case
+    // needs special handling, not least because Expression doesn't
+    // inherit from VectorBase.  What follows is legacy CR code,
+    // bodged as necessary.
+
     /* Convert to a vector of integer subscripts */
     /* in the range 1:length(x). */
-
     int stretch = 1;
     GCStackRoot<> indx(makeSubscript(x, s, &stretch, call));
     int n = LENGTH(indx);
-
-    SEXPTYPE mode = TYPEOF(x);
-    GCStackRoot<> result;
-    if (x) {
-	const IntVector* indices = SEXP_downcast<IntVector*>(indx.get());
-	switch (mode) {
-	case LGLSXP:
-	    result = Subscripting::vectorSubset(static_cast<LogicalVector*>(x),
-						s);
-	    break;
-	case INTSXP:
-	    result = Subscripting::vectorSubset(static_cast<IntVector*>(x),
-						s);
-	    break;
-	case REALSXP:
-	    result = Subscripting::vectorSubset(static_cast<RealVector*>(x),
-						s);
-	    break;
-	case CPLXSXP:
-	    result = Subscripting::vectorSubset(static_cast<ComplexVector*>(x),
-						s);
-	    break;
-	case RAWSXP:
-	    result = Subscripting::vectorSubset(static_cast<RawVector*>(x),
-						s);
-	    break;
-	case STRSXP:
-	    result = Subscripting::vectorSubset(static_cast<StringVector*>(x),
-						s);
-	    break;
-	case VECSXP:
-	    result = Subscripting::vectorSubset(static_cast<ListVector*>(x),
-						 s);
-	    /* we do not duplicate the values when extracting the subset,
-	       so to be conservative mark the result as NAMED = 2 */
-	    SET_NAMED(result, 2);
-	    break;
-	case EXPRSXP:
-	    result = Subscripting::vectorSubset(static_cast<ExpressionVector*>(x),
-						s);
-	    /* we do not duplicate the values when extracting the subset,
-	       so to be conservative mark the result as NAMED = 2 */
-	    SET_NAMED(result, 2);
-	    break;
-	case LISTSXP:
-	    // Shouldn't happen: LISTSXP will already have been
-	    // converted to VECSXP.
-	    break;
-	case LANGSXP:
-	    // In CXXR, this case needs special handling, not least
-	    // because Expression doesn't inherit from VectorBase.
-	    {
-		unsigned int nx = length(x);
-		result = allocVector(LANGSXP, n);
-		SEXP tmp = result;
-		for (unsigned int i = 0; int(i) < n; ++i) {
-		    int ii = (*indices)[i];
-		    if (ii == NA_INTEGER || ii <= 0 || ii > int(nx))
-			SETCAR(tmp, 0);
-		    else {
-			SEXP tmp2 = nthcdr(x, ii - 1);
-			SETCAR(tmp, CAR(tmp2));
-			SET_TAG(tmp, TAG(tmp2));
-		    }
-		    tmp = CDR(tmp);
-		}
-		// Fix attributes:
-		if (result) {
-		    SEXP attrib;
-		    if (
-			((attrib = getAttrib(x, R_NamesSymbol)) != R_NilValue) ||
-			( /* here we might have an array.  Use row names if 1D */
-			 isArray(x)
-			 && (attrib = getAttrib(x, R_DimNamesSymbol)) != R_NilValue
-			 && LENGTH(attrib) == 1
-			 && (attrib = GetRowNames(attrib)) != R_NilValue
-			 )
-			) {
-			GCStackRoot<> nattrib(allocVector(TYPEOF(attrib), n));
-			nattrib = ExtractSubset(attrib, nattrib, indx, call);
-			setAttrib(result, R_NamesSymbol, nattrib);
-		    }
-		    if ((attrib = getAttrib(x, R_SrcrefSymbol)) != R_NilValue &&
-			TYPEOF(attrib) == VECSXP) {
-			GCStackRoot<> nattrib(allocVector(VECSXP, n));
-			nattrib = ExtractSubset(attrib, nattrib, indx, call);
-			setAttrib(result, R_SrcrefSymbol, nattrib);
-		    }
-		}
-	    }
-	    break;
-	default:
-	    errorcall(call, R_MSG_ob_nonsub, type2char(SEXPTYPE(mode)));
+    const IntVector* indices = SEXP_downcast<IntVector*>(indx.get());
+    unsigned int nx = length(x);
+    GCStackRoot<> result(allocVector(LANGSXP, n));
+    SEXP tmp = result;
+    for (unsigned int i = 0; int(i) < n; ++i) {
+	int ii = (*indices)[i];
+	if (ii == NA_INTEGER || ii <= 0 || ii > int(nx))
+	    SETCAR(tmp, 0);
+	else {
+	    SEXP tmp2 = nthcdr(x, ii - 1);
+	    SETCAR(tmp, CAR(tmp2));
+	    SET_TAG(tmp, TAG(tmp2));
 	}
+	tmp = CDR(tmp);
     }
-
-    // In CXXR, for everything other than LANGSXP, the following will
-    // already have been done in Subscripting::vectorSubset():
-    if (result != R_NilValue && mode == LANGSXP) {
+    // Fix attributes:
+    {
 	SEXP attrib;
 	if (
 	    ((attrib = getAttrib(x, R_NamesSymbol)) != R_NilValue) ||
@@ -292,13 +255,13 @@ static SEXP VectorSubset(SEXP x, SEXP sarg, SEXP call)
 	     && (attrib = GetRowNames(attrib)) != R_NilValue
 	     )
 	    ) {
-	    GCStackRoot<> nattrib(allocVector(TYPEOF(attrib), n)); /* prot seems unneeded */
+	    GCStackRoot<> nattrib(allocVector(TYPEOF(attrib), n));
 	    nattrib = ExtractSubset(attrib, nattrib, indx, call);
 	    setAttrib(result, R_NamesSymbol, nattrib);
 	}
 	if ((attrib = getAttrib(x, R_SrcrefSymbol)) != R_NilValue &&
 	    TYPEOF(attrib) == VECSXP) {
-	    GCStackRoot<> nattrib(allocVector(VECSXP, n)); /* prot seems unneeded */
+	    GCStackRoot<> nattrib(allocVector(VECSXP, n));
 	    nattrib = ExtractSubset(attrib, nattrib, indx, call);
 	    setAttrib(result, R_SrcrefSymbol, nattrib);
 	}
