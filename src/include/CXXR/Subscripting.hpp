@@ -68,6 +68,13 @@ namespace CXXR {
      * implementation (or indeed its use at all) may change in the
      * future.
      *
+     * @todo At present this class does not handle the special case
+     * (described in sec. 3.4.2 of the R Language Definition) where
+     * subscripting is being applied to an array, and there is a
+     * single subscript which is a matrix with as many columns as the
+     * array has dimensions, each row of the matrix being used to pick
+     * out a single element of the array.
+     *
      * @todo A matter for possible review is the fact that during
      * subsetting and subassignment operations, CXXR sometimes makes
      * deep copies of the elements of HandleVector objects in cases
@@ -171,6 +178,35 @@ namespace CXXR {
 	static std::pair<const IntVector*, size_t>
 	canonicalize(const LogicalVector* raw_indices, size_t range_size);
 
+	/** Obtain canonical index vector from an arbitrary subscript object.
+	 *
+	 * @param subscripts Pointer, possibly null, to an RObject.
+	 *          If the type and contents of this object are legal
+	 *          for subscripting, canonicalization will be
+	 *          performed accordingly; otherwise an error will be
+	 *          raised.
+	 *
+	 * @param range_size The size of the vector or dimension into
+	 *          which indexing is being performed.
+	 *
+	 * @param range_names Pointer, possibly null, to the vector of
+	 *          names associated with the vector or dimension into
+	 *          which indexing is being performed.  If present,
+	 *          the size of this vector must be equal to \a
+	 *          range_size .
+	 *
+	 * @return The first element of the returned value is a
+	 * pointer to the canonicalised index vector.  The second
+	 * element is the minimum size implied by \a subscripts for
+	 * the vector or dimension into which indexing is being
+	 * performed.  If this exceeds the size of \a v it means that
+	 * an attempt is being made to read or write from elements
+	 * beyond the end of the range.
+	 */
+	static std::pair<const IntVector*, size_t>
+	canonicalize(const RObject* raw_indices, size_t range_size,
+		     const StringVector* range_names);
+
 	/** @brief Obtain canonical index vector from an StringVector.
 	 *
 	 * @param raw_indices Non-null pointer to a StringVector.  Any
@@ -222,7 +258,7 @@ namespace CXXR {
 	canonicalize(const StringVector* raw_indices, size_t range_size,
 		     const StringVector* range_names);
 
-	/** Canonicalize a subscript object for indexing an R vector.
+	/** FIXME FIXME FIXME Canonicalize a subscript object for indexing an R vector.
 	 *
 	 * @param v Non-null pointer to the VectorBase to which
 	 *          subscripting is to be applied.
@@ -248,9 +284,9 @@ namespace CXXR {
 	 * matrix being used to pick out a single element of the
 	 * array.
 	 */
-	static std::pair<const IntVector*, size_t>
-	canonicalizeVectorSubscript(const VectorBase* v,
-				    const RObject* subscripts);
+	static ListVector*
+	canonicalizeArraySubscripts(const VectorBase* v,
+				    const PairList* subscripts);
 
 	/** @brief Remove dimensions of unit extent.
 	 *
@@ -331,7 +367,7 @@ namespace CXXR {
 	static V* vectorSubset(const V* v, const RObject* subscripts)
 	{
 	    GCStackRoot<const IntVector>
-		indices(canonicalizeVectorSubscript(v, subscripts).first);
+		indices(canonicalize(subscripts, v->size(), v->names()).first);
 	    return vectorSubset(v, indices);
 	}
     private:
@@ -482,7 +518,7 @@ namespace CXXR {
 	for (unsigned int i = 0; i < ni; ++i) {
 	    int index = (*indices)[i];
 	    // Note that zero and negative indices ought not to occur.
-	    if (isNA(index) || index <= 0 || index > int(vsize))
+	    if (isNA(index) || index > int(vsize))
 		(*ans)[i] = NA<typename V::value_type>();
 	    else (*ans)[i] = (*vnc)[index - 1];
 	}
