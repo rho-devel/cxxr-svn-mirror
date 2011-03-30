@@ -61,12 +61,12 @@ const ListVector* VectorBase::dimensionNames() const
     return static_cast<const ListVector*>(getAttribute(DimNamesSymbol));
 }
 
-const VectorBase* VectorBase::dimensionNames(unsigned int d) const
+const StringVector* VectorBase::dimensionNames(unsigned int d) const
 {
     const ListVector* lv = dimensionNames();
     if (!lv || d > lv->size())
 	return 0;
-    return static_cast<const VectorBase*>((*lv)[d - 1].get());
+    return static_cast<const StringVector*>((*lv)[d - 1].get());
 }
 
 const IntVector* VectorBase::dimensions() const
@@ -84,7 +84,7 @@ void VectorBase::setDimensionNames(ListVector* names)
     setAttribute(DimNamesSymbol, names);
 }
 
-void VectorBase::setDimensionNames(unsigned int d, VectorBase* names)
+void VectorBase::setDimensionNames(unsigned int d, StringVector* names)
 {
     unsigned int ndims = dimensions()->size();
     if (d == 0 || d > ndims)

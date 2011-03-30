@@ -138,13 +138,13 @@ namespace CXXR {
 	 * pointer to ListVector with as many elements as \a *this has
 	 * dimensions.  Each element of the ListVector is either a
 	 * null pointer, signifying that there are no names associated
-	 * with the corresponding dimension, or a pointer to an object
-	 * inheriting from VectorBase with as many elements as the
-	 * size of the array along the corresponding dimension, giving
-	 * the names to be given to the 'slices' along that dimension.
-	 * For example the zeroth element of the ListVector, if
-	 * non-null, will give the row names, and the following
-	 * element will give the column names.
+	 * with the corresponding dimension, or a pointer to a
+	 * StringVector with as many elements as the size of the array
+	 * along the corresponding dimension, giving the names of the
+	 * 'slices' along that dimension.  For example the zeroth
+	 * element of the ListVector, if non-null, will give the row
+	 * names, and the following element will give the column
+	 * names.
 	 */
 	const ListVector* dimensionNames() const;
 
@@ -158,12 +158,12 @@ namespace CXXR {
 	 * @return A null pointer if no names are associated with
 	 * dimension \a d of \a *this , if \a *this does not have as
 	 * many as \a d dimensions, or if \a *this is not an R matrix
-	 * or array.  Otherwise a pointer to an object inheriting from
-	 * VectorBase with as many elements as the size of \a *this
-	 * along the corresponding dimension, giving the names of the
-	 * 'slices' along that dimension.
+	 * or array.  Otherwise a pointer to a StringVector with as
+	 * many elements as the size of \a *this along the
+	 * corresponding dimension, giving the names of the 'slices'
+	 * along that dimension.
 	 */
-	const VectorBase* dimensionNames(unsigned int d) const;
+	const StringVector* dimensionNames(unsigned int d) const;
 
 	/** @brief Dimensions of R matrix or array.
 	 *
@@ -195,16 +195,16 @@ namespace CXXR {
 	 *          dimensions.  Each element of the ListVector must
 	 *          be either a null pointer, signifying that no names
 	 *          are to be associated with the corresponding
-	 *          dimension, or a pointer to an object inheriting
-	 *          from VectorBase with as many elements as the size
-	 *          of the array along the corresponding dimension,
-	 *          giving the names to be given to the 'slices' along
-	 *          that dimension.  For example the zeroth element of
-	 *          the ListVector, if non-null, will give the row
-	 *          names, and the following element will give the
-	 *          column names.  \a *this will assume ownership of
-	 *          this ListVector (rather than duplicating it), so
-	 *          the calling code must not subsequently modify it.
+	 *          dimension, or a pointer to a StringVector with as
+	 *          many elements as the size of the array along the
+	 *          corresponding dimension, giving the names to be
+	 *          given to the 'slices' along that dimension.  For
+	 *          example the zeroth element of the ListVector, if
+	 *          non-null, will give the row names, and the
+	 *          following element will give the column names.  \a
+	 *          *this will assume ownership of this ListVector
+	 *          (rather than duplicating it), so the calling code
+	 *          must not subsequently modify it.
 	 */
 	void setDimensionNames(ListVector* names);
 
@@ -219,15 +219,14 @@ namespace CXXR {
 	 * @param names If this is a null pointer, any names currently
 	 *          associated with dimension \a d of \a *this are
 	 *          removed.  Otherwise \a names must be a pointer to
-	 *          an object inheriting from VectorBase with as many
-	 *          elements as the size of \a *this along the
-	 *          corresponding dimension, giving the names to be
-	 *          given to the 'slices' along that dimension.  \a
-	 *          *this will assume ownership of this VectorBase
-	 *          (rather than duplicating it), so the calling code
-	 *          must not subsequently modify it.
+	 *          a StringVector with as many elements as the size
+	 *          of \a *this along the corresponding dimension,
+	 *          giving the names to be given to the 'slices' along
+	 *          that dimension.  \a *this will assume ownership of
+	 *          this StringVector (rather than duplicating it), so
+	 *          the calling code must not subsequently modify it.
 	 */
-	void setDimensionNames(unsigned int d, VectorBase* names);
+	void setDimensionNames(unsigned int d, StringVector* names);
 
 	/** @brief Define the dimensions of R matrix or array.
 	 *

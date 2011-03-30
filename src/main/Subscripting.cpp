@@ -228,13 +228,24 @@ Subscripting::canonicalizeArraySubscripts(const VectorBase* v,
     if (!dims)
 	Rf_error(_ ("not a matrix/array"));
     size_t ndims = dims->size();
-    // const ListVector* dimnames = v->dimensionNames();
+    const ListVector* dimnames = v->dimensionNames();
     GCStackRoot<ListVector> ans(CXXR_NEW(ListVector(ndims)));
-    // const PairList* pl = subscripts;
+    const PairList* pl = subscripts;
     for (unsigned int d = 0; d < ndims; ++d) {
-	// const VectorBase* names = static_cast<VectorBase*>((*dimnames)[d]);
-	// INCOMPLETE!
+	if (!pl)
+	    Rf_error(_("too few subscripts"));
+	size_t dimsize = (*dims)[d];
+	const StringVector* names
+	    = static_cast<StringVector*>((*dimnames)[d].get());
+	pair<const IntVector*, size_t> pr
+	    = canonicalize(pl->car(), dimsize, names);
+	if (pr.second > dimsize)
+	    Rf_error(_("subscript out of bounds"));
+	(*ans)[d] = const_cast<IntVector*>(pr.first);
+	pl = pl->tail();
     }
+    if (pl)
+	Rf_error(_("too many subscripts"));
     return ans;
 }
 	
