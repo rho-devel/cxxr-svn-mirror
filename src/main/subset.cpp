@@ -195,23 +195,9 @@ static SEXP VectorSubset(SEXP x, SEXP sarg, SEXP call)
     case STRSXP:
 	return Subscripting::vectorSubset(static_cast<StringVector*>(x), s);
     case VECSXP:
-	{
-	    ListVector* result
-		= Subscripting::vectorSubset(static_cast<ListVector*>(x), s);
-	    /* we do not duplicate the values when extracting the subset,
-	       so to be conservative mark the result as NAMED = 2 */
-	    SET_NAMED(result, 2);
-	    return result;
-	}
+	return Subscripting::vectorSubset(static_cast<ListVector*>(x), s);
     case EXPRSXP:
-	{
-	    ExpressionVector* result
-		= Subscripting::vectorSubset(static_cast<ExpressionVector*>(x), s);
-	    /* we do not duplicate the values when extracting the subset,
-	       so to be conservative mark the result as NAMED = 2 */
-	    SET_NAMED(result, 2);
-	    return result;
-	}
+	return Subscripting::vectorSubset(static_cast<ExpressionVector*>(x), s);
     case LANGSXP:
 	break;
     default:
@@ -288,25 +274,25 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop)
     switch (mode) {
     case LGLSXP:
 	return Subscripting::arraySubset(static_cast<LogicalVector*>(x),
-					   indices, drop);
+					 indices, drop);
     case INTSXP:
 	return Subscripting::arraySubset(static_cast<IntVector*>(x),
-					   indices, drop);
+					 indices, drop);
     case REALSXP:
 	return Subscripting::arraySubset(static_cast<RealVector*>(x),
-					   indices, drop);
+					 indices, drop);
     case CPLXSXP:
 	return Subscripting::arraySubset(static_cast<ComplexVector*>(x),
-					   indices, drop);
+					 indices, drop);
     case STRSXP:
 	return Subscripting::arraySubset(static_cast<StringVector*>(x),
-					   indices, drop);
+					 indices, drop);
     case VECSXP:
 	return Subscripting::arraySubset(static_cast<ListVector*>(x),
-					   indices, drop);
+					 indices, drop);
     case RAWSXP:
 	return Subscripting::arraySubset(static_cast<RawVector*>(x),
-					   indices, drop);
+					 indices, drop);
     default:
 	errorcall(call, _("array subscripting not handled for this type"));
     }

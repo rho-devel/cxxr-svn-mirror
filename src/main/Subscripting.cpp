@@ -28,29 +28,6 @@
 using namespace std;
 using namespace CXXR;
 
-const StringVector* dimensionNames(const VectorBase* v, unsigned int d)
-{
-    const ListVector* lv = dimensionNames(v);
-    if (!lv || d > lv->size())
-	return 0;
-    return static_cast<const StringVector*>((*lv)[d - 1].get());
-}
-
-void setDimensionNames(VectorBase* v, unsigned int d, VectorBase* names)
-{
-    unsigned int ndims = dimensions(v)->size();
-    if (d == 0 || d > ndims)
-	Rf_error(_("Attempt to associate dimnames"
-		   " with a non-existent dimension"));
-    ListVector* lv
-	= static_cast<ListVector*>(v->getAttribute(DimNamesSymbol));
-    if (!lv) {
-	lv = CXXR_NEW(ListVector(ndims));
-	v->setAttribute(DimNamesSymbol, lv);
-    }
-    (*lv)[d - 1] = names;
-}
-
 pair<const IntVector*, size_t>
 Subscripting::canonicalize(const IntVector* raw_indices, size_t range_size)
 {
@@ -223,7 +200,7 @@ Subscripting::canonicalizeVectorSubscript(const VectorBase* v,
 	}
     case STRSXP:
 	return canonicalize(static_cast<const StringVector*>(subscripts),
-			    v->size(), names(v));
+			    v->size(), v->names());
     case SYMSXP:
 	{
 	    const Symbol* sym = static_cast<const Symbol*>(subscripts);
@@ -269,7 +246,7 @@ size_t Subscripting::createDimIndexers(DimIndexerVector* dimindexers,
 
 bool Subscripting::dropDimensions(VectorBase* v)
 {
-    GCStackRoot<const IntVector> dims(dimensions(v));
+    GCStackRoot<const IntVector> dims(v->dimensions());
     if (!dims)
 	return false;
     size_t ndims = dims->size();
@@ -280,7 +257,7 @@ bool Subscripting::dropDimensions(VectorBase* v)
 	    ++ngooddims;
     if (ngooddims == ndims)
 	return false;
-    ListVector* dimnames = const_cast<ListVector*>(dimensionNames(v));
+    ListVector* dimnames = const_cast<ListVector*>(v->dimensionNames());
     if (ngooddims > 1) {
 	// The result will still be an array/matrix.
 	bool havenames = false;
@@ -296,12 +273,12 @@ bool Subscripting::dropDimensions(VectorBase* v)
 			havenames = true;
 		}
 	    }
-	    setDimensions(v, newdims);
+	    v->setDimensions(newdims);
 	}
 	if (havenames) {
 	    // Set up new dimnames attribute:
 	    StringVector* dimnamesnames
-		= const_cast<StringVector*>(names(dimnames));
+		= const_cast<StringVector*>(dimnames->names());
 	    GCStackRoot<ListVector> newdimnames(CXXR_NEW(ListVector(ngooddims)));
 	    GCStackRoot<StringVector>
 		newdimnamesnames(CXXR_NEW(StringVector(ngooddims)));
@@ -314,22 +291,22 @@ bool Subscripting::dropDimensions(VectorBase* v)
 		    ++dout;
 		}
 	    if (dimnamesnames)
-		setNames(newdimnames, newdimnamesnames);
-	    setDimensionNames(v, newdimnames);
+		newdimnames->setNames(newdimnamesnames);
+	    v->setDimensionNames(newdimnames);
 	}
     } else if (ngooddims == 1) {
 	// Reduce to a vector.
-	setDimensions(v, 0);
-	setDimensionNames(v, 0);
+	v->setDimensions(0);
+	v->setDimensionNames(0);
 	if (dimnames) {
 	    unsigned int d = 0;
 	    while ((*dims)[d] == 1)
 		++d;
-	    setNames(v, static_cast<StringVector*>((*dimnames)[d].get()));
+	    v->setNames(static_cast<StringVector*>((*dimnames)[d].get()));
 	}
     } else /* ngooddims == 0 */ {
-	setDimensions(v, 0);
-	setDimensionNames(v, 0);
+	v->setDimensions(0);
+	v->setDimensionNames(0);
 	// In this special case it is ambiguous which dimnames to use
 	// for the sole remaining element, so we set up a name only if
 	// just one dimension has names.
@@ -344,7 +321,7 @@ bool Subscripting::dropDimensions(VectorBase* v)
 		}
 	    }
 	    if (count == 1)
-		setNames(v, newnames);
+		v->setNames(newnames);
 	}
     }
     return true;
@@ -382,17 +359,17 @@ void Subscripting::setArrayAttributes(VectorBase* subset,
 				      const DimIndexerVector& dimindexers,
 				      bool drop)
 {
-    size_t ndims = dimensions(source)->size();
+    size_t ndims = source->dimensions()->size();
     // Dimensions:
     {
 	GCStackRoot<IntVector> newdims(CXXR_NEW(IntVector(ndims)));
 	for (unsigned int d = 0; d < ndims; ++d)
 	    (*newdims)[d] = dimindexers[d].nindices;
-	setDimensions(subset, newdims);
+	subset->setDimensions(newdims);
     }
     // Dimnames:
     {
-	const ListVector* dimnames = dimensionNames(source);
+	const ListVector* dimnames = source->dimensionNames();
 	if (dimnames) {
 	    GCStackRoot<ListVector> newdimnames(CXXR_NEW(ListVector(ndims)));
 	    for (unsigned int d = 0; d < ndims; ++d) {
@@ -405,10 +382,10 @@ void Subscripting::setArrayAttributes(VectorBase* subset,
 			(*newdimnames)[d] = vectorSubset(sv, di.indices);
 		}
 	    }
-	    const StringVector* dimnamesnames = names(dimnames);
+	    const StringVector* dimnamesnames = dimnames->names();
 	    if (dimnamesnames)
-		setNames(newdimnames, dimnamesnames->clone());
-	    setDimensionNames(subset, newdimnames);
+		newdimnames->setNames(dimnamesnames->clone());
+	    subset->setDimensionNames(newdimnames);
 	}
     }
     if (drop)
@@ -421,15 +398,15 @@ void Subscripting::setVectorAttributes(VectorBase* subset,
 {
     // Names:
     {
-	const StringVector* sourcenames = names(source);
+	const StringVector* sourcenames = source->names();
 	if (!sourcenames) {
 	    // Use row names if this is a one-dimensional array:
-	    const ListVector* dimnames = dimensionNames(source);
+	    const ListVector* dimnames = source->dimensionNames();
 	    if (dimnames && dimnames->size() == 1)
 		sourcenames = static_cast<const StringVector*>((*dimnames)[0].get());
 	}
 	if (sourcenames)
-	    setNames(subset, vectorSubset(sourcenames, indices));
+	    subset->setNames(vectorSubset(sourcenames, indices));
     }
     // R_SrcrefSymbol:
     {

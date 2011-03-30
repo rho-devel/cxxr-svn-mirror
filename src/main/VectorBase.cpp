@@ -37,8 +37,13 @@
  * @brief Implementation of class VectorBase and related functions.
  */
 
-#include "R_ext/Error.h"
 #include "CXXR/VectorBase.h"
+
+#include "R_ext/Error.h"
+#include "CXXR/IntVector.h"
+#include "CXXR/ListVector.h"
+#include "CXXR/StringVector.h"
+#include "CXXR/Symbol.h"
 
 using namespace std;
 using namespace CXXR;
@@ -51,10 +56,63 @@ namespace CXXR {
     }
 }
 
-void VectorBase::resize(size_t new_size)
+const ListVector* VectorBase::dimensionNames() const
+{
+    return static_cast<const ListVector*>(getAttribute(DimNamesSymbol));
+}
+
+const VectorBase* VectorBase::dimensionNames(unsigned int d) const
+{
+    const ListVector* lv = dimensionNames();
+    if (!lv || d > lv->size())
+	return 0;
+    return static_cast<const VectorBase*>((*lv)[d - 1].get());
+}
+
+const IntVector* VectorBase::dimensions() const
+{
+    return static_cast<const IntVector*>(getAttribute(DimSymbol));
+}
+
+const StringVector* VectorBase::names() const
+{
+    return static_cast<const StringVector*>(getAttribute(NamesSymbol));
+}
+
+void VectorBase::setDimensionNames(ListVector* names)
+{
+    setAttribute(DimNamesSymbol, names);
+}
+
+void VectorBase::setDimensionNames(unsigned int d, VectorBase* names)
+{
+    unsigned int ndims = dimensions()->size();
+    if (d == 0 || d > ndims)
+	Rf_error(_("Attempt to associate dimnames"
+		   " with a non-existent dimension"));
+    ListVector* lv
+	= static_cast<ListVector*>(getAttribute(DimNamesSymbol));
+    if (!lv) {
+	lv = CXXR_NEW(ListVector(ndims));
+	setAttribute(DimNamesSymbol, lv);
+    }
+    (*lv)[d - 1] = names;
+}
+
+void VectorBase::setDimensions(IntVector* dims)
+{
+    setAttribute(DimSymbol, dims);
+}
+
+void VectorBase::setNames(StringVector* names)
+{
+    setAttribute(NamesSymbol, names);
+}
+
+void VectorBase::shrink(size_t new_size)
 {
     if (new_size > m_size)
-	Rf_error("VectorBase::resize() :"
+	Rf_error("VectorBase::shrink() :"
 		 " requested size exceeds current size.");
     m_size = new_size;
 }
@@ -86,5 +144,5 @@ void SETLENGTH(SEXP x, int v)
     CXXR::VectorBase* vb = dynamic_cast<CXXR::VectorBase*>(x);
     if (!vb)
 	Rf_error("SETLENGTH invoked for a non-vector.");
-    vb->resize(v);
+    vb->shrink(v);
 }

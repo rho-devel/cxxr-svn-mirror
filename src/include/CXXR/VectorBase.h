@@ -51,6 +51,12 @@
 typedef CXXR::RObject VECTOR_SEXPREC, *VECSEXP;
 
 namespace CXXR {
+    class ListVector;
+    class StringVector;
+
+    template <typename T, SEXPTYPE ST> class DumbVector;
+    typedef DumbVector<int, INTSXP> IntVector;
+
     /** @brief Value to be used if 'not available'.
      *
      * @tparam T type used as an element in the CXXR implementation of
@@ -122,13 +128,148 @@ namespace CXXR {
 	      m_size(pattern.m_size)
 	{}
 
-	/** @brief Alter the size (number of elements) in the vector.
+	/** @brief Names associated with the rows, columns or other
+	 *  dimensions of an R matrix or array.
+	 *
+	 * @return A null pointer signifies that there are no names
+	 * associated with any of the dimensions of \a *this ; a null
+	 * pointer will always be returned if \a *this is not an R
+	 * matrix or array.  Otherwise the return value will be a
+	 * pointer to ListVector with as many elements as \a *this has
+	 * dimensions.  Each element of the ListVector is either a
+	 * null pointer, signifying that there are no names associated
+	 * with the corresponding dimension, or a pointer to an object
+	 * inheriting from VectorBase with as many elements as the
+	 * size of the array along the corresponding dimension, giving
+	 * the names to be given to the 'slices' along that dimension.
+	 * For example the zeroth element of the ListVector, if
+	 * non-null, will give the row names, and the following
+	 * element will give the column names.
+	 */
+	const ListVector* dimensionNames() const;
+
+	/** @brief Names associated with a particular dimension of an
+	 *  R matrix or array.
+	 *
+	 * @param d Dimension number (counting from 1) for which
+	 *          dimension names are required.  Must be non-zero (not
+	 *          checked).
+	 *
+	 * @return A null pointer if no names are associated with
+	 * dimension \a d of \a *this , if \a *this does not have as
+	 * many as \a d dimensions, or if \a *this is not an R matrix
+	 * or array.  Otherwise a pointer to an object inheriting from
+	 * VectorBase with as many elements as the size of \a *this
+	 * along the corresponding dimension, giving the names of the
+	 * 'slices' along that dimension.
+	 */
+	const VectorBase* dimensionNames(unsigned int d) const;
+
+	/** @brief Dimensions of R matrix or array.
+	 *
+	 * @return A null pointer if \a *this is not an R matrix or
+	 * array.  Otherwise a pointer to an IntVector with one or
+	 * more elements, the product of the elements being equal to
+	 * the number of elements in \a *this .  The number of
+	 * elements in the return value is the dimensionality of the
+	 * array (e.g. 2 for a matrix), and each element gives the
+	 * size of the array along the respective dimension.
+	 */
+	const IntVector* dimensions() const;
+
+	/** @brief Names of vector elements.
+	 *
+	 * @return either a null pointer (if the elements do not have
+	 * names), or a pointer to a StringVector with the same number
+	 * of elements as \a *this .
+	 */
+	const StringVector* names() const;
+
+	/** @brief Associate names with the rows, columns or other
+	 *  dimensions of an R matrix or array.
+	 *
+	 * @param names If this is a null pointer, any names currently
+	 *          associated with the dimensions of \a *this will be
+	 *          removed.  Otherwise \a names must be a pointer to
+	 *          ListVector with as many elements as \a *this has
+	 *          dimensions.  Each element of the ListVector must
+	 *          be either a null pointer, signifying that no names
+	 *          are to be associated with the corresponding
+	 *          dimension, or a pointer to an object inheriting
+	 *          from VectorBase with as many elements as the size
+	 *          of the array along the corresponding dimension,
+	 *          giving the names to be given to the 'slices' along
+	 *          that dimension.  For example the zeroth element of
+	 *          the ListVector, if non-null, will give the row
+	 *          names, and the following element will give the
+	 *          column names.  \a *this will assume ownership of
+	 *          this ListVector (rather than duplicating it), so
+	 *          the calling code must not subsequently modify it.
+	 */
+	void setDimensionNames(ListVector* names);
+
+	/** @brief Associate names with a particular dimension of an
+	 *  R matrix or array.
+	 *
+	 * @param d Dimension number (counting from 1) with which
+	 *          dimension names are to be associated.  Must not be
+	 *          greater than the * number of dimensions of \a
+	 *          *this (checked).
+	 *
+	 * @param names If this is a null pointer, any names currently
+	 *          associated with dimension \a d of \a *this are
+	 *          removed.  Otherwise \a names must be a pointer to
+	 *          an object inheriting from VectorBase with as many
+	 *          elements as the size of \a *this along the
+	 *          corresponding dimension, giving the names to be
+	 *          given to the 'slices' along that dimension.  \a
+	 *          *this will assume ownership of this VectorBase
+	 *          (rather than duplicating it), so the calling code
+	 *          must not subsequently modify it.
+	 */
+	void setDimensionNames(unsigned int d, VectorBase* names);
+
+	/** @brief Define the dimensions of R matrix or array.
+	 *
+	 * As a side-effect, this function will remove any dimension names.
+	 *
+	 * @param dims If this is a null pointer, any existing dimensions
+	 *          associated will be removed, and \a *this will
+	 *          cease to be a R matrix/array.  Otherwise \a dims
+	 *          must be a pointer to an IntVector with one or more
+	 *          elements, the product of the elements being equal
+	 *          to the number of elements in \a *this . The number
+	 *          of elements in \a dims is the required
+	 *          dimensionality of the array (e.g. 2 for a matrix),
+	 *          and each element gives the required size of the
+	 *          array along the respective dimension.  \a *this
+	 *          will assume ownership of this IntVector (rather
+	 *          than duplicating it), so the calling code must not
+	 *          subsequently modify it.
+	 */
+	void setDimensions(IntVector* dims);
+
+	/** @brief Associate names with the elements of a VectorBase.
+	 *
+	 * @param names Either a null pointer, in which case any
+	 * existing names will be removed, or a pointer to a
+	 * StringVector with the same number of elements as \a *this .
+	 * \a *this will assume ownership of this StringVector (rather
+	 * than duplicating it), so the calling code must not
+	 * subsequently modify it.
+	 */
+	void setNames(StringVector* names);
+
+	/** @brief Reduce the number of elements in the vector.
 	 *
 	 * @param new_size New size required.  Zero is permissible,
-	 *          but (as presently implemented) the new size must
-	 *          not be greater than the current size. 
+	 *          but the new size must not be greater than the
+	 *          current size.
+	 *
+	 * @deprecated May be withdrawn in future.  Currently used by
+	 * SETLENGTH() (which itself is little used).
 	 */
-	void resize(size_t new_size);
+	void shrink(size_t new_size);
 
 	/** @brief Number of elements in the vector.
 	 *
@@ -205,8 +346,14 @@ inline int TRUELENGTH(SEXP x)
 
 /**
  * Set length of vector.
+ *
  * @param x Pointer to a CXXR::VectorBase .
- * @param v The required new length.
+ *
+ * @param v The required new length, which must not be greater than
+ *          the current length.
+ *
+ * @deprecated May be withdrawn in future.  Currently used in
+ * library/stats/src/isoreg.c .
  */
 void SETLENGTH(SEXP x, int v);
 
