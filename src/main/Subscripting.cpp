@@ -223,19 +223,17 @@ Subscripting::canonicalizeVectorSubscript(const VectorBase* v,
 
 size_t Subscripting::createDimIndexers(DimIndexerVector* dimindexers,
 				       const IntVector* source_dims,
-				       const PairList* indices)
+				       const ListVector* indices)
 {
     size_t ndims = source_dims->size();
     size_t resultsize = 1;
-    const PairList* pl = indices;
     for (unsigned int d = 0; d < ndims; ++d) {
 	DimIndexer& di = (*dimindexers)[d];
-	const IntVector* iv = static_cast<IntVector*>(pl->car());
+	const IntVector* iv = static_cast<IntVector*>((*indices)[d].get());
 	di.nindices = iv->size();
 	resultsize *= di.nindices;
 	di.indices = iv;
 	di.indexnum = 0;
-	pl = pl->tail();
     }
     (*dimindexers)[0].stride = 1;
     for (unsigned int d = 1; d < ndims; ++d)

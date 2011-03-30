@@ -83,14 +83,14 @@ namespace CXXR {
 	 *          matrix or array from which a subset (not
 	 *          necessarily a proper subset) is to be extracted.
 	 *
-	 * @param indices Pointer to a PairList with as many elements
-	 *          as \a v has dimensions.  Each element (car) of the
-	 *          PairList is an IntVector giving the index values
-	 *          (counting from 1) to be selected for the
-	 *          corresponding dimension.  NA_INTEGER is a
+	 * @param indices Pointer to a ListVector with as many
+	 *          elements as \a v has dimensions.  Each element
+	 *          (car) of the ListVector is an IntVector giving the
+	 *          index values (counting from 1) to be selected for
+	 *          the corresponding dimension.  NA_INTEGER is a
 	 *          permissible index value, in which case any
 	 *          corresponding elements of the output array will
-	 *          have an NA valueappropriate to type \a V .
+	 *          have an NA value appropriate to type \a V .
 	 *          Otherwise, all indices must be in range for the
 	 *          relevant dimension of \a v .
 	 *
@@ -101,7 +101,7 @@ namespace CXXR {
 	 * containing the designated subset of \a v .
 	 */
 	template <class V>
-	static V* arraySubset(const V* v, const PairList* indices,
+	static V* arraySubset(const V* v, const ListVector* indices,
 			      bool drop);
 
 	/** @brief Obtain canonical index vector from an IntVector.
@@ -360,7 +360,7 @@ namespace CXXR {
 	// the required size of the output vector.
 	static size_t createDimIndexers(DimIndexerVector* dimindexers,
 					const IntVector* source_dims,
-					const PairList* indices);
+					const ListVector* indices);
 
 	// If 'indices' has a 'use.names' attribute, use this to
 	// update the 'names' attribute of 'v'.
@@ -398,7 +398,7 @@ namespace CXXR {
     };  // class Subscripting
 
     template <class V>
-    V* Subscripting::arraySubset(const V* v, const PairList* indices,
+    V* Subscripting::arraySubset(const V* v, const ListVector* indices,
 				 bool drop)
     {
 	const IntVector* vdims = v->dimensions();

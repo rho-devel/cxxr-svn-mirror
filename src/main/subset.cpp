@@ -261,16 +261,15 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop)
     SEXPTYPE mode = TYPEOF(x);
     SEXP xdims = getAttrib(x, R_DimSymbol);
     int k = length(xdims);
-
+    GCStackRoot<ListVector> indices(CXXR_NEW(ListVector(k)));
     {
 	SEXP r = s;
 	for (int i = 0; i < k; i++) {
-	    SETCAR(r, arraySubscript(i, CAR(r), xdims, getAttrib,
-				     (STRING_ELT), x));
+	    (*indices)[i] = arraySubscript(i, CAR(r), xdims, getAttrib,
+					   (STRING_ELT), x);
 	    r = CDR(r);
 	}
     }
-    const PairList* indices = static_cast<PairList*>(s);
     switch (mode) {
     case LGLSXP:
 	return Subscripting::arraySubset(static_cast<LogicalVector*>(x),
