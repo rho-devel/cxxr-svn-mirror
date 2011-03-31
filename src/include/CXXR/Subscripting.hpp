@@ -90,19 +90,58 @@ namespace CXXR {
 	 *          matrix or array from which a subset (not
 	 *          necessarily a proper subset) is to be extracted.
 	 *
-	 * @param indices Pointer to a ListVector with as many
-	 *          elements as \a v has dimensions.  Each element
-	 *          (car) of the ListVector is an IntVector giving the
-	 *          index values (counting from 1) to be selected for
-	 *          the corresponding dimension.  NA_INTEGER is a
-	 *          permissible index value, in which case any
-	 *          corresponding elements of the output array will
-	 *          have an NA value appropriate to type \a V .
-	 *          Otherwise, all indices must be in range for the
-	 *          relevant dimension of \a v .
+	 * @param subscripts Pointer, possibly null, to a list of
+	 *          objects inheriting from RObject , with the same
+	 *          number of elements as \a v has dimensions.  (\a
+	 *          subscripts can be null only if \a v has zero
+	 *          dimensions.)  The elements of the list represent
+	 *          the subscripting to be applied for successive
+	 *          dimensions of \a v .  An error will be raised if
+	 *          the type or contents of any element is
+	 *          inappropriate for subscripting from the dimension
+	 *          in question.
 	 *
-	 * @parak drop true iff any dimensions of unit extent are to
-	 * be removed from the result.
+	 * @param drop true iff any dimensions of unit extent are to
+	 *          be removed from the result.
+	 * 
+	 * @return Pointer to a newly created object of type \a V ,
+	 * containing the designated subset of \a v .
+	 */
+	template <class V>
+	static V* arraySubset(const V* v, const PairList* subscripts,
+			      bool drop)
+	{
+	    GCStackRoot<const ListVector>
+		indices(Subscripting::canonicalizeArraySubscripts(v,
+								  subscripts));
+	    return arraySubset(v, indices, drop);
+	}
+
+	/** @brief Extract a subset from an R matrix or array.
+	 *
+	 * This function differs from the previous one in that the \a
+	 * indices parameter must contain canonical index vectors
+	 * rather than arbitrary subscripting objects.
+	 *
+	 * @tparam V A type inheriting from VectorBase.
+	 *
+	 * @param v Non-null pointer to a \a V object, which is an R
+	 *          matrix or array from which a subset (not
+	 *          necessarily a proper subset) is to be extracted.
+	 *
+	 * @param indices Pointer to a ListVector with as many
+	 *          elements as \a v has dimensions.  Each element of
+	 *          the ListVector is a pointer to a canonical index
+	 *          vector giving the index values (counting from 1)
+	 *          to be selected for the corresponding dimension.
+	 *          NA_INTEGER is a permissible index value, in which
+	 *          case any corresponding elements of the output
+	 *          array will have an NA value appropriate to type \a
+	 *          V .  Otherwise, all indices must be in range for
+	 *          the relevant dimension of \a v .
+	 *
+	 * @param drop true iff any dimensions of unit extent are to
+	 *          be removed from the result.
 	 * 
 	 * @return Pointer to a newly created object of type \a V ,
 	 * containing the designated subset of \a v .

@@ -258,32 +258,29 @@ static SEXP VectorSubset(SEXP x, SEXP sarg, SEXP call)
 
 static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop)
 {
-    const VectorBase* v = SEXP_downcast<VectorBase*>(x);
     const PairList* subs = SEXP_downcast<PairList*>(s);
-    GCStackRoot<const ListVector>
-	indices(Subscripting::canonicalizeArraySubscripts(v, subs));
     switch (x->sexptype()) {
     case LGLSXP:
 	return Subscripting::arraySubset(static_cast<LogicalVector*>(x),
-					 indices, drop);
+					 subs, drop);
     case INTSXP:
 	return Subscripting::arraySubset(static_cast<IntVector*>(x),
-					 indices, drop);
+					 subs, drop);
     case REALSXP:
 	return Subscripting::arraySubset(static_cast<RealVector*>(x),
-					 indices, drop);
+					 subs, drop);
     case CPLXSXP:
 	return Subscripting::arraySubset(static_cast<ComplexVector*>(x),
-					 indices, drop);
+					 subs, drop);
     case STRSXP:
 	return Subscripting::arraySubset(static_cast<StringVector*>(x),
-					 indices, drop);
+					 subs, drop);
     case VECSXP:
 	return Subscripting::arraySubset(static_cast<ListVector*>(x),
-					 indices, drop);
+					 subs, drop);
     case RAWSXP:
 	return Subscripting::arraySubset(static_cast<RawVector*>(x),
-					 indices, drop);
+					 subs, drop);
     default:
 	errorcall(call, _("array subscripting not handled for this type"));
     }
