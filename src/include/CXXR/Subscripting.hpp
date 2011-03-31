@@ -352,6 +352,35 @@ namespace CXXR {
 	 */
 	static bool dropDimensions(VectorBase* v);
 
+	/** @brief Extract a subset from an R vector, matrix or array.
+	 *
+	 * @tparam V A type inheriting from VectorBase.
+	 *
+	 * @param v Non-null pointer to a \a V object from which a
+	 *          subset (not necessarily a proper subset) is to be
+	 *          extracted.
+	 *
+	 * @param subscripts Pointer, possibly null, to a list of
+	 *          objects inheriting from RObject .  If \a v is an R
+	 *          matrix or array, then it is permissible for the
+	 *          list to have as many elements as \a v has
+	 *          dimensions, and in that case array subsetting is
+	 *          applied, as described for method arraySubset().
+	 *          If the foregoing condition does not apply, then
+	 *          the list must have either zero or one elements,
+	 *          and vector subsetting is applied, as described for
+	 *          method vectorSubset().
+	 *
+	 * @param drop true iff any dimensions of unit extent are to
+	 *          be removed from the result.  Ignored if vector
+	 *          subsetting is used.
+	 * 
+	 * @return Pointer to a newly created object of type \a V ,
+	 * containing the designated subset of \a v .
+	 */
+	template <class V>
+	static V* subset(const V* v, const PairList* subscripts, bool drop);
+
 	template <class VL, class VR>
 	static VL* vectorSubassign(VL* lhs, const IntVector* indices,
 				   const VR* rhs);
@@ -515,6 +544,19 @@ namespace CXXR {
 	}
 	setArrayAttributes(result, v, dimindexer, drop);
 	return result;
+    }
+
+    template <class V>
+    V* Subscripting::subset(const V* v, const PairList* subscripts, bool drop)
+    {
+	unsigned int nsubs = listLength(subscripts);
+	if (nsubs > 1)
+	    return arraySubset(v, subscripts, drop);
+	const IntVector* dims = v->dimensions();
+	if (dims && dims->size() == nsubs)
+	    return arraySubset(v, subscripts, drop);
+	return vectorSubset(v, (subscripts ? subscripts->car()
+				: Symbol::missingArgument()));
     }
 
     template <class VL, class VR>
