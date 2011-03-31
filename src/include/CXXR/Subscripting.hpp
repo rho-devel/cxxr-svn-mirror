@@ -258,33 +258,29 @@ namespace CXXR {
 	canonicalize(const StringVector* raw_indices, size_t range_size,
 		     const StringVector* range_names);
 
-	/** FIXME FIXME FIXME Canonicalize a subscript object for indexing an R vector.
+	/** Canonicalize a list of subscript objects for indexing an R
+	 *  matrix/array.
 	 *
 	 * @param v Non-null pointer to the VectorBase to which
 	 *          subscripting is to be applied.
 	 *
-	 * @param subscripts Pointer, possibly null, to an RObject.
-	 *          If the type and contents of this object are legal
-	 *          for subscripting, canonicalization will be
-	 *          performed accordingly; otherwise an error will be
-	 *          raised.
+	 * @param subscripts Pointer, possibly null, to a list of
+	 *          objects inheriting from RObject , with the same
+	 *          number of elements as \a v has dimensions.  (\a
+	 *          subscripts can be null only if \a v has zero
+	 *          dimensions.)  The elements of the list represent
+	 *          the subscripting to be applied for successive
+	 *          dimensions of \a v .  An error will be raised if
+	 *          the type or contents of any element is
+	 *          inappropriate for subscripting from the dimension
+	 *          in question.
 	 *
-	 * @return The first element of the returned value is a
-	 * pointer to the canonicalised index vector.  The second
-	 * element is the minimum size implied by \a subscripts for
-	 * the vector into which indexing is being performed.  If this
-	 * exceeds the size of \a v it means that an attempt is being
-	 * made to read or write from elements beyond the end of the
-	 * vector.
-	 *
-	 * @note At present this function does not handle the special
-	 * case (described in sec. 3.4.2 of the R Language Definition)
-	 * where \a v is an array, and \a subscripts is a matrix with
-	 * as many columns as \a v has dimensions, each row of the
-	 * matrix being used to pick out a single element of the
-	 * array.
+	 * @return Pointer to a ListVector with the same number of
+	 * elements as \a subscripts , each element of the ListVector
+	 * being the canonicalized index vector for the corresponding
+	 * dimension.
 	 */
-	static ListVector*
+	static const ListVector*
 	canonicalizeArraySubscripts(const VectorBase* v,
 				    const PairList* subscripts);
 

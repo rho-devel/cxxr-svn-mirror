@@ -220,7 +220,7 @@ Subscripting::canonicalize(const StringVector* raw_indices, size_t range_size,
     return pair<const IntVector*, size_t>(ans, max_index);
 }
 
-ListVector*
+const ListVector*
 Subscripting::canonicalizeArraySubscripts(const VectorBase* v,
 					  const PairList* subscripts)
 {
@@ -236,11 +236,13 @@ Subscripting::canonicalizeArraySubscripts(const VectorBase* v,
 	    Rf_error(_("too few subscripts"));
 	size_t dimsize = (*dims)[d];
 	const StringVector* names
-	    = static_cast<StringVector*>((*dimnames)[d].get());
+	    = (dimnames ? static_cast<StringVector*>((*dimnames)[d].get()) : 0);
 	pair<const IntVector*, size_t> pr
 	    = canonicalize(pl->car(), dimsize, names);
 	if (pr.second > dimsize)
 	    Rf_error(_("subscript out of bounds"));
+	// Since the return value is a const pointer, this const_cast
+	// is tolerable:
 	(*ans)[d] = const_cast<IntVector*>(pr.first);
 	pl = pl->tail();
     }

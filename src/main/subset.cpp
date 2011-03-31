@@ -258,19 +258,11 @@ static SEXP VectorSubset(SEXP x, SEXP sarg, SEXP call)
 
 static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop)
 {
-    SEXPTYPE mode = TYPEOF(x);
-    SEXP xdims = getAttrib(x, R_DimSymbol);
-    int k = length(xdims);
-    GCStackRoot<ListVector> indices(CXXR_NEW(ListVector(k)));
-    {
-	SEXP r = s;
-	for (int i = 0; i < k; i++) {
-	    (*indices)[i] = arraySubscript(i, CAR(r), xdims, getAttrib,
-					   (STRING_ELT), x);
-	    r = CDR(r);
-	}
-    }
-    switch (mode) {
+    const VectorBase* v = SEXP_downcast<VectorBase*>(x);
+    const PairList* subs = SEXP_downcast<PairList*>(s);
+    GCStackRoot<const ListVector>
+	indices(Subscripting::canonicalizeArraySubscripts(v, subs));
+    switch (x->sexptype()) {
     case LGLSXP:
 	return Subscripting::arraySubset(static_cast<LogicalVector*>(x),
 					 indices, drop);
