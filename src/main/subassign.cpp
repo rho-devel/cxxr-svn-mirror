@@ -219,8 +219,7 @@ static SEXP embedInVector(SEXP v)
    This does not coerce when assigning into a list.
 */
 
-static int SubassignTypeFix(SEXP *x, SEXP *y, int stretch, int level,
-			    SEXP call)
+static int SubassignTypeFix(SEXP *x, SEXP *y, int level, SEXP call)
 {
     int which = 100 * TYPEOF(*x) + TYPEOF(*y);
 
@@ -374,11 +373,6 @@ static int SubassignTypeFix(SEXP *x, SEXP *y, int stretch, int level,
 	      type2char(CXXRCONSTRUCT(SEXPTYPE, which%100)), type2char(CXXRCONSTRUCT(SEXPTYPE, which/100)));
     }
 
-    if (stretch) {
-	GCStackRoot<> yrt(*y);
-	*x = EnlargeVector(*x, stretch);
-    }
-
     return(100 * TYPEOF(*x) + TYPEOF(*y));
 }
 
@@ -480,10 +474,12 @@ static SEXP VectorAssign(SEXP call, SEXP xarg, SEXP sarg, SEXP yarg)
     {
 	SEXP xtmp = x;
 	SEXP ytmp = y;
-	which = SubassignTypeFix(&xtmp, &ytmp, stretch, 1, call);
+	which = SubassignTypeFix(&xtmp, &ytmp, 1, call);
 	x = xtmp;
 	y = ytmp;
     }
+    if (stretch)
+	x = EnlargeVector(x, stretch);
     if (n == 0)
 	return x;
     int ny = length(y);
@@ -666,7 +662,7 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     if (n > 0 && n % ny)
 	error(_("number of items to replace is not a multiple of replacement length"));
 
-    which = SubassignTypeFix(&x, &y, 0, 1, call);
+    which = SubassignTypeFix(&x, &y, 1, call);
     if (n == 0) return x;
 
     PROTECT(x);
@@ -948,7 +944,7 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     /* Here we make sure that the LHS has been coerced into */
     /* a form which can accept elements from the RHS. */
 
-    which = SubassignTypeFix(&x, &y, 0, 1, call);/* = 100 * TYPEOF(x) + TYPEOF(y);*/
+    which = SubassignTypeFix(&x, &y, 1, call);/* = 100 * TYPEOF(x) + TYPEOF(y);*/
 
     if (n == 0) {
 	UNPROTECT(1);
@@ -1488,8 +1484,13 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    UNPROTECT(1);
 	}
 
-	which = SubassignTypeFix(&x, &y, stretch, 2, call);
-
+	which = SubassignTypeFix(&x, &y, 2, call);
+	if (stretch) {
+	    PROTECT(x);
+	    PROTECT(y);
+	    x = EnlargeVector(x, stretch);
+	    UNPROTECT(2);
+	}
 	PROTECT(x);
 
 	switch (which) {
