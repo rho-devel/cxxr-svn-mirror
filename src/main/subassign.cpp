@@ -478,10 +478,6 @@ static SEXP VectorAssign(SEXP call, SEXP xarg, SEXP sarg, SEXP yarg)
 	x = xtmp;
 	y = ytmp;
     }
-    if (stretch)
-	x = EnlargeVector(x, stretch);
-    if (n == 0)
-	return x;
     int ny = length(y);
 
     if ((TYPEOF(x) != VECSXP && TYPEOF(x) != EXPRSXP) || y != R_NilValue) {
@@ -494,14 +490,16 @@ static SEXP VectorAssign(SEXP call, SEXP xarg, SEXP sarg, SEXP yarg)
     /* Note that we are now committed. */
     /* Since we are mutating existing objects, */
     /* any changes we make now are (likely to be) permanent.  Beware! */
-    const IntVector* indices = static_cast<const IntVector*>(indx.get());
+    pair<const IntVector*, size_t> indices_pr;
+    indices_pr.first = static_cast<const IntVector*>(indx.get());
+    indices_pr.second = max(LENGTH(x), stretch);
     switch(which) {
 	/* because we have called SubassignTypeFix the commented
 	   values cannot occur (and would be unsafe) */
 
     case 1010:	/* logical   <- logical	  */
 	x = Subscripting::vectorSubassign(SEXP_downcast<LogicalVector*>(x.get()),
-					  indices,
+					  indices_pr,
 					  SEXP_downcast<const LogicalVector*>(y.get()));
 	break;
     /* case 1013:  logical   <- integer	  */
@@ -511,12 +509,12 @@ static SEXP VectorAssign(SEXP call, SEXP xarg, SEXP sarg, SEXP yarg)
     /* case 1019:  logial     <- vector   */
     case 1310:	/* integer   <- logical	  */
 	x = Subscripting::vectorSubassign(SEXP_downcast<IntVector*>(x.get()),
-					  indices,
+					  indices_pr,
 					  SEXP_downcast<const LogicalVector*>(y.get()));
 	break;
     case 1313:	/* integer   <- integer	  */
 	x = Subscripting::vectorSubassign(SEXP_downcast<IntVector*>(x.get()),
-					  indices,
+					  indices_pr,
 					  SEXP_downcast<const IntVector*>(y.get()));
 	break;
     /* case 1314:  integer   <- real	  */
@@ -525,17 +523,17 @@ static SEXP VectorAssign(SEXP call, SEXP xarg, SEXP sarg, SEXP yarg)
     /* case 1319:  integer    <- vector   */
     case 1410:	/* real	     <- logical	  */
 	x = Subscripting::vectorSubassign(SEXP_downcast<RealVector*>(x.get()),
-					  indices,
+					  indices_pr,
 					  SEXP_downcast<const LogicalVector*>(y.get()));
 	break;
     case 1413:	/* real	     <- integer	  */
 	x = Subscripting::vectorSubassign(SEXP_downcast<RealVector*>(x.get()),
-					  indices,
+					  indices_pr,
 					  SEXP_downcast<const IntVector*>(y.get()));
 	break;
     case 1414:	/* real	     <- real	  */
 	x = Subscripting::vectorSubassign(SEXP_downcast<RealVector*>(x.get()),
-					  indices,
+					  indices_pr,
 					  SEXP_downcast<const RealVector*>(y.get()));
 	break;
     /* case 1415:  real	     <- complex	  */
@@ -543,22 +541,22 @@ static SEXP VectorAssign(SEXP call, SEXP xarg, SEXP sarg, SEXP yarg)
     /* case 1419:  real       <- vector   */
     case 1510:	/* complex   <- logical	  */
 	x = Subscripting::vectorSubassign(SEXP_downcast<ComplexVector*>(x.get()),
-					  indices,
+					  indices_pr,
 					  SEXP_downcast<const LogicalVector*>(y.get()));
 	break;
     case 1513:	/* complex   <- integer	  */
 	x = Subscripting::vectorSubassign(SEXP_downcast<ComplexVector*>(x.get()),
-					  indices,
+					  indices_pr,
 					  SEXP_downcast<const IntVector*>(y.get()));
 	break;
     case 1514:	/* complex   <- real	  */
 	x = Subscripting::vectorSubassign(SEXP_downcast<ComplexVector*>(x.get()),
-					  indices,
+					  indices_pr,
 					  SEXP_downcast<const RealVector*>(y.get()));
 	break;
     case 1515:	/* complex   <- complex	  */
 	x = Subscripting::vectorSubassign(SEXP_downcast<ComplexVector*>(x.get()),
-					  indices,
+					  indices_pr,
 					  SEXP_downcast<const ComplexVector*>(y.get()));
 	break;
     /* case 1516:  complex   <- character */
@@ -569,7 +567,7 @@ static SEXP VectorAssign(SEXP call, SEXP xarg, SEXP sarg, SEXP yarg)
     /* case 1615:  character <- complex	  */
     case 1616:	/* character <- character */
 	x = Subscripting::vectorSubassign(SEXP_downcast<StringVector*>(x.get()),
-					  indices,
+					  indices_pr,
 					  SEXP_downcast<const StringVector*>(y.get()));
 	break;
     /* case 1619:  character  <- vector   */
@@ -580,7 +578,7 @@ static SEXP VectorAssign(SEXP call, SEXP xarg, SEXP sarg, SEXP yarg)
     /* case 1916:  vector     <- character  */
     case 1919:  /* vector     <- vector     */
 	x = Subscripting::vectorSubassign(SEXP_downcast<ListVector*>(x.get()),
-					  indices,
+					  indices_pr,
 					  SEXP_downcast<const ListVector*>(y.get()));
 	break;
     /* case 2001:  expression <- symbol	    */
@@ -593,12 +591,12 @@ static SEXP VectorAssign(SEXP call, SEXP xarg, SEXP sarg, SEXP yarg)
     case 2019:	/* expression <- vector, needed if we have promoted a
 		   RHS  to a list */
 	x = Subscripting::vectorSubassign(SEXP_downcast<ExpressionVector*>(x.get()),
-					  indices,
+					  indices_pr,
 					  SEXP_downcast<const ListVector*>(y.get()));
 	break;
     case 2020:	/* expression <- expression */
 	x = Subscripting::vectorSubassign(SEXP_downcast<ExpressionVector*>(x.get()),
-					  indices,
+					  indices_pr,
 					  SEXP_downcast<const ExpressionVector*>(y.get()));
 	break;
     case 1900:  /* vector     <- null       */
@@ -608,7 +606,7 @@ static SEXP VectorAssign(SEXP call, SEXP xarg, SEXP sarg, SEXP yarg)
 	break;
     case 2424:	/* raw   <- raw	  */
 	x = Subscripting::vectorSubassign(SEXP_downcast<RawVector*>(x.get()),
-					  indices,
+					  indices_pr,
 					  SEXP_downcast<const RawVector*>(y.get()));
 	break;
     default:

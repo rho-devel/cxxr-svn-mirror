@@ -46,9 +46,13 @@
 
 #ifdef __cplusplus
 
+#include "CXXR/GCStackRoot.hpp"
 #include "CXXR/SEXP_downcast.hpp"
 
-typedef CXXR::RObject VECTOR_SEXPREC, *VECSEXP;
+// Needed in VectorBase::copyAttributesOnResize():
+extern "C" {
+    void Rf_copyMostAttrib(SEXP, SEXP);
+}
 
 namespace CXXR {
     class ListVector;
@@ -128,6 +132,26 @@ namespace CXXR {
 	      m_size(pattern.m_size)
 	{}
 
+	/** @brief Function auxiliary to resize().
+	 *
+	 * resize() uses this function to copy attributes (other than
+	 * 'names') from the vector being resized to the result of the
+	 * resizing.  Its default behaviour is to copy all attributes
+	 * other than 'names', 'dim' and 'dimnames', but this can be
+	 * overridden by template specialization if desired.
+	 *
+	 * @param source Vector from which attributes are being
+	 *          copied.
+	 *
+	 * @param destination Vector to which attributes are being
+	 *          copied.
+	 */
+	template <class V>
+	static void copyAttributesOnResize(V* destination, const V* source)
+	{
+	    Rf_copyMostAttrib(const_cast<V*>(source), destination);
+	}
+
 	/** @brief Names associated with the rows, columns or other
 	 *  dimensions of an R matrix or array.
 	 *
@@ -184,6 +208,31 @@ namespace CXXR {
 	 * of elements as \a *this .
 	 */
 	const StringVector* names() const;
+
+	/** @brief Create an extended or shrunken copy of an R vector.
+	 *
+	 * @tparam V A type inheriting from VectorBase.
+	 *
+	 * @param pattern Non-null pointer to the vector to be copied.
+	 *
+	 * @param new_size Required size of the copy, which may be
+	 *          smaller than, equal to or larger than the current
+	 *          size.  Zero is permissible.
+	 *
+	 * @return Pointer to the copied vector.  If \a new_size is
+	 * smaller than the size of \a pattern , supernumerary
+	 * elements at the end of \a pattern are not included in the
+	 * copy.  If \a new_size is greater than the size of \a
+	 * pattern, extra elements are appended to the result and set
+	 * to the NA value of \a V::value_type .  If \a pattern has a
+	 * <tt>names</tt> attribute, then the result is given a
+	 * <tt>names</tt> attribute obtained by recursively applying
+	 * this resize() function to the names of \a pattern .  Other
+	 * attributes are copied across by calling
+	 * copyAttributesOnResize().
+	 */
+	template <class V>
+	static V* resize(const V* pattern, size_t new_size);
 
 	/** @brief Associate names with the rows, columns or other
 	 *  dimensions of an R matrix or array.
@@ -295,6 +344,23 @@ namespace CXXR {
     private:
 	size_t m_size;
     };
+
+    template <class V>
+    V* VectorBase::resize(const V* pattern, size_t new_size)
+    {
+	GCStackRoot<V> ans(CXXR_NEW(V(new_size)));
+	size_t patternsz = pattern->size();
+	size_t copysz = std::min(patternsz, new_size);
+	for (unsigned int i = 0; i < copysz; ++i)
+	    (*ans)[i] = (*pattern)[i];
+	for (unsigned int i = copysz; i < new_size; ++i)
+	    (*ans)[i] = NA<typename V::value_type>();
+	const StringVector* names = pattern->names();
+	if (names)
+	    ans->setNames(resize(names, new_size));
+	copyAttributesOnResize(ans.get(), pattern);
+	return ans;
+    }
 }  // namespace CXXR
 
 extern "C" {

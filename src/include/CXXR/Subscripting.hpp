@@ -382,7 +382,9 @@ namespace CXXR {
 	static V* subset(const V* v, const PairList* subscripts, bool drop);
 
 	template <class VL, class VR>
-	static VL* vectorSubassign(VL* lhs, const IntVector* indices,
+	static VL* vectorSubassign(VL* lhs,
+				   const std::pair<const IntVector*,
+				                   size_t>& indices_pr,
 				   const VR* rhs);
 
 	/** @brief Extract a subset of an R vector object.
@@ -560,18 +562,25 @@ namespace CXXR {
     }
 
     template <class VL, class VR>
-    VL* Subscripting::vectorSubassign(VL* lhs, const IntVector* indices,
+    VL* Subscripting::vectorSubassign(VL* lhs,
+				      const std::pair<const IntVector*,
+				                      size_t>& indices_pr,
 				      const VR* rhs)
     {
 	typedef typename VL::value_type Lval;
 	typedef typename VR::value_type Rval;
+	const IntVector* indices = indices_pr.first;
+	size_t newsize = indices_pr.second;
 	size_t ni = indices->size();
 	size_t rhs_size = rhs->size();
 	GCStackRoot<VL> ans(lhs);
-	// Make sure we don't modify rhs.  (FIXME: ideally this should
-	// be a shallow copy for HandleVectors.)
-	if (static_cast<VectorBase*>(lhs) == rhs)
-	    ans = lhs->clone();
+	if (newsize > lhs->size())
+	    ans = VectorBase::resize(lhs, newsize);
+	// Make sure we don't modify rhs or indices.  (FIXME: ideally
+	// this should be a shallow copy for HandleVectors.)
+	const VectorBase* ansvb = static_cast<VectorBase*>(ans.get());
+	if (ansvb == rhs || ansvb == indices)
+	    ans = ans->clone();
 	for (unsigned int i = 0; i < ni; ++i) {
 	    int index = (*indices)[i];
 	    if (!isNA(index)) {
