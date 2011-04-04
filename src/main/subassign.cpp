@@ -461,11 +461,6 @@ static SEXP VectorAssign(SEXP call, SEXP xarg, SEXP sarg, SEXP yarg)
 
     int stretch = 1;
     GCStackRoot<> indx(makeSubscript(x, s, &stretch, R_NilValue));
-    int n = length(indx);
-    if(length(y) > 1)
-	for(int i = 0; i < n; i++)
-	    if(INTEGER(indx)[i] == NA_INTEGER)
-		error(_("NAs are not allowed in subscripted assignments"));
 
     /* Here we make sure that the LHS has */
     /* been coerced into a form which can */
@@ -477,14 +472,6 @@ static SEXP VectorAssign(SEXP call, SEXP xarg, SEXP sarg, SEXP yarg)
 	which = SubassignTypeFix(&xtmp, &ytmp, 1, call);
 	x = xtmp;
 	y = ytmp;
-    }
-    int ny = length(y);
-
-    if ((TYPEOF(x) != VECSXP && TYPEOF(x) != EXPRSXP) || y != R_NilValue) {
-	if (n > 0 && ny == 0)
-	    error(_("replacement has length zero"));
-	if (n > 0 && n % ny)
-	    warning(_("number of items to replace is not a multiple of replacement length"));
     }
 
     /* Note that we are now committed. */

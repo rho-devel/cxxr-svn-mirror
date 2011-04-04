@@ -573,6 +573,14 @@ namespace CXXR {
 	size_t newsize = indices_pr.second;
 	size_t ni = indices->size();
 	size_t rhs_size = rhs->size();
+	if (rhs_size > 1) {
+	    // TODO: Move NA-detection back into the canonicalisation
+	    // process.
+	    for (unsigned int i = 0; i < ni; ++i)
+		if (isNA((*indices)[i]))
+		    Rf_error(_("NAs subscripts are not allowed"
+			       " in this context"));
+	}
 	GCStackRoot<VL> ans(lhs);
 	if (newsize > lhs->size())
 	    ans = VectorBase::resize(lhs, newsize);
@@ -581,6 +589,14 @@ namespace CXXR {
 	const VectorBase* ansvb = static_cast<VectorBase*>(ans.get());
 	if (ansvb == rhs || ansvb == indices)
 	    ans = ans->clone();
+	// Dispose of special case:
+	if (ni == 0)
+	    return ans;
+	if (rhs_size == 0)
+	    Rf_error(_("replacement has length zero"));
+	if (ni%rhs_size != 0)
+	    Rf_warning(_("number of items to replace is not"
+			 " a multiple of replacement length"));
 	for (unsigned int i = 0; i < ni; ++i) {
 	    int index = (*indices)[i];
 	    if (!isNA(index)) {
