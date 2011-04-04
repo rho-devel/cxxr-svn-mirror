@@ -381,11 +381,112 @@ namespace CXXR {
 	template <class V>
 	static V* subset(const V* v, const PairList* subscripts, bool drop);
 
+	/** @brief Assign to selected elements of an R vector object.
+	 *
+	 * @tparam V A type inheriting from VectorBase.
+	 * 
+	 * @param v lhs Non-null pointer to a \a V object, which is
+	 *            the object to whose elements assignment is to be
+	 *            made.  Where feasible, the return value will
+	 *            point to \a lhs itself, modified appropriately
+	 *            (which is why this parameter is not
+	 *            <tt>const</tt>); otherwise the return value will
+	 *            point to a modified copy of \a lhs.  (Copying
+	 *            will occur if \a lhs aliases either \a rhs or
+	 *            the first element of \a indices_pr , or if the
+	 *            return vector needs to be larger than \a lhs .)
+	 *
+	 * @param indices_pr A pair as returned by one of the
+	 *          canonicalization functions.  The first element of
+	 *          the pair points to a canonical index vector, and
+	 *          the second element is the minimum size implied by
+	 *          the supplied subscripts for the returned vector.
+	 *          It is an error for the canonical index vector to
+	 *          contain any NAs if \a rhs contains more than one
+	 *          element.
+	 *
+	 * @param rhs Non-null pointer to the vector from which values
+	 *          are to be taken.  Successive elements are assigned
+	 *          to the locations within the result defined by the
+	 *          canonical index vector in \a indices_pr .  If the
+	 *          return vector is larger than \a rhs , the elements
+	 *          of \a rhs are repeated in rotation.  It is an
+	 *          error for \a rhs to have zero elements.  A warning
+	 *          will be given if the number of indices in the
+	 *          canonical index vector is not equal to or a
+	 *          multiple of the length of \a rhs .
+	 *
+	 * @result Pointer to the result of the assignment.  The size of the
+	 * this vector will be whichever is larger of the the size of
+	 * \a lhs or the second element of \a indices_pr .  If the
+	 * result is larger than \a lhs , then any supplementary
+	 * elements not assigned to by the specified indices will be
+	 * set to the NA value of VL::value_type .
+	 */
 	template <class VL, class VR>
 	static VL* vectorSubassign(VL* lhs,
 				   const std::pair<const IntVector*,
 				                   size_t>& indices_pr,
 				   const VR* rhs);
+
+	/** @brief Assign to selected elements of an R vector object.
+	 *
+	 * @tparam V A type inheriting from VectorBase.
+	 * 
+	 * @param v lhs Non-null pointer to a \a V object, which is
+	 *            the object to whose elements assignment is to be
+	 *            made.  Where feasible, the return value will
+	 *            point to \a lhs itself, modified appropriately
+	 *            (which is why this parameter is not
+	 *            <tt>const</tt>); otherwise the return value will
+	 *            point to a modified copy of \a lhs.  (Copying
+	 *            will occur if \a lhs aliases either \a rhs or
+	 *            the first element of \a indices_pr , or if the
+	 *            return vector needs to be larger than \a lhs .)
+	 *
+	 * @param indices_pr A pair as returned by one of the
+	 *          canonicalization functions.  The first element of
+	 *          the pair points to a canonical index vector, and
+	 *          the second element is the minimum size implied by
+	 *          the supplied subscripts for the returned vector.
+	 *          It is an error for the canonical index vector to
+	 *          contain any NAs if \a rhs contains more than one
+	 *          element.
+	 *
+	 * @param subscripts Pointer, possibly null, to an RObject.
+	 *          If the type and context of this object are legal
+	 *          for subscripting, subassignment will be performed
+	 *          accordingly; otherwise an error will be raised.
+	 *          It is an error for the subscripts to give rise to
+	 *          any NA index values of \a rhs contains more than
+	 *          one element.
+	 *
+	 * @param rhs Non-null pointer to the vector from which values
+	 *          are to be taken.  Successive elements are assigned
+	 *          to the locations within the result defined by the
+	 *          subscripts.  If the return vector is larger than
+	 *          \a rhs , the elements of \a rhs are repeated in
+	 *          rotation.  It is an error for \a rhs to have zero
+	 *          elements.  A warning will be given if the number
+	 *          of locations to be assigned to is not equal to or
+	 *          a multiple of the length of \a rhs .
+	 *
+	 * @result Pointer to the result of the assignment.  The size of the
+	 * this vector will be whichever is larger of the the size of
+	 * \a lhs or the minimum size implied by \a subscripts .  If the
+	 * result is larger than \a lhs , then any supplementary
+	 * elements not assigned to by the specified subscripts will be
+	 * set to the NA value of VL::value_type .
+	 */
+	template <class VL, class VR>
+	static VL* vectorSubassign(VL* lhs, const RObject* subscripts,
+				   const VR* rhs)
+	{
+	    const std::pair<const IntVector*, size_t>
+		pr(canonicalize(subscripts, lhs->size(), lhs->names()));
+	    GCStackRoot<const IntVector> iv(pr.first);
+	    return vectorSubassign(lhs, pr, rhs);
+	}
 
 	/** @brief Extract a subset of an R vector object.
 	 *
@@ -421,7 +522,7 @@ namespace CXXR {
 	 *          object from which a subset (not necessarily a
 	 *          proper subset) is to be extracted.
 	 *
-	 * @param subscripts Pointer, possibly null, to an RObject  If
+	 * @param subscripts Pointer, possibly null, to an RObject.  If
 	 *          the type and contents of this object are legal for
 	 *          subscripting, subsetting will be performed
 	 *          accordingly; otherwise an error will be raised.
