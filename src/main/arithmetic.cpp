@@ -75,7 +75,9 @@ extern "C" {
 #include <errno.h>
 #include <math.h>
 
+#include <functional>
 #include "CXXR/GCStackRoot.hpp"
+#include "CXXR/VectorOps.hpp"
 
 using namespace CXXR;
 
@@ -314,6 +316,7 @@ static double logbase(double x, double base)
 }
 
 static SEXP integer_unary(ARITHOP_TYPE, SEXP, SEXP);
+static SEXP logical_unary(ARITHOP_TYPE, SEXP, SEXP);
 static SEXP real_unary(ARITHOP_TYPE, SEXP, SEXP);
 static SEXP real_binary(ARITHOP_TYPE, SEXP, SEXP);
 static SEXP integer_binary(ARITHOP_TYPE, SEXP, SEXP, SEXP);
@@ -545,6 +548,7 @@ SEXP attribute_hidden R_unary(SEXP call, SEXP op, SEXP s1)
     ARITHOP_TYPE operation = ARITHOP_TYPE( PRIMVAL(op));
     switch (TYPEOF(s1)) {
     case LGLSXP:
+	return logical_unary(operation, s1, call);
     case INTSXP:
 	return integer_unary(operation, s1, call);
     case REALSXP:
@@ -564,13 +568,24 @@ static SEXP integer_unary(ARITHOP_TYPE code, SEXP s1, SEXP call)
 	return s1;
     case MINUSOP:
 	{
-	    int n = LENGTH(s1);
-	    GCStackRoot<IntVector> ans(CXXR_NEW(IntVector(n)));
-	    for (int i = 0; i < n; i++) {
-		int x = INTEGER(s1)[i];
-		INTEGER(ans)[i] = (x == NA_INTEGER) ? NA_INTEGER : -x;
-	    }
-	    return ans;
+	    IntVector* iv = SEXP_downcast<IntVector*>(s1);
+	    return VectorOps::unary<IntVector>(iv, std::negate<int>());
+	}
+    default:
+	errorcall(call, _("invalid unary operator"));
+    }
+    return s1;			/* never used; to keep -Wall happy */
+}
+
+static SEXP logical_unary(ARITHOP_TYPE code, SEXP s1, SEXP call)
+{
+    switch (code) {
+    case PLUSOP:
+	return s1;
+    case MINUSOP:
+	{
+	    LogicalVector* lv = SEXP_downcast<LogicalVector*>(s1);
+	    return VectorOps::unary<IntVector>(lv, std::negate<int>());
 	}
     default:
 	errorcall(call, _("invalid unary operator"));
@@ -580,17 +595,13 @@ static SEXP integer_unary(ARITHOP_TYPE code, SEXP s1, SEXP call)
 
 static SEXP real_unary(ARITHOP_TYPE code, SEXP s1, SEXP lcall)
 {
-    int i, n;
-    SEXP ans;
-
     switch (code) {
     case PLUSOP: return s1;
     case MINUSOP:
-	ans = duplicate(s1);
-	n = LENGTH(s1);
-	for (i = 0; i < n; i++)
-	    REAL(ans)[i] = -REAL(s1)[i];
-	return ans;
+	{
+	    RealVector* rv = SEXP_downcast<RealVector*>(s1);
+	    return VectorOps::unary<RealVector>(rv, std::negate<double>());
+	}
     default:
 	errorcall(lcall, _("invalid unary operator"));
     }
