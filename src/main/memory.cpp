@@ -478,26 +478,6 @@ DL_FUNC R_ExternalPtrAddrFn(SEXP s)
 }
 
 
-
-/* The following functions are replacements for the accessor macros.
-   They are used by code that does not have direct access to the
-   internal representation of objects.  The assignment functions
-   implement the write barrier. */
-
-/* General Cons Cell Attributes */
-
-void DUPLICATE_ATTRIB(SEXP to, SEXP from) {
-    GCStackRoot<> attributes(duplicate(ATTRIB(from)));
-    SET_ATTRIB(to, attributes);
-    IS_S4_OBJECT(from) ?  SET_S4_OBJECT(to) : UNSET_S4_OBJECT(to);
-}
-
-
-/* R_FunTab accessors */
-/* Not used:
-void (SET_PRIMFUN)(SEXP x, CCODE f) { PRIMFUN(x) = f; }
-*/
-
 /*******************************************/
 /* Non-sampling memory use profiler
    reports all large vector heap

@@ -56,6 +56,7 @@ using namespace CXXR;
 // from C:
 namespace CXXR {
     namespace ForceNonInline {
+	void (*DUPLICATE_ATTRIBptr)(SEXP, SEXP) = DUPLICATE_ATTRIB;
 	Rboolean (*isNullptr)(SEXP s) = Rf_isNull;
 	Rboolean (*isObjectptr)(SEXP s) = Rf_isObject;
 	Rboolean (*IS_S4_OBJECTptr)(SEXP x) = IS_S4_OBJECT;
@@ -94,6 +95,15 @@ void RObject::clearAttributes()
 	m_attrib = 0;
 	m_type &= ~s_class_mask;
     }
+}
+
+void RObject::copyAttributes(const RObject* source, bool copyS4)
+{
+    const PairList* srcatts = source->attributes();
+    GCStackRoot<const PairList> attribs(srcatts ? srcatts->clone() : 0);
+    setAttributes(attribs);
+    if (copyS4)
+	setS4Object(source->isS4Object());
 }
 
 RObject* RObject::evaluate(Environment* env)
@@ -140,14 +150,17 @@ void RObject::setAttribute(const Symbol* name, RObject* value)
     }
     if (node) {  // Attribute already present
 	// Update existing attribute:
-	if (value) node->setCar(value);
+	if (value)
+	    node->setCar(value);
 	// Delete existing attribute:
-	else if (prev) prev->setTail(node->tail());
+	else if (prev)
+	    prev->setTail(node->tail());
 	else m_attrib = node->tail();
     } else if (value) {  
 	// Create new node:
 	PairList* newnode = PairList::cons(value, 0, name);
-	if (prev) prev->setTail(newnode);
+	if (prev)
+	    prev->setTail(newnode);
 	else { // No preexisting attributes at all:
 	    m_attrib = newnode;
 	}
@@ -200,6 +213,16 @@ SEXP ATTRIB(SEXP x)
 {
     GCNode::GCInhibitor inhibitor;
     return x ? const_cast<PairList*>(x->attributes()) : 0;
+}
+
+void DUPLICATE_ATTRIB(SEXP to, SEXP from)
+{
+    if (from) 
+	to->copyAttributes(from, true);
+    else {
+	to->clearAttributes();
+	to->setS4Object(false);
+    }
 }
 
 void SET_ATTRIB(SEXP x, SEXP v)

@@ -401,6 +401,18 @@ namespace CXXR {
 	    return pattern ? static_cast<T*>(pattern->clone()) : 0;
 	}
 
+	/** @brief Copy attributes from one RObject to another.
+	 *
+	 * Any existing attributes of \a *this are discarded.
+	 *
+	 * @param source Non-null pointer to the object from which
+	 *          attributes are to be copied.
+	 *
+	 * @param copyS4 If true, the status of \a source as an S4
+	 *          object (or not) is also copied to \a *this .
+	 */
+	void copyAttributes(const RObject* source, bool copyS4);
+
 	/** @brief Evaluate object in a specified Environment.
 	 *
 	 * @param env Pointer to the environment in which evaluation
@@ -654,6 +666,8 @@ extern "C" {
 
     /** @brief Replace the attributes of \a to by those of \a from.
      *
+     * The status of \a to as an S4 Object is also copied from \a from .
+     * 
      * @param to Pointer to CXXR::RObject.
      *
      * @param from Pointer to another CXXR::RObject.
