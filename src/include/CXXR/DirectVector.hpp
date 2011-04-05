@@ -144,7 +144,8 @@ namespace CXXR {
 	 */
 	inline static const char* staticTypeName();
 
-	// Virtual function of RObject:
+	// Virtual functions of RObject:
+	DirectVector<T, ST>* clone() const;
 	const char* typeName() const;
     protected:
 	/**
@@ -159,6 +160,12 @@ namespace CXXR {
 	// compiler-generated version:
 	DirectVector& operator=(const DirectVector&);
     };
+
+    template <typename T, SEXPTYPE ST>
+    DirectVector<T, ST>* DirectVector<T, ST>::clone() const
+    {
+	return expose(new DirectVector<T, ST>(*this));
+    }
 
     template <typename T, SEXPTYPE ST>
     const char* DirectVector<T, ST>::typeName() const

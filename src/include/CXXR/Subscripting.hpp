@@ -685,12 +685,13 @@ namespace CXXR {
 	GCStackRoot<VL> ans(lhs);
 	if (newsize > lhs->size())
 	    ans = VectorBase::resize(lhs, newsize);
-	// Make sure we don't modify rhs or indices.  (FIXME: ideally
-	// this should be a shallow copy for HandleVectors.)
+	// If necessary, make a copy to be sure we don't modify rhs or
+	// indices.  (FIXME: ideally this should be a shallow copy for
+	// HandleVectors.)
 	const VectorBase* ansvb = static_cast<VectorBase*>(ans.get());
 	if (ansvb == rhs || ansvb == indices)
-	    ans = ans->clone();
-	// Dispose of special case:
+	    ans = CXXR_NEW(VL(*ans.get()));
+	// Dispose of 'no indices' case:
 	if (ni == 0)
 	    return ans;
 	if (rhs_size == 0)
