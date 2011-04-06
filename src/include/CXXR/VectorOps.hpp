@@ -50,27 +50,20 @@ namespace CXXR {
      */
     class VectorOps {
     public:
-	/** @brief Control attribute copying for VectorOps::unary().
+	/** @brief Control attribute copying for unary functions.
 	 *
-	 * An object from an instantiation of this template is used by
-	 * VectorOps::unary() to determine which attributes are copied
-	 * from the input vector to the output vector.  The default
-	 * behaviour, implemented here, is to copy all attributes
-	 * across, along with the S4 object status.  However, this can
-	 * be overridden by specializing this template.
+	 * VectorOps::UnaryFunction takes as a template parameter an
+	 * \a AttributeCopier class which determines which attributes
+	 * are copied from the input vector to the output vector.
 	 *
-	 * @tparam Vout A class inheriting from VectorBase, used to
-	 *           contain the results of applying a unary function.
-	 *
-	 * @tparam Vin A class inheriting from VectorBase, used to
-	 *           contain the input values for a unary function.
-	 *
-	 * @tparam Functor A function object class defining a unary
-	 *           function from Vin::value_type to Vout::value_type .
+	 * This class is the default value of the \a AttributeCopier
+	 * parameter, and its behaviour is to copy all attributes
+	 * across, along with the S4 object status.  If different
+	 * behaviour is required, another class can be created using
+	 * this class as a model.
 	 */
-	template <class Vout, class Vin, typename Functor>
-	struct AttributeCopier4Unary
-	    : std::binary_function<Vout*, Vin*, void> {
+	struct DefaultAttributeCopier4Unary
+	    : std::binary_function<RObject*, RObject*, void> {
 	    /** @brief Copy attributes as required.
 	     *
 	     * The default behaviour, implemented here, is to copy all
@@ -82,30 +75,28 @@ namespace CXXR {
 	     * @param from Non-null pointer to the vector from which
 	     *          attributes are to be copied.
 	     */
-	    void operator()(Vout* to, const Vin* from)
+	    void operator()(RObject* to, const RObject* from)
 	    {
 		to->copyAttributes(from, true);
 	    }
 	};
 
-	/** @brief Check function application for VectorOps::unary().
+	/** @brief Monitor function application for unary functions.
 	 *
-	 * An object from an instantiation of this template is used by
-	 * by VectorOps::unary() to keep track of any abnormal
-	 * conditions arising in the application of the unary
-	 * function.  After each individual application of the unary
-	 * function, the operator() method of the validator object is
-	 * called with the result value and the input value.  The
-	 * validator object can then note any abnormalities as part of
-	 * its internal state, and possibly modify the result value.
+	 * VectorOps::UnaryFunction takes as a template parameter a \a
+	 * FunctorWrapper class.  The apply() method of UnaryFunction
+	 * creates an object of the \a FunctorWrapper class, and
+	 * delegates to it the task of calling the unary function; the
+	 * \a FunctorWrapper object can then monitor any abnormal
+	 * conditions that occur, and take appropriate action either
+	 * immediately (typically by raising an error) or when
+	 * processing of the input vector is complete (typically by
+	 * providing one or more warnings).
 	 *
-	 * Once VectorOps::unary() has processed the entire input
-	 * vector, it calls the wrapUp() method of the validator
-	 * object, which can raise an error or warning.
-	 *
-	 * The default behaviour, implemented here, is to apply no
-	 * validation.  However, this can be overridden by
-	 * specializing this template.
+	 * This class is the default value of the \a FunctorWrapper
+	 * template parameter, and its behaviour is to apply no
+	 * monitoring at all.  If different behaviour is required,
+	 * another class can be created using this class as a model.
 	 *
 	 * @tparam Functor a function object class inheriting from an
 	 *           instantiation of the std::unary_function template
@@ -113,72 +104,213 @@ namespace CXXR {
 	 *           result_type and \a argument_type appropriately).
 	 */
 	template <class Functor>
-	struct Validator4Unary
-	    : std::binary_function<typename Functor::result_type,
-				   typename Functor::argument_type, void> {
-	    typedef typename Functor::result_type result_type;
+	class DefaultUnaryFunctorWrapper
+	    : public std::unary_function<typename Functor::argument_type,
+					 typename Functor::result_type> {
+	public:
+	    // See para. 3 of ISO14882:2003 Sec. 14.6.2 for why these
+	    // typedefs aren't inherited from std::unary_function:
 	    typedef typename Functor::argument_type argument_type;
+	    typedef typename Functor::result_type result_type;
 
-	    /** @brief Apply validation to an input-result pair.
+	    /** @brief Constructor.
 	     *
-	     * The default behaviour, implemented here, is to apply no
-	     * validation.
-	     *
-	     * @param out Pointer to the result value of the functor
-	     *          application to be validated.  It is
-	     *          permissible for the function to modify this
-	     *          value, and if this happens, the modified value
-	     *          will be carried through to the result of the
-	     *          VectorOps::unary() invocation.
-	     *
-	     * @param in Input value to the functor application to be
-	     *          validated.
+	     * @param f Pointer to an object of type \a Functor
+	     *          defining the unary function whose operation
+	     *          this \a FunctorWrapper is to monitor.
 	     */
-	    void operator()(result_type* out, const argument_type& in)
+	    DefaultUnaryFunctorWrapper(const Functor& f)
+		: m_func(f)
 	    {}
-
-	    /** @brief Wrap-up processing of a vector.
+		
+	    /** @brief Monitored invocation of \a f .
 	     *
-	     * This function will be called by VectorOps::unary() once
-	     * all the elements of its input vector have been
-	     * processed.  The Validator4Unary object can use it to
-	     * raise an error or (more typically) a warning in the
-	     * light of the validation results.
+	     * The apply() method of an object instantiating the
+	     * VectorOps::UnaryFunction template will call this
+	     * function to generate a value for the output vector from
+	     * a value from the input vector using the functor \a f .
+	     * This function will monitor the operation of \a f , and
+	     * take appropriate action if abnormalities occur, for
+	     * example by raising an error, modifying the return
+	     * value, and/or recording the abnormality for later
+	     * reporting by warnings().
+	     *
+	     * @param in Input value to which \a f is to be applied.
+	     *
+	     * @result The result of applying \a f to \a in , possibly
+	     * modified if abnormalities occurred.
+	     */
+	    result_type operator()(const argument_type& in)
+	    {
+		return (m_func)(in);
+	    }
+
+	    /** @brief Raise warnings after processing a vector.
+	     *
+	     * The apply() method of an object instantiating the
+	     * VectorOps::UnaryFunction template will call this
+	     * function once all the elements of the input vector have
+	     * been processed.  Typically this function will do
+	     * nothing if no abnormalities have occurred during the
+	     * lifetime of this \a FunctorWrapper object , otherwise
+	     * it will raise one or more warnings.  (Note that the
+	     * lifetime of a \a FunctorWrapper object corresponds to
+	     * the processing of an input vector by the apply() method
+	     * of UnaryFunction.)
 	     *
 	     * The default behaviour, implemented here, is to do
 	     * nothing.
 	     */
-	    void wrapUp()
+	    void warnings()
 	    {}
+	private:
+	    Functor m_func;
 	};
 
+	/** @brief Class used to transform a vector elementwise using
+	 *         unary function.
+	 *
+	 * An object of this class is used to map one vector into
+	 * new vector of equal size, with each element of the output
+	 * vector being obtained from the corresponding element of the
+	 * input vector by the application of a unary function.  NAs
+	 * in the input vector are carried across into NAs in the
+	 * output vector.
+	 *
+	 * @tparam Functor a function object class inheriting from an
+	 *           instantiation of the std::unary_function template
+	 *           (or otherwise defining nested types \a
+	 *           result_type and \a argument_type appropriately).
+	 *
+	 * @tparam FunctorWrapper Each invocation of apply() will
+	 *           create an object of this class, and delegate to
+	 *           it the task of calling the unary function; the \a
+	 *           FunctorWrapper objects can then monitor any
+	 *           abnormal conditions.  See the description of
+	 *           VectorOps::DefaultUnaryFunctionWrapper for
+	 *           further information.
+	 *
+	 * @tparam AttributeCopier The apply() method will create an
+	 *           object of this class and use it to determine
+	 *           which attributes are copied from the input vector
+	 *           to the output vector.  See the description of
+	 *           VectorOps::DefaultAttributeCopier4Unary for
+	 *           further information.
+	 */
+	template <typename Functor,
+		  class FunctorWrapper = DefaultUnaryFunctorWrapper<Functor>,
+		  class AttributeCopier = DefaultAttributeCopier4Unary>
+	class UnaryFunction {
+	public:
+	    /** @brief Constructor.
+	     *
+	     * @param f Pointer to an object of type \a Functor
+	     *          defining the unary function that this
+	     *          UnaryFunction object will use to generate an
+	     *          output vector from an input vector.
+	     */
+	    UnaryFunction(const Functor& f)
+		: m_f(f)
+	    {}
+
+	    /** @brief Apply a unary function to a vector.
+	     *
+	     * @tparam Vout Class of vector to be produced as a
+	     *           result.  It must be possible to assign values
+	     *           of the return type of \a f to the elements of
+	     *           a vector of type \a Vout .
+	     *
+	     * @tparam Vin Class of vector to be taken as input.  It
+	     *           must be possible implicitly to convert the
+	     *           elements of a \a Vin to the input type of \a
+	     *           f .
+	     *
+	     * @param v Non-null pointer to the input vector.
+	     *
+	     * @result Pointer to the result vector, a newly created
+	     * vector of the same size as \a v , with each element of
+	     * the output vector being obtained from the corresponding
+	     * element of the input vector by the application of \a f
+	     * , except that NAs in the input vector are carried
+	     * across into NAs in the output vector.
+	     */
+	    template <class Vout, class Vin>
+	    Vout* apply(const Vin* v);
+	private:
+	    Functor m_f;
+	};
+
+	/** @brief Apply a unary function to a vector (simple case).
+	 *
+	 * This function represents a common special case.  For
+	 * customised behaviour, use class UnaryFunction directly.
+	 *
+	 * @tparam Vout Class of vector to be produced as a result.
+	 *           It must be possible to assign values of the
+	 *           return type of \a f to the elements of a vector
+	 *           of type \a Vout .
+	 *
+	 * @tparam Vin Class of vector to be taken as input.  It must
+	 *           be possible implicitly to convert the elements of
+	 *           a \a Vin to the input type of \a f .
+	 *
+	 * @tparam Functor a function object class inheriting from an
+	 *           instantiation of the std::unary_function template
+	 *           (or otherwise defining nested types \a
+	 *           result_type and \a argument_type appropriately).
+	 *
+	 * @param v Non-null pointer to the input vector.
+	 *
+	 * @result Pointer to the result vector, a newly created
+	 * vector of the same size as \a v , with each element of the
+	 * output vector being obtained from the corresponding element
+	 * of the input vector by the application of \a f , except
+	 * that NAs in the input vector are carried across into NAs in
+	 * the output vector.  All attributes of \a v are copied to
+	 * the result; the status of \a v as an S4 object (or not) is
+	 * also copied across.
+	 */
 	template <class Vout, class Vin, typename Functor>
-	static Vout* unary(const Vin* v, Functor f);
+	static Vout* unary(const Vin* v, Functor f)
+	{
+	    UnaryFunction<Functor> uf(f);
+	    // Refer to para. 4 of ISO14882:2003 sec 14.2 for the need
+	    // for the following syntax:
+	    return uf.template apply<Vout>(v);
+	}
+    private:
+	// Not implemented.  Declared private to prevent VectorOps
+	// objects being created.
+	VectorOps();
     };  // class VectorOps
 
-    template <class Vout, class Vin, typename Functor>
-    Vout* VectorOps::unary(const Vin* v, Functor f)
+    template <typename Functor, class FunctorWrapper, class AttributeCopier>
+    template <class Vout, class Vin>
+    Vout* VectorOps::UnaryFunction<Functor,
+				   FunctorWrapper,
+				   AttributeCopier>::apply(const Vin* v)
     {
 	typedef typename Vin::value_type Inval;
 	typedef typename Vout::value_type Outval;
 	size_t vsize = v->size();
 	GCStackRoot<Vout> ans(CXXR_NEW(Vout(vsize)));
-	Validator4Unary<Functor> validator;
-	for (unsigned int i = 0; i < vsize; ++i) {
+	FunctorWrapper fwrapper(m_f);
+	for (size_t i = 0; i < vsize; ++i) {
 	    const Inval arg = (*v)[i];
+	    Outval result;
 	    if (isNA(arg))
-		(*ans)[i] = NA<Outval>();
-	    else {
-		Outval result = f(arg);
-		validator(&result, arg);
-		(*ans)[i] = result;
-	    }
+		result = NA<Outval>();
+	    else
+		result = fwrapper(arg);
+	    (*ans)[i] = result;
+	    // (*ans)[i] = (isNA(arg) ? NA<Outval>() : fwrapper(arg));
 	}
-	validator.wrapUp();
-	AttributeCopier4Unary<Vout, Vin, Functor> attrib_copier;
+	fwrapper.warnings();
+	AttributeCopier attrib_copier;
 	attrib_copier(ans, v);
 	return ans;
     }
+    
 }  // namespace CXXR;
 
 #endif  // VECTOROPS_HPP

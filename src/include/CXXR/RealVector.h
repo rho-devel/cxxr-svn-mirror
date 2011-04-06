@@ -59,6 +59,12 @@ namespace CXXR {
     }
 
     template <>
+    inline bool isNA<double>(const double& t)
+    {
+	return R_IsNA(t);
+    }
+
+    template <>
     inline const char* DumbVector<double, REALSXP>::staticTypeName()
     {
 	return "numeric";

@@ -1079,45 +1079,42 @@ static SEXP real_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2)
 
 /* Mathematical Functions of One Argument */
 
+class NaNHandler {
+public:
+    NaNHandler(double (*f)(double))
+	: m_f(f), m_any_NaN(false)
+    {}
+
+    double operator()(double in)
+    {
+	if (isnan(in))
+	    return in;
+	double ans = m_f(in);
+	if (isnan(ans))
+	    m_any_NaN = true;
+	return ans;
+    }
+
+    void warnings()
+    {
+	if (m_any_NaN)
+	    Rf_warning(R_MSG_NA);
+    }
+private:
+    double (*m_f)(double);
+    bool m_any_NaN;
+};
+
 static SEXP math1(SEXP sa, double (*f)(double), SEXP lcall)
 {
-    SEXP sy;
-    double *y, *a;
-    int i, n;
-    int naflag;
-
     if (!isNumeric(sa))
 	errorcall(lcall, R_MSG_NONNUM_MATH);
-
-    n = length(sa);
     /* coercion can lose the object bit */
-    PROTECT(sa = coerceVector(sa, REALSXP));
-    PROTECT(sy = allocVector(REALSXP, n));
-#ifdef R_MEMORY_PROFILING
-    if (RTRACE(sa)){
-       memtrace_report(sa, sy);
-       SET_RTRACE(sy, 1);
-    }
-#endif
-    a = REAL(sa);
-    y = REAL(sy);
-    naflag = 0;
-    for (i = 0; i < n; i++) {
-	if (ISNAN(a[i]))
-	    y[i] = a[i];
-	else {
-	    y[i] = f(a[i]);
-	    if (ISNAN(y[i])) naflag = 1;
-	}
-    }
-    if(naflag)
-	warningcall(lcall, R_MSG_NA);
-
-    DUPLICATE_ATTRIB(sy, sa);
-    UNPROTECT(2);
-    return sy;
+    GCStackRoot<RealVector>
+	rv(static_cast<RealVector*>(coerceVector(sa, REALSXP)));
+    VectorOps::UnaryFunction<double (*)(double), NaNHandler> uf(f);
+    return uf.apply<RealVector>(rv.get());
 }
-
 
 SEXP attribute_hidden do_math1(SEXP call, SEXP op, SEXP args, SEXP env)
 {
