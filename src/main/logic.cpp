@@ -170,6 +170,10 @@ static SEXP lbinary(SEXP call, SEXP op, SEXP args)
     return x;
 }
 
+// Note that this specifically implements logical (or for RAWSXP,
+// bitwise) negation, not a general unary function: the op arg is
+// ignored.
+
 static SEXP lunary(SEXP call, SEXP op, SEXP arg)
 {
     SEXP x, dim, dimnames, names;

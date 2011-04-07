@@ -220,6 +220,8 @@ static double myfloor(double x1, double x2)
 
 /* some systems get this wrong, possibly depend on what libs are loaded */
 static R_INLINE double R_log(double x) {
+    if (isnan(x))
+	return x;
     return x > 0 ? log(x) : x < 0 ? R_NaN : R_NegInf;
 }
 
@@ -1079,18 +1081,18 @@ static SEXP real_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2)
 
 /* Mathematical Functions of One Argument */
 
-class NaNHandler {
+// FunctionWrapper for VectorOps::UnaryFunction.  Warns if function
+// application gives rise to any new NaNs.
+class NaNWarner {
 public:
-    NaNHandler(double (*f)(double))
+    NaNWarner(double (*f)(double))
 	: m_f(f), m_any_NaN(false)
     {}
 
     double operator()(double in)
     {
-	if (isnan(in))
-	    return in;
 	double ans = m_f(in);
-	if (isnan(ans))
+	if (isnan(ans) && !isnan(in))
 	    m_any_NaN = true;
 	return ans;
     }
@@ -1112,7 +1114,7 @@ static SEXP math1(SEXP sa, double (*f)(double), SEXP lcall)
     /* coercion can lose the object bit */
     GCStackRoot<RealVector>
 	rv(static_cast<RealVector*>(coerceVector(sa, REALSXP)));
-    VectorOps::UnaryFunction<double (*)(double), NaNHandler> uf(f);
+    VectorOps::UnaryFunction<double (*)(double), NaNWarner> uf(f);
     return uf.apply<RealVector>(rv.get());
 }
 
