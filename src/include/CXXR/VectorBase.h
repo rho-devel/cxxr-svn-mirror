@@ -354,7 +354,7 @@ namespace CXXR {
 	for (unsigned int i = 0; i < copysz; ++i)
 	    (*ans)[i] = (*pattern)[i];
 	for (unsigned int i = copysz; i < new_size; ++i)
-	    (*ans)[i] = NA<typename V::value_type>();
+	    (*ans)[i] = NA<typename V::element_type>();
 	const StringVector* names = pattern->names();
 	if (names)
 	    ans->setNames(resize(names, new_size));

@@ -629,7 +629,7 @@ namespace CXXR {
 		    iin += (index - 1)*di.stride;
 		}
 		(*result)[iout]
-		    = naindex ? NA<typename V::value_type>() : (*vnc)[iin];
+		    = naindex ? NA<typename V::element_type>() : (*vnc)[iin];
 		// Advance the index selection:
 		{
 		    unsigned int d = 0;
@@ -668,8 +668,8 @@ namespace CXXR {
 				                      size_t>& indices_pr,
 				      const VR* rhs)
     {
-	typedef typename VL::value_type Lval;
-	typedef typename VR::value_type Rval;
+	typedef typename VL::element_type Lval;
+	typedef typename VR::element_type Rval;
 	const IntVector* indices = indices_pr.first;
 	size_t newsize = indices_pr.second;
 	size_t ni = indices->size();
@@ -723,7 +723,7 @@ namespace CXXR {
 	    int index = (*indices)[i];
 	    // Note that zero and negative indices ought not to occur.
 	    if (isNA(index) || index > int(vsize))
-		(*ans)[i] = NA<typename V::value_type>();
+		(*ans)[i] = NA<typename V::element_type>();
 	    else (*ans)[i] = (*vnc)[index - 1];
 	}
 	setVectorAttributes(ans, v, indices);

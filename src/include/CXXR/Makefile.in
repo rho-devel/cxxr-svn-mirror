@@ -43,7 +43,7 @@ CXXR_HPPS = \
   GCEdge.hpp GCNode.hpp GCStackRoot.hpp \
   HandleVector.hpp HeterogeneousList.hpp MemoryBank.hpp \
   SEXP_downcast.hpp SchwarzCounter.hpp StdFrame.hpp Subscripting.hpp \
-  config.hpp
+  VectorOps.hpp config.hpp
 
 CXXR_HEADERS = $(CXXR_HS) $(CXXR_HPPS)
 

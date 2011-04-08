@@ -270,8 +270,8 @@ namespace CXXR {
 	 * the result; the status of \a v as an S4 object (or not) is
 	 * also copied across.
 	 */
-	template <class Vout, class Vin, typename Functor>
-	static Vout* unary(const Vin* v, Functor f)
+	template <class Vout, typename Functor, class Vin>
+	static Vout* unary(Functor f, const Vin* v)
 	{
 	    UnaryFunction<Functor> uf(f);
 	    // Refer to para. 4 of ISO14882:2003 sec 14.2 for the need
@@ -290,8 +290,8 @@ namespace CXXR {
 				   FunctorWrapper,
 				   AttributeCopier>::apply(const Vin* v)
     {
-	typedef typename Vin::value_type Inval;
-	typedef typename Vout::value_type Outval;
+	typedef typename Vin::element_type Inval;
+	typedef typename Vout::element_type Outval;
 	size_t vsize = v->size();
 	GCStackRoot<Vout> ans(CXXR_NEW(Vout(vsize)));
 	FunctorWrapper fwrapper(m_f);

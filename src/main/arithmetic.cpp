@@ -571,7 +571,7 @@ static SEXP integer_unary(ARITHOP_TYPE code, SEXP s1, SEXP call)
     case MINUSOP:
 	{
 	    IntVector* iv = SEXP_downcast<IntVector*>(s1);
-	    return VectorOps::unary<IntVector>(iv, std::negate<int>());
+	    return VectorOps::unary<IntVector>(std::negate<int>(), iv);
 	}
     default:
 	errorcall(call, _("invalid unary operator"));
@@ -587,7 +587,7 @@ static SEXP logical_unary(ARITHOP_TYPE code, SEXP s1, SEXP call)
     case MINUSOP:
 	{
 	    LogicalVector* lv = SEXP_downcast<LogicalVector*>(s1);
-	    return VectorOps::unary<IntVector>(lv, std::negate<int>());
+	    return VectorOps::unary<IntVector>(std::negate<int>(), lv);
 	}
     default:
 	errorcall(call, _("invalid unary operator"));
@@ -602,7 +602,7 @@ static SEXP real_unary(ARITHOP_TYPE code, SEXP s1, SEXP lcall)
     case MINUSOP:
 	{
 	    RealVector* rv = SEXP_downcast<RealVector*>(s1);
-	    return VectorOps::unary<RealVector>(rv, std::negate<double>());
+	    return VectorOps::unary<RealVector>(std::negate<double>(), rv);
 	}
     default:
 	errorcall(lcall, _("invalid unary operator"));

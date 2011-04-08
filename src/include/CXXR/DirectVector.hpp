@@ -62,7 +62,7 @@ namespace CXXR {
     private:
 	typedef std::vector<T, Allocator<T> > Vector;
     public:
-	typedef T value_type;
+	typedef T element_type;
 	typedef typename Vector::const_iterator const_iterator;
 
 	/** @brief Create a vector.

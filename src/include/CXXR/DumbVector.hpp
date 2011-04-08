@@ -59,7 +59,7 @@ namespace CXXR {
     template <typename T, SEXPTYPE ST>
     class DumbVector : public VectorBase {
     public:
-	typedef T value_type;
+	typedef T element_type;
 
 	/** @brief Create a vector, leaving its contents
 	 *         uninitialized. 
