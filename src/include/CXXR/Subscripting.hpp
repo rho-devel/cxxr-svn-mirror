@@ -629,7 +629,8 @@ namespace CXXR {
 		    iin += (index - 1)*di.stride;
 		}
 		(*result)[iout]
-		    = naindex ? NA<typename V::element_type>() : (*vnc)[iin];
+		    = (naindex ? ElementTraits<typename V::element_type>::NA()
+		       : (*vnc)[iin]);
 		// Advance the index selection:
 		{
 		    unsigned int d = 0;
@@ -703,7 +704,8 @@ namespace CXXR {
 	    int index = (*indices)[i];
 	    if (!isNA(index)) {
 		const Rval& rval = (*rhs)[i % rhs_size];
-		(*ans)[index - 1] = (isNA(rval) ? NA<Lval>() : Rval(rval));
+		(*ans)[index - 1] = (isNA(rval) ? ElementTraits<Lval>::NA()
+				     : Rval(rval));
 	    }
 	}
 	processUseNames(ans, indices);
@@ -723,7 +725,7 @@ namespace CXXR {
 	    int index = (*indices)[i];
 	    // Note that zero and negative indices ought not to occur.
 	    if (isNA(index) || index > int(vsize))
-		(*ans)[i] = NA<typename V::element_type>();
+		(*ans)[i] = ElementTraits<typename V::element_type>::NA();
 	    else (*ans)[i] = (*vnc)[index - 1];
 	}
 	setVectorAttributes(ans, v, indices);

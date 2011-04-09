@@ -54,14 +54,14 @@ typedef unsigned char Rbyte;
 namespace CXXR {
     // Template specializations:
     template <>
-    inline const Rbyte& NA<Rbyte>()
+    inline const Rbyte& ElementTraits<Rbyte>::NA()
     {
 	static Rbyte ans(0);
 	return ans;
     }
 
     template <>
-    inline bool isNA<Rbyte>(const Rbyte&)
+    inline bool ElementTraits<Rbyte>::isNA(const Rbyte&)
     {
 	return false;
     }

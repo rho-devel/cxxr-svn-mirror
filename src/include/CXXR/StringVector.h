@@ -56,16 +56,11 @@
 namespace CXXR {
     // Template specializations:
     template <>
-    inline const RObject::Handle<String>& NA<RObject::Handle<String> >()
+    inline const RObject::Handle<String>&
+    ElementTraits<RObject::Handle<String> >::NA()
     {
 	static RObject::Handle<String> ans(String::NA());
 	return ans;
-    }
-
-    template <>
-    inline bool isNA<RObject::Handle<String> >(const RObject::Handle<String>& hs)
-    {
-	return hs == NA<RObject::Handle<String> >();
     }
 
     template <>

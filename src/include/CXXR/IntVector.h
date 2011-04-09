@@ -57,7 +57,7 @@
 namespace CXXR {
     // Template specializations:
     template <>
-    inline const int& NA<int>()
+    inline const int& ElementTraits<int>::NA()
     {
 	return NA_INTEGER;
     }

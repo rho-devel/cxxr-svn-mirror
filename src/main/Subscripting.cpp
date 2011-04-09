@@ -94,7 +94,7 @@ Subscripting::canonicalize(const LogicalVector* raw_indices, size_t range_size)
 	for (unsigned int iin = 0; iin < nmax; ++iin) {
 	    int logical = (*raw_indices)[iin % rawsize];
 	    if (isNA(logical))
-		(*ans)[iout++] = NA<int>();
+		(*ans)[iout++] = ElementTraits<int>::NA();
 	    else if (logical != 0)
 		(*ans)[iout++] = iin + 1;
 	}
@@ -160,7 +160,7 @@ Subscripting::canonicalize(const StringVector* raw_indices, size_t range_size,
     for (unsigned int iraw = 0; iraw < rawsize; ++iraw) {
 	String* subscript = (*raw_indices)[iraw];
 	if (subscript == String::NA())
-	    (*ans)[iraw] = NA<int>();
+	    (*ans)[iraw] = ElementTraits<int>::NA();
 	else {
 	    GCRoot<CachedString>
 		csubscript(SEXP_downcast<CachedString*>(subscript));

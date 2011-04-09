@@ -56,7 +56,8 @@ namespace CXXR {
 
     // Template specializations:
     template <>
-    inline const RObject::Handle<RObject>& NA<RObject::Handle<RObject> >()
+    inline const RObject::Handle<RObject>&
+    ElementTraits<RObject::Handle<RObject> >::NA()
     {
 	static RObject::Handle<RObject> ans(0);
 	return ans;

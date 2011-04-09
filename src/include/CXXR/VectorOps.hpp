@@ -299,7 +299,7 @@ namespace CXXR {
 	    const Inval arg = (*v)[i];
 	    Outval result;
 	    if (isNA(arg))
-		result = NA<Outval>();
+		result = ElementTraits<Outval>::NA();
 	    else
 		result = fwrapper(arg);
 	    (*ans)[i] = result;
