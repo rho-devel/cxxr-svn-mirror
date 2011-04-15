@@ -301,9 +301,8 @@ namespace CXXR {
 	    if (isNA(arg))
 		result = ElementTraits<Outval>::NA();
 	    else
-		result = fwrapper(arg);
+		result = fwrapper(elementData(arg));
 	    (*ans)[i] = result;
-	    // (*ans)[i] = (isNA(arg) ? NA<Outval>() : fwrapper(arg));
 	}
 	fwrapper.warnings();
 	AttributeCopier attrib_copier;
