@@ -81,6 +81,23 @@ namespace CXXR {
 	    }
 	};
 
+	/** @brief Control attribute copying for unary functions.
+	 *
+	 * VectorOps::UnaryFunction takes as a template parameter an
+	 * \a AttributeCopier class which determines which attributes
+	 * are copied from the input vector to the output vector.
+	 *
+	 * This class can be used as the value of the \a AttributeCopier
+	 * parameter, and its behaviour is to copy no attributes at all.
+	 */
+	struct NullAttributeCopier4Unary
+	    : std::binary_function<RObject*, RObject*, void> {
+	    /** @brief Copy no attributes.
+	     */
+	    void operator()(RObject*, const RObject*)
+	    {}
+	};
+
 	/** @brief Monitor function application for unary functions.
 	 *
 	 * VectorOps::UnaryFunction takes as a template parameter a \a
@@ -198,8 +215,8 @@ namespace CXXR {
 	 *           further information.
 	 */
 	template <typename Functor,
-		  class FunctorWrapper = DefaultUnaryFunctorWrapper<Functor>,
-		  class AttributeCopier = DefaultAttributeCopier4Unary>
+		  class AttributeCopier = DefaultAttributeCopier4Unary,
+		  class FunctorWrapper = DefaultUnaryFunctorWrapper<Functor> >
 	class UnaryFunction {
 	public:
 	    /** @brief Constructor.
@@ -284,11 +301,11 @@ namespace CXXR {
 	VectorOps();
     };  // class VectorOps
 
-    template <typename Functor, class FunctorWrapper, class AttributeCopier>
+    template <typename Functor, class AttributeCopier, class FunctorWrapper>
     template <class Vout, class Vin>
     Vout* VectorOps::UnaryFunction<Functor,
-				   FunctorWrapper,
-				   AttributeCopier>::apply(const Vin* v)
+				   AttributeCopier,
+				   FunctorWrapper>::apply(const Vin* v)
     {
 	typedef typename Vin::element_type Inval;
 	typedef typename Vout::element_type Outval;
@@ -296,12 +313,12 @@ namespace CXXR {
 	GCStackRoot<Vout> ans(CXXR_NEW(Vout(vsize)));
 	FunctorWrapper fwrapper(m_f);
 	for (size_t i = 0; i < vsize; ++i) {
-	    const Inval arg = (*v)[i];
+	    const Inval elt = (*v)[i];
 	    Outval result;
-	    if (isNA(arg))
+	    if (isNA(elt))
 		result = ElementTraits<Outval>::NA();
 	    else
-		result = fwrapper(elementData(arg));
+		result = fwrapper(elementData(elt));
 	    (*ans)[i] = result;
 	}
 	fwrapper.warnings();

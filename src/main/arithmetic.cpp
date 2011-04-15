@@ -1114,7 +1114,8 @@ static SEXP math1(SEXP sa, double (*f)(double), SEXP lcall)
     /* coercion can lose the object bit */
     GCStackRoot<RealVector>
 	rv(static_cast<RealVector*>(coerceVector(sa, REALSXP)));
-    VectorOps::UnaryFunction<double (*)(double), NaNWarner> uf(f);
+    VectorOps::UnaryFunction<double (*)(double),
+	VectorOps::DefaultAttributeCopier4Unary, NaNWarner> uf(f);
     return uf.apply<RealVector>(rv.get());
 }
 
