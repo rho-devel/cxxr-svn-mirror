@@ -48,26 +48,20 @@ namespace CXXR {
      * services supporting various commonly occurring operations on R
      * vector objects, including R matrices and arrays.
      */
-    class VectorOps {
-    public:
+    namespace VectorOps {
 	/** @brief Control attribute copying for unary functions.
 	 *
 	 * VectorOps::UnaryFunction takes as a template parameter an
 	 * \a AttributeCopier class which determines which attributes
 	 * are copied from the input vector to the output vector.
 	 *
-	 * This class is the default value of the \a AttributeCopier
+	 * This class is a possible value of the \a AttributeCopier
 	 * parameter, and its behaviour is to copy all attributes
-	 * across, along with the S4 object status.  If different
-	 * behaviour is required, another class can be created using
-	 * this class as a model.
+	 * across, along with the S4 object status.
 	 */
-	struct DefaultAttributeCopier4Unary
+	struct CopyAllAttributes
 	    : std::binary_function<RObject*, RObject*, void> {
-	    /** @brief Copy attributes as required.
-	     *
-	     * The default behaviour, implemented here, is to copy all
-	     * attributes across, along with the S4 object status.
+	    /** @brief Copy all attributes and S4 object status.
 	     *
 	     * @param to Non-null pointer to the vector to which
 	     *          attributes are to be copied.
@@ -90,7 +84,7 @@ namespace CXXR {
 	 * This class can be used as the value of the \a AttributeCopier
 	 * parameter, and its behaviour is to copy no attributes at all.
 	 */
-	struct NullAttributeCopier4Unary
+	struct CopyNoAttributes
 	    : std::binary_function<RObject*, RObject*, void> {
 	    /** @brief Copy no attributes.
 	     */
@@ -121,7 +115,7 @@ namespace CXXR {
 	 *           result_type and \a argument_type appropriately).
 	 */
 	template <class Functor>
-	class DefaultUnaryFunctorWrapper
+	class NullUnaryFunctorWrapper
 	    : public std::unary_function<typename Functor::argument_type,
 					 typename Functor::result_type> {
 	public:
@@ -136,7 +130,7 @@ namespace CXXR {
 	     *          defining the unary function whose operation
 	     *          this \a FunctorWrapper is to monitor.
 	     */
-	    DefaultUnaryFunctorWrapper(const Functor& f)
+	    NullUnaryFunctorWrapper(const Functor& f)
 		: m_func(f)
 	    {}
 		
@@ -194,6 +188,13 @@ namespace CXXR {
 	 * in the input vector are carried across into NAs in the
 	 * output vector.
 	 *
+	 * @tparam AttributeCopier The apply() method will create an
+	 *           object of this class and use it to determine
+	 *           which attributes are copied from the input vector
+	 *           to the output vector.  See the description of
+	 *           VectorOps::DefaultAttributeCopier4Unary for
+	 *           further information.
+	 *
 	 * @tparam Functor a function object class inheriting from an
 	 *           instantiation of the std::unary_function template
 	 *           (or otherwise defining nested types \a
@@ -206,17 +207,9 @@ namespace CXXR {
 	 *           abnormal conditions.  See the description of
 	 *           VectorOps::DefaultUnaryFunctionWrapper for
 	 *           further information.
-	 *
-	 * @tparam AttributeCopier The apply() method will create an
-	 *           object of this class and use it to determine
-	 *           which attributes are copied from the input vector
-	 *           to the output vector.  See the description of
-	 *           VectorOps::DefaultAttributeCopier4Unary for
-	 *           further information.
 	 */
-	template <typename Functor,
-		  class AttributeCopier = DefaultAttributeCopier4Unary,
-		  class FunctorWrapper = DefaultUnaryFunctorWrapper<Functor> >
+	template <class AttributeCopier, typename Functor,
+		  class FunctorWrapper = NullUnaryFunctorWrapper<Functor> >
 	class UnaryFunction {
 	public:
 	    /** @brief Constructor.
@@ -226,7 +219,7 @@ namespace CXXR {
 	     *          UnaryFunction object will use to generate an
 	     *          output vector from an input vector.
 	     */
-	    UnaryFunction(const Functor& f)
+	    UnaryFunction(const Functor& f = Functor())
 		: m_f(f)
 	    {}
 
@@ -257,76 +250,58 @@ namespace CXXR {
 	    Functor m_f;
 	};
 
-	/** @brief Apply a unary function to a vector (simple case).
+	/** @brief Create a UnaryFunction object from a functor.
 	 *
-	 * This function represents a common special case.  For
-	 * customised behaviour, use class UnaryFunction directly.
-	 *
-	 * @tparam Vout Class of vector to be produced as a result.
-	 *           It must be possible to assign values of the
-	 *           return type of \a f to the elements of a vector
-	 *           of type \a Vout .
-	 *
-	 * @tparam Vin Class of vector to be taken as input.  It must
-	 *           be possible implicitly to convert the elements of
-	 *           a \a Vin to the input type of \a f .
+	 * @tparam AttributeCopier The apply() method will create an
+	 *           object of this class and use it to determine
+	 *           which attributes are copied from the input vector
+	 *           to the output vector.  See the description of
+	 *           VectorOps::DefaultAttributeCopier4Unary for
+	 *           further information.
 	 *
 	 * @tparam Functor a function object class inheriting from an
 	 *           instantiation of the std::unary_function template
 	 *           (or otherwise defining nested types \a
 	 *           result_type and \a argument_type appropriately).
 	 *
-	 * @param v Non-null pointer to the input vector.
-	 *
-	 * @result Pointer to the result vector, a newly created
-	 * vector of the same size as \a v , with each element of the
-	 * output vector being obtained from the corresponding element
-	 * of the input vector by the application of \a f , except
-	 * that NAs in the input vector are carried across into NAs in
-	 * the output vector.  All attributes of \a v are copied to
-	 * the result; the status of \a v as an S4 object (or not) is
-	 * also copied across.
+	 * @param f Pointer to an object of type \a Functor defining
+	 *          the unary function that this UnaryFunction object
+	 *          will use to generate an output vector from an
+	 *          input vector.
 	 */
-	template <class Vout, typename Functor, class Vin>
-	static Vout* unary(Functor f, const Vin* v)
+	template <class AttributeCopier, typename Functor>
+	static UnaryFunction<AttributeCopier, Functor>
+	makeUnaryFunction(Functor f)
 	{
-	    UnaryFunction<Functor> uf(f);
-	    // Refer to para. 4 of ISO14882:2003 sec 14.2 for the need
-	    // for the following syntax:
-	    return uf.template apply<Vout>(v);
+	    return UnaryFunction<AttributeCopier, Functor>(f);
 	}
-    private:
-	// Not implemented.  Declared private to prevent VectorOps
-	// objects being created.
-	VectorOps();
-    };  // class VectorOps
 
-    template <typename Functor, class AttributeCopier, class FunctorWrapper>
-    template <class Vout, class Vin>
-    Vout* VectorOps::UnaryFunction<Functor,
-				   AttributeCopier,
-				   FunctorWrapper>::apply(const Vin* v)
-    {
-	typedef typename Vin::element_type Inval;
-	typedef typename Vout::element_type Outval;
-	size_t vsize = v->size();
-	GCStackRoot<Vout> ans(CXXR_NEW(Vout(vsize)));
-	FunctorWrapper fwrapper(m_f);
-	for (size_t i = 0; i < vsize; ++i) {
-	    const Inval elt = (*v)[i];
-	    Outval result;
-	    if (isNA(elt))
-		result = ElementTraits<Outval>::NA();
-	    else
-		result = fwrapper(elementData(elt));
-	    (*ans)[i] = result;
+	template <class AttributeCopier, typename Functor, class FunctorWrapper>
+	template <class Vout, class Vin>
+	Vout* UnaryFunction<AttributeCopier,
+			    Functor,
+			    FunctorWrapper>::apply(const Vin* v)
+	{
+	    typedef typename Vin::element_type Inval;
+	    typedef typename Vout::element_type Outval;
+	    size_t vsize = v->size();
+	    GCStackRoot<Vout> ans(CXXR_NEW(Vout(vsize)));
+	    FunctorWrapper fwrapper(m_f);
+	    for (size_t i = 0; i < vsize; ++i) {
+		const Inval elt = (*v)[i];
+		Outval result;
+		if (isNA(elt))
+		    result = ElementTraits<Outval>::NA();
+		else
+		    result = fwrapper(elementData(elt));
+		(*ans)[i] = result;
+	    }
+	    fwrapper.warnings();
+	    AttributeCopier attrib_copier;
+	    attrib_copier(ans, v);
+	    return ans;
 	}
-	fwrapper.warnings();
-	AttributeCopier attrib_copier;
-	attrib_copier(ans, v);
-	return ans;
-    }
-    
-}  // namespace CXXR;
+    }  // namespace VectorOps
+}  // namespace CXXR
 
 #endif  // VECTOROPS_HPP

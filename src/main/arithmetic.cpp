@@ -570,8 +570,11 @@ static SEXP integer_unary(ARITHOP_TYPE code, SEXP s1, SEXP call)
 	return s1;
     case MINUSOP:
 	{
+	    using namespace VectorOps;
 	    IntVector* iv = SEXP_downcast<IntVector*>(s1);
-	    return VectorOps::unary<IntVector>(std::negate<int>(), iv);
+	    return
+		UnaryFunction<CopyAllAttributes, std::negate<int> >()
+		.apply<IntVector>(iv);
 	}
     default:
 	errorcall(call, _("invalid unary operator"));
@@ -586,8 +589,11 @@ static SEXP logical_unary(ARITHOP_TYPE code, SEXP s1, SEXP call)
 	return s1;
     case MINUSOP:
 	{
+	    using namespace VectorOps;
 	    LogicalVector* lv = SEXP_downcast<LogicalVector*>(s1);
-	    return VectorOps::unary<IntVector>(std::negate<int>(), lv);
+	    return
+		makeUnaryFunction<CopyAllAttributes>(std::negate<int>())
+		.apply<IntVector>(lv);
 	}
     default:
 	errorcall(call, _("invalid unary operator"));
@@ -601,8 +607,11 @@ static SEXP real_unary(ARITHOP_TYPE code, SEXP s1, SEXP lcall)
     case PLUSOP: return s1;
     case MINUSOP:
 	{
+	    using namespace VectorOps;
 	    RealVector* rv = SEXP_downcast<RealVector*>(s1);
-	    return VectorOps::unary<RealVector>(std::negate<double>(), rv);
+	    return
+		makeUnaryFunction<CopyAllAttributes>(std::negate<double>())
+		.apply<RealVector>(rv);
 	}
     default:
 	errorcall(lcall, _("invalid unary operator"));
@@ -1109,13 +1118,13 @@ private:
 
 static SEXP math1(SEXP sa, double (*f)(double), SEXP lcall)
 {
+    using namespace VectorOps;
     if (!isNumeric(sa))
 	errorcall(lcall, R_MSG_NONNUM_MATH);
     /* coercion can lose the object bit */
     GCStackRoot<RealVector>
 	rv(static_cast<RealVector*>(coerceVector(sa, REALSXP)));
-    VectorOps::UnaryFunction<double (*)(double),
-	VectorOps::DefaultAttributeCopier4Unary, NaNWarner> uf(f);
+    UnaryFunction<CopyAllAttributes, double (*)(double), NaNWarner> uf(f);
     return uf.apply<RealVector>(rv.get());
 }
 
