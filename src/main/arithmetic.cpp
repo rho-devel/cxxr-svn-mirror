@@ -349,53 +349,54 @@ SEXP attribute_hidden do_arith(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;			/* never used; to keep -Wall happy */
 }
 
-#define COERCE_IF_NEEDED(v, tp, vpi) do { \
+#define COERCE_IF_NEEDED(v, tp) do { \
     if (TYPEOF(v) != (tp)) { \
-	REPROTECT(v = coerceVector(v, (tp)), vpi); \
+	v = coerceVector(v, (tp)); \
     } \
 } while (0)
 
-#define FIXUP_NULL_AND_CHECK_TYPES(v, vpi) do { \
+#define FIXUP_NULL_AND_CHECK_TYPES(v) do { \
     switch (TYPEOF(v)) { \
-    case NILSXP: REPROTECT(v = allocVector(REALSXP,0), vpi); break; \
+    case NILSXP: v = allocVector(REALSXP,0); break; \
     case CPLXSXP: case REALSXP: case INTSXP: case LGLSXP: break; \
     default: errorcall(lcall, _("non-numeric argument to binary operator")); \
     } \
 } while (0)
 
-SEXP attribute_hidden R_binary(SEXP call, SEXP op, SEXP x, SEXP y)
+SEXP attribute_hidden R_binary(SEXP call, SEXP op, SEXP xarg, SEXP yarg)
 {
-    SEXP klass, dims, tsp, xnames, ynames, val;
-    int mismatch = 0, nx, ny, xarray, yarray, xts, yts, xS4 = 0, yS4 = 0;
-    int xattr, yattr;
     SEXP lcall = call;
-    PROTECT_INDEX xpi, ypi;
     ARITHOP_TYPE oper = ARITHOP_TYPE( PRIMVAL(op));
-    int nprotect = 2; /* x and y */
 
+    GCStackRoot<> x(xarg);
+    GCStackRoot<> y(yarg);
 
-    PROTECT_WITH_INDEX(x, &xpi);
-    PROTECT_WITH_INDEX(y, &ypi);
+    FIXUP_NULL_AND_CHECK_TYPES(x);
+    FIXUP_NULL_AND_CHECK_TYPES(y);
 
-    FIXUP_NULL_AND_CHECK_TYPES(x, xpi);
-    FIXUP_NULL_AND_CHECK_TYPES(y, ypi);
-
-    nx = LENGTH(x);
+    int nx = LENGTH(x);
+    bool xattr = false;
+    bool xarray = false;
+    bool xts = false;
+    bool xS4 = false;
     if (ATTRIB(x) != R_NilValue) {
 	xattr = TRUE;
 	xarray = isArray(x);
 	xts = isTs(x);
 	xS4 = isS4(x);
     }
-    else xarray = xts = xattr = FALSE;
-    ny = LENGTH(y);
+
+    int ny = LENGTH(y);
+    bool yattr = false;
+    bool yarray = false;
+    bool yts = false;
+    bool yS4 = false;
     if (ATTRIB(y) != R_NilValue) {
 	yattr = TRUE;
 	yarray = isArray(y);
 	yts = isTs(y);
 	yS4 = isS4(y);
     }
-    else yarray = yts = yattr = FALSE;
 
     /* If either x or y is a matrix with length 1 and the other is a
        vector, we want to coerce the matrix to be a vector.
@@ -408,110 +409,94 @@ SEXP attribute_hidden R_binary(SEXP call, SEXP op, SEXP x, SEXP y)
      */
     if (xarray != yarray) {
 	if (xarray && nx==1 && ny!=1) {
-	    REPROTECT(x = duplicate(x), xpi);
+	    x = duplicate(x);
 	    setAttrib(x, R_DimSymbol, R_NilValue);
 	}
 	if (yarray && ny==1 && nx!=1) {
-	    REPROTECT(y = duplicate(y), ypi);
+	    y = duplicate(y);
 	    setAttrib(y, R_DimSymbol, R_NilValue);
 	}
     }
 
+    GCStackRoot<> dims, xnames, ynames;
     if (xarray || yarray) {
 	if (xarray && yarray) {
 	    if (!conformable(x, y))
 		errorcall(lcall, _("non-conformable arrays"));
-	    PROTECT(dims = getAttrib(x, R_DimSymbol));
+	    dims = getAttrib(x, R_DimSymbol);
 	}
 	else if (xarray) {
-	    PROTECT(dims = getAttrib(x, R_DimSymbol));
+	    dims = getAttrib(x, R_DimSymbol);
 	}
 	else {			/* (yarray) */
-	    PROTECT(dims = getAttrib(y, R_DimSymbol));
+	    dims = getAttrib(y, R_DimSymbol);
 	}
-	nprotect++;
-	if (xattr) {
-	    PROTECT(xnames = getAttrib(x, R_DimNamesSymbol));
-	    nprotect++;
-	}
-	else xnames = R_NilValue;
-	if (yattr) {
-	    PROTECT(ynames = getAttrib(y, R_DimNamesSymbol));
-	    nprotect++;
-	}
-	else ynames = R_NilValue;
+	if (xattr)
+	    xnames = getAttrib(x, R_DimNamesSymbol);
+	if (yattr)
+	    ynames = getAttrib(y, R_DimNamesSymbol);
     }
     else {
-	dims = R_NilValue;
-	if (xattr) {
-	    PROTECT(xnames = getAttrib(x, R_NamesSymbol));
-	    nprotect++;
-	}
-	else xnames = R_NilValue;
-	if (yattr) {
-	    PROTECT(ynames = getAttrib(y, R_NamesSymbol));
-	    nprotect++;
-	}
-	else ynames = R_NilValue;
-    }
-    if (nx == ny || nx == 1 || ny == 1) mismatch = 0;
-    else if (nx > 0 && ny > 0) {
-	if (nx > ny) mismatch = nx % ny;
-	else mismatch = ny % nx;
+	if (xattr)
+	    xnames = getAttrib(x, R_NamesSymbol);
+	if (yattr)
+	    ynames = getAttrib(y, R_NamesSymbol);
     }
 
+    bool mismatch;
+    if (nx == ny || nx == 1 || ny == 1) mismatch = false;
+    else if (nx > 0 && ny > 0) {
+	if (nx > ny) mismatch = (nx % ny != 0);
+	else mismatch = (ny % nx != 0);
+    }
+
+    GCStackRoot<> klass, tsp;
     if (xts || yts) {
 	if (xts && yts) {
 	    if (!tsConform(x, y))
 		errorcall(lcall, _("non-conformable time-series"));
-	    PROTECT(tsp = getAttrib(x, R_TspSymbol));
-	    PROTECT(klass = getAttrib(x, R_ClassSymbol));
+	    tsp = getAttrib(x, R_TspSymbol);
+	    klass = getAttrib(x, R_ClassSymbol);
 	}
 	else if (xts) {
 	    if (nx < ny)
 		ErrorMessage(lcall, ERROR_TSVEC_MISMATCH);
-	    PROTECT(tsp = getAttrib(x, R_TspSymbol));
-	    PROTECT(klass = getAttrib(x, R_ClassSymbol));
+	    tsp = getAttrib(x, R_TspSymbol);
+	    klass = getAttrib(x, R_ClassSymbol);
 	}
 	else {			/* (yts) */
 	    if (ny < nx)
 		ErrorMessage(lcall, ERROR_TSVEC_MISMATCH);
-	    PROTECT(tsp = getAttrib(y, R_TspSymbol));
-	    PROTECT(klass = getAttrib(y, R_ClassSymbol));
+	    tsp = getAttrib(y, R_TspSymbol);
+	    klass = getAttrib(y, R_ClassSymbol);
 	}
-	nprotect += 2;
     }
-    else klass = tsp = NULL; /* -Wall */
 
     if (mismatch)
 	warningcall(lcall,
 		    _("longer object length is not a multiple of shorter object length"));
 
+    GCStackRoot<> val;
     /* need to preserve object here, as *_binary copies class attributes */
     if (TYPEOF(x) == CPLXSXP || TYPEOF(y) == CPLXSXP) {
-	COERCE_IF_NEEDED(x, CPLXSXP, xpi);
-	COERCE_IF_NEEDED(y, CPLXSXP, ypi);
+	COERCE_IF_NEEDED(x, CPLXSXP);
+	COERCE_IF_NEEDED(y, CPLXSXP);
 	val = complex_binary(oper, x, y);
     }
     else if (TYPEOF(x) == REALSXP || TYPEOF(y) == REALSXP) {
 	if(!(TYPEOF(x) == INTSXP || TYPEOF(y) == INTSXP
 	     /* || TYPEOF(x) == LGLSXP || TYPEOF(y) == LGLSXP*/)) {
 	    /* Can get a LGLSXP. In base-Ex.R on 24 Oct '06, got 8 of these. */
-	    COERCE_IF_NEEDED(x, REALSXP, xpi);
-	    COERCE_IF_NEEDED(y, REALSXP, ypi);
+	    COERCE_IF_NEEDED(x, REALSXP);
+	    COERCE_IF_NEEDED(y, REALSXP);
 	}
 	val = real_binary(oper, x, y);
     }
     else val = integer_binary(oper, x, y, lcall);
 
     /* quick return if there are no attributes */
-    if (! xattr && ! yattr) {
-	UNPROTECT(nprotect);
+    if (! xattr && ! yattr)
 	return val;
-    }
-
-    PROTECT(val);
-    nprotect++;
 
     /* Don't set the dims if one argument is an array of size 0 and the
        other isn't of size zero, cos they're wrong */
@@ -541,7 +526,6 @@ SEXP attribute_hidden R_binary(SEXP call, SEXP op, SEXP x, SEXP y)
     if(xS4 || yS4) {   /* Only set the bit:  no method defined! */
         val = asS4(val, TRUE, TRUE);
     }
-    UNPROTECT(nprotect);
     return val;
 }
 
