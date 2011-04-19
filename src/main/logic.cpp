@@ -40,6 +40,9 @@
 
 #include "Defn.h"
 
+#include "CXXR/GCStackRoot.hpp"
+
+using namespace CXXR;
 
 static SEXP lunary(SEXP, SEXP, SEXP);
 static SEXP lbinary(SEXP, SEXP, SEXP);
@@ -69,66 +72,66 @@ SEXP attribute_hidden do_logic(SEXP call, SEXP op, SEXP args, SEXP env)
 static SEXP lbinary(SEXP call, SEXP op, SEXP args)
 {
 /* logical binary : "&" or "|" */
-    SEXP x, y, dims, tsp, klass, xnames, ynames;
-    int mismatch, nx, ny, xarray, yarray, xts, yts;
-    mismatch = 0;
-    x = CAR(args);
-    y = CADR(args);
+    GCStackRoot<> x(CAR(args));
+    GCStackRoot<> y(CADR(args));
     if (isRaw(x) && isRaw(y)) {
     }
     else if (!isNumber(x) || !isNumber(y))
 	errorcall(call,
 		  _("operations are possible only for numeric, logical or complex types"));
-    tsp = R_NilValue;		/* -Wall */
-    klass = R_NilValue;		/* -Wall */
-    xarray = isArray(x);
-    yarray = isArray(y);
-    xts = isTs(x);
-    yts = isTs(y);
+    bool xarray = isArray(x);
+    bool yarray = isArray(y);
+    bool xts = isTs(x);
+    bool yts = isTs(y);
+
+    GCStackRoot<> dims, xnames, ynames;
     if (xarray || yarray) {
 	if (xarray && yarray) {
 	    if (!conformable(x, y))
 		error(_("binary operation on non-conformable arrays"));
-	    PROTECT(dims = getAttrib(x, R_DimSymbol));
+	    dims = getAttrib(x, R_DimSymbol);
 	}
 	else if (xarray) {
-	    PROTECT(dims = getAttrib(x, R_DimSymbol));
+	    dims = getAttrib(x, R_DimSymbol);
 	}
 	else /*(yarray)*/ {
-	    PROTECT(dims = getAttrib(y, R_DimSymbol));
+	    dims = getAttrib(y, R_DimSymbol);
 	}
-	PROTECT(xnames = getAttrib(x, R_DimNamesSymbol));
-	PROTECT(ynames = getAttrib(y, R_DimNamesSymbol));
+	xnames = getAttrib(x, R_DimNamesSymbol);
+	ynames = getAttrib(y, R_DimNamesSymbol);
     }
     else {
-	PROTECT(dims = R_NilValue);
-	PROTECT(xnames = getAttrib(x, R_NamesSymbol));
-	PROTECT(ynames = getAttrib(y, R_NamesSymbol));
+	xnames = getAttrib(x, R_NamesSymbol);
+	ynames = getAttrib(y, R_NamesSymbol);
     }
-    nx = length(x);
-    ny = length(y);
+
+    int nx = length(x);
+    int ny = length(y);
+    bool mismatch = false;
     if(nx > 0 && ny > 0) {
 	if(nx > ny) mismatch = nx % ny;
 	else mismatch = ny % nx;
     }
+
+    GCStackRoot<> tsp, klass;
     if (xts || yts) {
 	if (xts && yts) {
 	    if (!tsConform(x, y))
 		errorcall(call, _("non-conformable time series"));
-	    PROTECT(tsp = getAttrib(x, R_TspSymbol));
-	    PROTECT(klass = getAttrib(x, R_ClassSymbol));
+	    tsp = getAttrib(x, R_TspSymbol);
+	    klass = getAttrib(x, R_ClassSymbol);
 	}
 	else if (xts) {
 	    if (length(x) < length(y))
 		ErrorMessage(call, ERROR_TSVEC_MISMATCH);
-	    PROTECT(tsp = getAttrib(x, R_TspSymbol));
-	    PROTECT(klass = getAttrib(x, R_ClassSymbol));
+	    tsp = getAttrib(x, R_TspSymbol);
+	    klass = getAttrib(x, R_ClassSymbol);
 	}
 	else /*(yts)*/ {
 	    if (length(y) < length(x))
 		ErrorMessage(call, ERROR_TSVEC_MISMATCH);
-	    PROTECT(tsp = getAttrib(y, R_TspSymbol));
-	    PROTECT(klass = getAttrib(y, R_ClassSymbol));
+	    tsp = getAttrib(y, R_TspSymbol);
+	    klass = getAttrib(y, R_ClassSymbol);
 	}
     }
     if(mismatch)
@@ -136,16 +139,15 @@ static SEXP lbinary(SEXP call, SEXP op, SEXP args)
 		    _("longer object length is not a multiple of shorter object length"));
 
     if (isRaw(x) && isRaw(y)) {
-	PROTECT(x = binaryLogic2(PRIMVAL(op), x, y));
+	x = binaryLogic2(PRIMVAL(op), x, y);
     } else {
 	if (!isNumber(x) || !isNumber(y))
 	    errorcall(call,
 		      _("operations are possible only for numeric, logical or complex types"));
 	x = SETCAR(args, coerceVector(x, LGLSXP));
 	y = SETCADR(args, coerceVector(y, LGLSXP));
-	PROTECT(x = binaryLogic(PRIMVAL(op), x, y));
+	x = binaryLogic(PRIMVAL(op), x, y);
     }
-
 
     if (dims != R_NilValue) {
 	setAttrib(x, R_DimSymbol, dims);
@@ -164,9 +166,7 @@ static SEXP lbinary(SEXP call, SEXP op, SEXP args)
     if (xts || yts) {
 	setAttrib(x, R_TspSymbol, tsp);
 	setAttrib(x, R_ClassSymbol, klass);
-	UNPROTECT(2);
     }
-    UNPROTECT(4);
     return x;
 }
 
