@@ -41,8 +41,10 @@
 #include "Defn.h"
 
 #include "CXXR/GCStackRoot.hpp"
+#include "CXXR/VectorOps.hpp"
 
 using namespace CXXR;
+using namespace VectorOps;
 
 static SEXP lunary(SEXP, SEXP, SEXP);
 static SEXP lbinary(SEXP, SEXP, SEXP);
@@ -72,38 +74,17 @@ SEXP attribute_hidden do_logic(SEXP call, SEXP op, SEXP args, SEXP env)
 static SEXP lbinary(SEXP call, SEXP op, SEXP args)
 {
 /* logical binary : "&" or "|" */
-    GCStackRoot<> x(CAR(args));
-    GCStackRoot<> y(CADR(args));
-    if (isRaw(x) && isRaw(y)) {
+    SEXP xarg = CAR(args);
+    SEXP yarg = CADR(args);
+    if (isRaw(xarg) && isRaw(yarg)) {
     }
-    else if (!isNumber(x) || !isNumber(y))
+    else if (!isNumber(xarg) || !isNumber(yarg))
 	errorcall(call,
 		  _("operations are possible only for numeric, logical or complex types"));
-    bool xarray = isArray(x);
-    bool yarray = isArray(y);
-    bool xts = isTs(x);
-    bool yts = isTs(y);
-
-    GCStackRoot<> dims, xnames, ynames;
-    if (xarray || yarray) {
-	if (xarray && yarray) {
-	    if (!conformable(x, y))
-		error(_("binary operation on non-conformable arrays"));
-	    dims = getAttrib(x, R_DimSymbol);
-	}
-	else if (xarray) {
-	    dims = getAttrib(x, R_DimSymbol);
-	}
-	else /*(yarray)*/ {
-	    dims = getAttrib(y, R_DimSymbol);
-	}
-	xnames = getAttrib(x, R_DimNamesSymbol);
-	ynames = getAttrib(y, R_DimNamesSymbol);
-    }
-    else {
-	xnames = getAttrib(x, R_NamesSymbol);
-	ynames = getAttrib(y, R_NamesSymbol);
-    }
+    GCStackRoot<VectorBase> x(static_cast<VectorBase*>(xarg));
+    GCStackRoot<VectorBase> y(static_cast<VectorBase*>(yarg));
+    GCStackRoot<> ans;
+    checkOperandsConformable(x, y);
 
     int nx = length(x);
     int ny = length(y);
@@ -112,62 +93,68 @@ static SEXP lbinary(SEXP call, SEXP op, SEXP args)
 	if(nx > ny) mismatch = nx % ny;
 	else mismatch = ny % nx;
     }
-
-    GCStackRoot<> tsp, klass;
-    if (xts || yts) {
-	if (xts && yts) {
-	    if (!tsConform(x, y))
-		errorcall(call, _("non-conformable time series"));
-	    tsp = getAttrib(x, R_TspSymbol);
-	    klass = getAttrib(x, R_ClassSymbol);
-	}
-	else if (xts) {
-	    if (length(x) < length(y))
-		ErrorMessage(call, ERROR_TSVEC_MISMATCH);
-	    tsp = getAttrib(x, R_TspSymbol);
-	    klass = getAttrib(x, R_ClassSymbol);
-	}
-	else /*(yts)*/ {
-	    if (length(y) < length(x))
-		ErrorMessage(call, ERROR_TSVEC_MISMATCH);
-	    tsp = getAttrib(y, R_TspSymbol);
-	    klass = getAttrib(y, R_ClassSymbol);
-	}
-    }
-    if(mismatch)
+    if (mismatch)
 	warningcall(call,
 		    _("longer object length is not a multiple of shorter object length"));
 
     if (isRaw(x) && isRaw(y)) {
-	x = binaryLogic2(PRIMVAL(op), x, y);
+	ans = static_cast<VectorBase*>(binaryLogic2(PRIMVAL(op), x, y));
     } else {
-	if (!isNumber(x) || !isNumber(y))
-	    errorcall(call,
-		      _("operations are possible only for numeric, logical or complex types"));
-	x = SETCAR(args, coerceVector(x, LGLSXP));
-	y = SETCADR(args, coerceVector(y, LGLSXP));
-	x = binaryLogic(PRIMVAL(op), x, y);
+	x = static_cast<VectorBase*>(SETCAR(args, coerceVector(x, LGLSXP)));
+	y = static_cast<VectorBase*>(SETCADR(args, coerceVector(y, LGLSXP)));
+	ans = static_cast<VectorBase*>(binaryLogic(PRIMVAL(op), x, y));
     }
 
-    if (dims != R_NilValue) {
-	setAttrib(x, R_DimSymbol, dims);
-	if(xnames != R_NilValue)
-	    setAttrib(x, R_DimNamesSymbol, xnames);
-	else if(ynames != R_NilValue)
-	    setAttrib(x, R_DimNamesSymbol, ynames);
+    GCStackRoot<> dims, xnames, ynames;
+
+    bool xarray = isArray(x);
+    bool yarray = isArray(y);
+    if (xarray) {
+	dims = getAttrib(x, R_DimSymbol);
+	xnames = getAttrib(x, R_DimNamesSymbol);
+    }
+    if (yarray) {
+	dims = getAttrib(y, R_DimSymbol);
+	ynames = getAttrib(y, R_DimNamesSymbol);
+    } else if (!xarray) {
+	// Neither operand is an array:
+	xnames = getAttrib(x, R_NamesSymbol);
+	ynames = getAttrib(y, R_NamesSymbol);
+    }
+
+    if (dims) {
+	setAttrib(ans, R_DimSymbol, dims);
+	if (xnames)
+	    setAttrib(ans, R_DimNamesSymbol, xnames);
+	else if (ynames)
+	    setAttrib(ans, R_DimNamesSymbol, ynames);
     }
     else {
 	if(length(x) == length(xnames))
-	    setAttrib(x, R_NamesSymbol, xnames);
+	    setAttrib(ans, R_NamesSymbol, xnames);
 	else if(length(x) == length(ynames))
-	    setAttrib(x, R_NamesSymbol, ynames);
+	    setAttrib(ans, R_NamesSymbol, ynames);
+    }
+
+    GCStackRoot<> tsp, klass;
+
+    bool yts = isTs(y);
+    if (yts) {
+	tsp = getAttrib(y, R_TspSymbol);
+	klass = getAttrib(y, R_ClassSymbol);
+    }
+
+    bool xts = isTs(x);
+    if (xts) {
+	tsp = getAttrib(x, R_TspSymbol);
+	klass = getAttrib(x, R_ClassSymbol);
     }
 
     if (xts || yts) {
-	setAttrib(x, R_TspSymbol, tsp);
-	setAttrib(x, R_ClassSymbol, klass);
+	setAttrib(ans, R_TspSymbol, tsp);
+	setAttrib(ans, R_ClassSymbol, klass);
     }
-    return x;
+    return ans;
 }
 
 // Note that this specifically implements logical (or for RAWSXP,
@@ -442,3 +429,24 @@ SEXP attribute_hidden do_logic3(SEXP call, SEXP op, SEXP args, SEXP env)
 }
 #undef _OP_ALL
 #undef _OP_ANY
+
+namespace CXXR {
+    namespace VectorOps {
+	void checkOperandsConformable(const VectorBase* vl, const VectorBase* vr)
+	{
+	    // Temporary kludge:
+	    VectorBase* vlnc = const_cast<VectorBase*>(vl);
+	    VectorBase* vrnc = const_cast<VectorBase*>(vr);
+	    if (Rf_isArray(vlnc) && Rf_isArray(vrnc)
+		&& !Rf_conformable(vlnc, vrnc))
+		Rf_error(_("non-conformable arrays"));
+	    if (isTs(vlnc)) {
+		if (isTs(vrnc) && !Rf_tsConform(vlnc, vrnc))
+		    Rf_error(_("non-conformable time-series"));
+		if (vr->size() > vl->size())
+		    Rf_error(_("time-series/vector length mismatch"));
+	    } else if (isTs(vrnc) && vl->size() > vr->size())
+		Rf_error(_("time-series/vector length mismatch"));
+	}
+    } // namespace VectorOps
+} // namespace CXXR  

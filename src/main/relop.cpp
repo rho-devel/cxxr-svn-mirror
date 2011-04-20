@@ -46,8 +46,10 @@
 #include "basedecl.h"
 
 #include "CXXR/GCStackRoot.hpp"
+#include "CXXR/VectorOps.hpp"
 
 using namespace CXXR;
+using namespace VectorOps;
 
 static SEXP integer_relop(RELOP_TYPE code, SEXP s1, SEXP s2);
 static SEXP real_relop(RELOP_TYPE code, SEXP s1, SEXP s2);
@@ -119,109 +121,99 @@ SEXP attribute_hidden do_relop_dflt(SEXP call, SEXP op, SEXP xarg, SEXP yarg)
 	return allocVector(LGLSXP,0);
     }
 
-    bool xarray = isArray(x);
-    bool yarray = isArray(y);
-    bool xts = isTs(x);
-    bool yts = isTs(y);
+    VectorBase* xv = static_cast<VectorBase*>(x.get());
+    VectorBase* yv = static_cast<VectorBase*>(y.get());
+    checkOperandsConformable(xv, yv);
+
     if (nx > 0 && ny > 0)
 	mismatch = (((nx > ny) ? nx % ny : ny % nx) != 0);
-
-    GCStackRoot<> dims, xnames, ynames;
-    if (xarray || yarray) {
-	if (xarray && yarray) {
-	    if (!conformable(x, y))
-		errorcall(call, _("non-conformable arrays"));
-	    dims = getAttrib(x, R_DimSymbol);
-	}
-	else if (xarray) {
-	    dims = getAttrib(x, R_DimSymbol);
-	}
-	else /*(yarray)*/ {
-	    dims = getAttrib(y, R_DimSymbol);
-	}
-	xnames = getAttrib(x, R_DimNamesSymbol);
-	ynames = getAttrib(y, R_DimNamesSymbol);
-    }
-    else {
-	xnames = getAttrib(x, R_NamesSymbol);
-	ynames = getAttrib(y, R_NamesSymbol);
-    }
-
-    GCStackRoot<> klass, tsp;
-    if (xts || yts) {
-	if (xts && yts) {
-	    if (!tsConform(x, y))
-		errorcall(call, _("non-conformable time series"));
-	    tsp = getAttrib(x, R_TspSymbol);
-	    klass = getAttrib(x, R_ClassSymbol);
-	}
-	else if (xts) {
-	    if (length(x) < length(y))
-		ErrorMessage(call, ERROR_TSVEC_MISMATCH);
-	    tsp = getAttrib(x, R_TspSymbol);
-	    klass = getAttrib(x, R_ClassSymbol);
-	}
-	else /*(yts)*/ {
-	    if (length(y) < length(x))
-		ErrorMessage(call, ERROR_TSVEC_MISMATCH);
-	    tsp = getAttrib(y, R_TspSymbol);
-	    klass = getAttrib(y, R_ClassSymbol);
-	}
-    }
     if (mismatch)
 	warningcall(call, _("longer object length is not a multiple of shorter object length"));
 
+    GCStackRoot<> ans;
     if (isString(x) || isString(y)) {
 	x = coerceVector(x, STRSXP);
 	y = coerceVector(y, STRSXP);
-	x = string_relop(RELOP_TYPE( PRIMVAL(op)), x, y);
+	ans = string_relop(RELOP_TYPE( PRIMVAL(op)), x, y);
     }
     else if (isComplex(x) || isComplex(y)) {
 	x = coerceVector(x, CPLXSXP);
 	y = coerceVector(y, CPLXSXP);
-	x = complex_relop(RELOP_TYPE( PRIMVAL(op)), x, y, call);
+	ans = complex_relop(RELOP_TYPE( PRIMVAL(op)), x, y, call);
     }
     else if (isReal(x) || isReal(y)) {
 	x = coerceVector(x, REALSXP);
 	y = coerceVector(y, REALSXP);
-	x = real_relop(RELOP_TYPE( PRIMVAL(op)), x, y);
+	ans = real_relop(RELOP_TYPE( PRIMVAL(op)), x, y);
     }
     else if (isInteger(x) || isInteger(y)) {
 	x = coerceVector(x, INTSXP);
 	y = coerceVector(y, INTSXP);
-	x = integer_relop(RELOP_TYPE( PRIMVAL(op)), x, y);
+	ans = integer_relop(RELOP_TYPE( PRIMVAL(op)), x, y);
     }
     else if (isLogical(x) || isLogical(y)) {
 	x = coerceVector(x, LGLSXP);
 	y = coerceVector(y, LGLSXP);
-	x = integer_relop(RELOP_TYPE( PRIMVAL(op)), x, y);
+	ans = integer_relop(RELOP_TYPE( PRIMVAL(op)), x, y);
     }
     else if (TYPEOF(x) == RAWSXP || TYPEOF(y) == RAWSXP) {
 	x = coerceVector(x, RAWSXP);
 	y = coerceVector(y, RAWSXP);
-	x = raw_relop(RELOP_TYPE( PRIMVAL(op)), x, y);
+	ans = raw_relop(RELOP_TYPE( PRIMVAL(op)), x, y);
     } else errorcall(call, _("comparison of these types is not implemented"));
 
 
+    GCStackRoot<> dims, xnames, ynames;
+
+    bool xarray = isArray(x);
+    bool yarray = isArray(y);
+    if (xarray) {
+	dims = getAttrib(x, R_DimSymbol);
+	xnames = getAttrib(x, R_DimNamesSymbol);
+    }
+    if (yarray) {
+	dims = getAttrib(y, R_DimSymbol);
+	ynames = getAttrib(y, R_DimNamesSymbol);
+    } else if (!xarray) {
+	// Neither operand is an array:
+	xnames = getAttrib(x, R_NamesSymbol);
+	ynames = getAttrib(y, R_NamesSymbol);
+    }
+
     if (dims != R_NilValue) {
-	setAttrib(x, R_DimSymbol, dims);
+	setAttrib(ans, R_DimSymbol, dims);
 	if (xnames != R_NilValue)
-	    setAttrib(x, R_DimNamesSymbol, xnames);
+	    setAttrib(ans, R_DimNamesSymbol, xnames);
 	else if (ynames != R_NilValue)
-	    setAttrib(x, R_DimNamesSymbol, ynames);
+	    setAttrib(ans, R_DimNamesSymbol, ynames);
     }
     else {
 	if (length(x) == length(xnames))
-	    setAttrib(x, R_NamesSymbol, xnames);
+	    setAttrib(ans, R_NamesSymbol, xnames);
 	else if (length(x) == length(ynames))
-	    setAttrib(x, R_NamesSymbol, ynames);
-    }
-    if (xts || yts) {
-	setAttrib(x, R_TspSymbol, tsp);
-	setAttrib(x, R_ClassSymbol, klass);
+	    setAttrib(ans, R_NamesSymbol, ynames);
     }
 
-    return x;
+    GCStackRoot<> tsp, klass;
+
+    bool yts = isTs(y);
+    if (yts) {
+	tsp = getAttrib(y, R_TspSymbol);
+	klass = getAttrib(y, R_ClassSymbol);
+    }
+
+    bool xts = isTs(x);
+    if (xts) {
+	tsp = getAttrib(x, R_TspSymbol);
+	klass = getAttrib(x, R_ClassSymbol);
+    }
+
+    if (xts || yts) {
+	setAttrib(ans, R_TspSymbol, tsp);
+	setAttrib(ans, R_ClassSymbol, klass);
+    }
+
+    return ans;
 }
 
 /* i1 = i % n1; i2 = i % n2;

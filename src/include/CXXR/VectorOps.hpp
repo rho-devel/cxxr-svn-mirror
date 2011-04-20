@@ -276,6 +276,32 @@ namespace CXXR {
 	    return UnaryFunction<AttributeCopier, Functor>(f);
 	}
 
+	/** @brief Are binary operands consistent?
+	 *
+	 * This function checks the operands of a binary vector
+	 * function to verify that they are compatible with each
+	 * other, and raises an error if not.
+	 *
+	 * An error will be raised in the following circumstances:
+	 * <ul>
+	 * <li>Both operands are arrays, but with different
+	 * dimensions.</li>
+	 *
+	 * <li>Both operands are time series, but they are not
+	 * conformable (i.e. they do not have the same start time, end
+	 * time and frequency).</li>
+	 *
+	 * <li>Just one operand is a time series, and the
+	 * non-time-series operand is longer than the time-series
+	 * operand.</li>
+	 * </ul>
+	 *
+	 * @param vl Non-null pointer to the first operand.
+	 *
+	 * @param vr Non-null pointer to the second operand.
+	 */
+	void checkOperandsConformable(const VectorBase* vl, const VectorBase* vr);
+
 	template <class AttributeCopier, typename Functor, class FunctorWrapper>
 	template <class Vout, class Vin>
 	Vout* UnaryFunction<AttributeCopier,

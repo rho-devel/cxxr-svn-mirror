@@ -288,6 +288,13 @@ namespace CXXR {
 	    return "(vector type)";
 	}
 
+	// Virtual function of RObject, redeclared for covariant
+	// return type:
+	VectorBase* clone() const
+	{
+	    return 0;
+	}
+
 	// Make private in due course (or get rid altogether):
 	R_len_t m_truelength;
     protected:
