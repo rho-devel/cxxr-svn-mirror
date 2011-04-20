@@ -37,5 +37,55 @@
  * Implementation of functions and classes in VectorOps namespace.
  */
 
+#include "CXXR/VectorOps.hpp"
+
+#include "CXXR/Symbol.h"
+
+using namespace CXXR;
+using namespace VectorOps;
+
 // Implementation of operandsConformable() is in logic.cpp (for the
 // time being).
+
+void GeneralBinaryAttributeCopier::apply(VectorBase* vout,
+					 const VectorBase* vl,
+					 const VectorBase* vr)
+{
+    // Handle layout attributes:
+    {
+	RObject* dims = vl->getAttribute(DimSymbol);
+	RObject* dimnames = 0;
+	if (dims)
+	    dimnames = vl->getAttribute(DimNamesSymbol);
+	else
+	    dims = vr->getAttribute(DimSymbol);
+	if (!dimnames)
+	    dimnames = vr->getAttribute(DimNamesSymbol);
+	if (dims) {
+	    vout->setAttribute(DimSymbol, dims);
+	    if (dimnames)
+		vout->setAttribute(DimNamesSymbol, dimnames);
+	} else {
+	    // Neither operand is an array:
+	    if (vout->size() == vl->size())
+		vout->setAttribute(NamesSymbol, vl->getAttribute(NamesSymbol));
+	    else vout->setAttribute(NamesSymbol, vr->getAttribute(NamesSymbol));
+	}
+    }
+    // Handle attributes related to time series:
+    {
+	RObject* tsp = vl->getAttribute(TspSymbol);
+	RObject* klass = 0;
+	if (tsp)
+	    klass = vl->getAttribute(ClassSymbol);
+	if (!tsp) {
+	   tsp = vr->getAttribute(TspSymbol); 
+	   if (tsp)
+	       klass = vr->getAttribute(ClassSymbol);
+	}
+	if (tsp)
+	    vout->setAttribute(TspSymbol, tsp);
+	if (klass)
+	    vout->setAttribute(ClassSymbol, klass);
+    }
+}

@@ -83,7 +83,7 @@ static SEXP lbinary(SEXP call, SEXP op, SEXP args)
 		  _("operations are possible only for numeric, logical or complex types"));
     GCStackRoot<VectorBase> x(static_cast<VectorBase*>(xarg));
     GCStackRoot<VectorBase> y(static_cast<VectorBase*>(yarg));
-    GCStackRoot<> ans;
+    GCStackRoot<VectorBase> ans;
     checkOperandsConformable(x, y);
 
     int nx = length(x);
@@ -105,55 +105,7 @@ static SEXP lbinary(SEXP call, SEXP op, SEXP args)
 	ans = static_cast<VectorBase*>(binaryLogic(PRIMVAL(op), x, y));
     }
 
-    GCStackRoot<> dims, xnames, ynames;
-
-    bool xarray = isArray(x);
-    bool yarray = isArray(y);
-    if (xarray) {
-	dims = getAttrib(x, R_DimSymbol);
-	xnames = getAttrib(x, R_DimNamesSymbol);
-    }
-    if (yarray) {
-	dims = getAttrib(y, R_DimSymbol);
-	ynames = getAttrib(y, R_DimNamesSymbol);
-    } else if (!xarray) {
-	// Neither operand is an array:
-	xnames = getAttrib(x, R_NamesSymbol);
-	ynames = getAttrib(y, R_NamesSymbol);
-    }
-
-    if (dims) {
-	setAttrib(ans, R_DimSymbol, dims);
-	if (xnames)
-	    setAttrib(ans, R_DimNamesSymbol, xnames);
-	else if (ynames)
-	    setAttrib(ans, R_DimNamesSymbol, ynames);
-    }
-    else {
-	if(length(x) == length(xnames))
-	    setAttrib(ans, R_NamesSymbol, xnames);
-	else if(length(x) == length(ynames))
-	    setAttrib(ans, R_NamesSymbol, ynames);
-    }
-
-    GCStackRoot<> tsp, klass;
-
-    bool yts = isTs(y);
-    if (yts) {
-	tsp = getAttrib(y, R_TspSymbol);
-	klass = getAttrib(y, R_ClassSymbol);
-    }
-
-    bool xts = isTs(x);
-    if (xts) {
-	tsp = getAttrib(x, R_TspSymbol);
-	klass = getAttrib(x, R_ClassSymbol);
-    }
-
-    if (xts || yts) {
-	setAttrib(ans, R_TspSymbol, tsp);
-	setAttrib(ans, R_ClassSymbol, klass);
-    }
+    GeneralBinaryAttributeCopier()(ans, x, y);
     return ans;
 }
 

@@ -41,6 +41,9 @@
 #ifndef VECTOROPS_HPP
 #define VECTOROPS_HPP 1
 
+//#include <functional>
+#include "CXXR/VectorBase.h"
+
 namespace CXXR {
    /** @brief Services to support common operations on R vectors and arrays.
      *
@@ -60,7 +63,7 @@ namespace CXXR {
 	 * across, along with the S4 object status.
 	 */
 	struct CopyAllAttributes
-	    : std::binary_function<RObject*, RObject*, void> {
+	    : std::binary_function<VectorBase*, VectorBase*, void> {
 	    /** @brief Copy all attributes and S4 object status.
 	     *
 	     * @param to Non-null pointer to the vector to which
@@ -69,7 +72,7 @@ namespace CXXR {
 	     * @param from Non-null pointer to the vector from which
 	     *          attributes are to be copied.
 	     */
-	    void operator()(RObject* to, const RObject* from)
+	    void operator()(VectorBase* to, const VectorBase* from)
 	    {
 		to->copyAttributes(from, true);
 	    }
@@ -85,11 +88,73 @@ namespace CXXR {
 	 * parameter, and its behaviour is to copy no attributes at all.
 	 */
 	struct CopyNoAttributes
-	    : std::binary_function<RObject*, RObject*, void> {
+	    : std::binary_function<VectorBase*, VectorBase*, void> {
 	    /** @brief Copy no attributes.
 	     */
-	    void operator()(RObject*, const RObject*)
+	    void operator()(VectorBase*, const VectorBase*)
 	    {}
+	};
+
+	/** @brief Control attribute copying for binary functions.
+	 *
+	 * VectorOps::BinaryFunction takes as a template parameter an
+	 * \a AttributeCopier class which determines which attributes
+	 * are copied from the input vectors to the output
+	 * vector. This class can be used as the value of the \a
+	 * AttributeCopier parameter, and acts as follows:
+	 * <ul>
+	 * <li>If both operands are arrays (in which case they must
+	 * have the same dimensions), the result will be an array with
+	 * the same dimensions.  Dimension names are taken from the
+	 * first operand if it has them, otherwise from the second
+	 * operand, if it has them.</li>
+	 *
+	 * <li>If just one operand is array, the result will be an
+	 * array with the same dimensions.  Dimension names are taken
+	 * from the array operand, if it has them.</li>
+	 *
+	 * <li>If neither operand is an array, the 'names' attribute
+	 * is taken from the first operand if it has them, otherwise
+	 * from the second operand, if it has them.</li>
+	 *
+	 * <li>If both operands are time series (in which case they
+	 * must have the same parameters, i.e. start time, end time
+	 * and frequency), the result will be a time series with the
+	 * same parameters.  The result will take its class attribute
+	 * from the first operand if it has one, otherwise from the
+	 * second operand, if it has one.</li>
+	 *
+	 * <li>If just one operand is a time series, the result will
+	 * be a time series with the same parameters.  The result from
+	 * take its class attribute from the time-series operand, if
+	 * it has one.</li>
+	 * </ul>
+	 *
+	 * Note that no class attribute is applied to the result
+	 * unless at least one of the operands is a time series.
+	 */
+	class GeneralBinaryAttributeCopier {
+	public:
+	    /** @brief Copy attributes as described above.
+	     *
+	     * @param vout Non-null pointer to the vector to which
+	     *          attributes are to be copied.
+	     *
+	     * @param vl Non-null pointer to the first operand.
+	     *
+	     * @param vr Non-null pointer to the second operand.
+	     */
+	    void operator()(VectorBase* vout,
+			    const VectorBase* vl, const VectorBase* vr)
+	    {
+		if (!vl->attributes() && !vr->attributes())
+		    return;
+		apply(vout, vl, vr);
+	    }
+	private:
+	    // Deal with non-trivial cases:
+	    void apply(VectorBase* vout,
+		    const VectorBase* vl, const VectorBase* vr);
 	};
 
 	/** @brief Monitor function application for unary functions.
