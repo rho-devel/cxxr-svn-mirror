@@ -41,8 +41,8 @@
 #ifndef VECTOROPS_HPP
 #define VECTOROPS_HPP 1
 
-//#include <functional>
 #include "CXXR/VectorBase.h"
+#include "CXXR/errors.h"
 
 namespace CXXR {
    /** @brief Services to support common operations on R vectors and arrays.
@@ -613,6 +613,7 @@ namespace CXXR {
 			     Functor,
 			     FunctorWrapper>::apply(const Vl* vl, const Vr* vr)
 	{
+	    checkOperandsConformable(vl, vr);
 	    size_t lsize = vl->size();
 	    size_t rsize = vr->size();
 	    GCStackRoot<Vout> ans;
@@ -644,6 +645,10 @@ namespace CXXR {
 	    typedef typename Vout::element_type Outelt;
 	    size_t lsize = vl->size();
 	    size_t rsize = vr->size();
+	    if ((flag < 0 && rsize%lsize != 0)
+		|| (flag > 0 && lsize%rsize != 0))
+		Rf_warning(_("longer object length is not"
+			     " a multiple of shorter object length"));
 	    size_t outsize = vout->size();
 	    FunctorWrapper fwrapper(m_f);
 	    size_t il = 0;

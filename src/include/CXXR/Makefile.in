@@ -35,7 +35,7 @@ CXXR_HS = \
   ListVector.h LogicalVector.h PairList.h Promise.h ProtectStack.h \
   RAllocStack.h RObject.h RawVector.h RealVector.h \
   S4Object.h String.h StringVector.h Symbol.h \
-  UncachedString.h VectorBase.h WeakRef.h uncxxr.h
+  UncachedString.h VectorBase.h WeakRef.h errors.h uncxxr.h
 
 CXXR_HPPS = \
   Allocator.hpp ArgList.hpp ArgMatcher.hpp CellPool.hpp \

@@ -42,20 +42,66 @@
 #include <Defn.h>
 #include <Rmath.h>
 #include <errno.h>
+#include <utility>
 
 #include "basedecl.h"
 
 #include "CXXR/GCStackRoot.hpp"
+#include "CXXR/LogicalVector.h"
 #include "CXXR/VectorOps.hpp"
 
+using namespace std;
 using namespace CXXR;
 using namespace VectorOps;
 
-static SEXP integer_relop(RELOP_TYPE code, SEXP s1, SEXP s2);
-static SEXP real_relop(RELOP_TYPE code, SEXP s1, SEXP s2);
-static SEXP complex_relop(RELOP_TYPE code, SEXP s1, SEXP s2, SEXP call);
 static SEXP string_relop(RELOP_TYPE code, SEXP s1, SEXP s2);
-static SEXP raw_relop(RELOP_TYPE code, SEXP s1, SEXP s2);
+
+namespace {
+    template <template <typename> class Relop, class V>
+    inline LogicalVector* relop_aux(const V* vl, const V* vr)
+    {
+	using namespace rel_ops;
+	typedef typename V::element_type element_type;
+	return
+	    BinaryFunction<GeneralBinaryAttributeCopier,
+		           Relop<element_type> >()
+	    .template apply<LogicalVector>(vl, vr);
+    }
+
+    template <class V>
+    LogicalVector* relop(const V* vl, const V* vr, RELOP_TYPE code)
+    {
+	switch (code) {
+	case EQOP:
+	    return relop_aux<equal_to>(vl, vr);
+	case NEOP:
+	    return relop_aux<not_equal_to>(vl, vr);
+	case LTOP:
+	    return relop_aux<less>(vl, vr);
+	case GTOP:
+	    return relop_aux<greater>(vl, vr);
+	case LEOP:
+	    return relop_aux<less_equal>(vl, vr);
+	case GEOP:
+	    return relop_aux<greater_equal>(vl, vr);
+	}
+	return 0;  // -Wall
+    }
+
+    template <class V>
+    LogicalVector* relop_no_order(const V* vl, const V* vr, RELOP_TYPE code)
+    {
+	switch (code) {
+	case EQOP:
+	    return relop_aux<equal_to>(vl, vr);
+	case NEOP:
+	    return relop_aux<not_equal_to>(vl, vr);
+	default:
+	    Rf_error(_("comparison of these types is not implemented"));
+	}
+	return 0;  // -Wall
+    }
+}
 
 SEXP attribute_hidden do_relop(SEXP call, SEXP op, SEXP args, SEXP env)
 {
@@ -70,23 +116,6 @@ SEXP attribute_hidden do_relop(SEXP call, SEXP op, SEXP args, SEXP env)
 SEXP attribute_hidden do_relop_dflt(SEXP call, SEXP op, SEXP xarg, SEXP yarg)
 {
     GCStackRoot<> x(xarg), y(yarg);
-    int nx = length(x);
-    int ny = length(y);
-    bool mismatch = false;
-
-    /* pre-test to handle the most common case quickly.
-       Used to skip warning too ....
-     */
-    if (ATTRIB(x) == R_NilValue && ATTRIB(y) == R_NilValue &&
-	TYPEOF(x) == REALSXP && TYPEOF(y) == REALSXP &&
-	LENGTH(x) > 0 && LENGTH(y) > 0) {
-	SEXP ans = real_relop(RELOP_TYPE( PRIMVAL(op)), x, y);
-	if (nx > 0 && ny > 0)
-	    mismatch = (((nx > ny) ? nx % ny : ny % nx) != 0);
-	if (mismatch)
-	    warningcall(call, _("longer object length is not a multiple of shorter object length"));
-	return ans;
-    }
 
     /* That symbols and calls were allowed was undocumented prior to
        R 2.5.0.  We deparse them as deparse() would, minus attributes */
@@ -121,55 +150,62 @@ SEXP attribute_hidden do_relop_dflt(SEXP call, SEXP op, SEXP xarg, SEXP yarg)
 	return allocVector(LGLSXP,0);
     }
 
-    VectorBase* xv = static_cast<VectorBase*>(x.get());
-    VectorBase* yv = static_cast<VectorBase*>(y.get());
-    checkOperandsConformable(xv, yv);
-
-    if (nx > 0 && ny > 0)
-	mismatch = (((nx > ny) ? nx % ny : ny % nx) != 0);
-    if (mismatch)
-	warningcall(call, _("longer object length is not a multiple of shorter object length"));
-
-    GCStackRoot<VectorBase> ans;
+    RELOP_TYPE opcode = RELOP_TYPE(PRIMVAL(op));
     if (isString(x) || isString(y)) {
-	x = coerceVector(x, STRSXP);
-	y = coerceVector(y, STRSXP);
-	ans = static_cast<VectorBase*>(string_relop(RELOP_TYPE( PRIMVAL(op)),
-						    x, y));
+	// This case has not yet been brought into line with the
+	// general CXXR pattern.
+	VectorBase* xv = static_cast<VectorBase*>(coerceVector(x, STRSXP));
+	VectorBase* yv = static_cast<VectorBase*>(coerceVector(y, STRSXP));
+	checkOperandsConformable(xv, yv);
+	int nx = length(xv);
+	int ny = length(yv);
+	bool mismatch = false;
+	if (nx > 0 && ny > 0)
+	    mismatch = (((nx > ny) ? nx % ny : ny % nx) != 0);
+	if (mismatch)
+	    warningcall(call, _("longer object length is not"
+				" a multiple of shorter object length"));
+	GCStackRoot<VectorBase>
+	    ans(static_cast<VectorBase*>(string_relop(opcode, xv, yv)));
+	GeneralBinaryAttributeCopier()(ans, xv, yv);
+	return ans;
     }
     else if (isComplex(x) || isComplex(y)) {
-	x = coerceVector(x, CPLXSXP);
-	y = coerceVector(y, CPLXSXP);
-	ans = static_cast<VectorBase*>(complex_relop(RELOP_TYPE( PRIMVAL(op)),
-						     x, y, call));
+	GCStackRoot<ComplexVector>
+	    vl(static_cast<ComplexVector*>(coerceVector(x, CPLXSXP)));
+	GCStackRoot<ComplexVector>
+	    vr(static_cast<ComplexVector*>(coerceVector(y, CPLXSXP)));
+	return relop_no_order(vl.get(), vr.get(), opcode);
     }
     else if (isReal(x) || isReal(y)) {
-	x = coerceVector(x, REALSXP);
-	y = coerceVector(y, REALSXP);
-	ans = static_cast<VectorBase*>(real_relop(RELOP_TYPE( PRIMVAL(op)),
-						  x, y));
+	GCStackRoot<RealVector>
+	    vl(static_cast<RealVector*>(coerceVector(x, REALSXP)));
+	GCStackRoot<RealVector>
+	    vr(static_cast<RealVector*>(coerceVector(y, REALSXP)));
+	return relop(vl.get(), vr.get(), opcode);
     }
     else if (isInteger(x) || isInteger(y)) {
-	x = coerceVector(x, INTSXP);
-	y = coerceVector(y, INTSXP);
-	ans = static_cast<VectorBase*>(integer_relop(RELOP_TYPE( PRIMVAL(op)),
-						     x, y));
+	GCStackRoot<IntVector>
+	    vl(static_cast<IntVector*>(coerceVector(x, INTSXP)));
+	GCStackRoot<IntVector>
+	    vr(static_cast<IntVector*>(coerceVector(y, INTSXP)));
+	return relop(vl.get(), vr.get(), opcode);
     }
     else if (isLogical(x) || isLogical(y)) {
-	x = coerceVector(x, LGLSXP);
-	y = coerceVector(y, LGLSXP);
-	ans = static_cast<VectorBase*>(integer_relop(RELOP_TYPE( PRIMVAL(op)),
-						     x, y));
+	GCStackRoot<LogicalVector>
+	    vl(static_cast<LogicalVector*>(coerceVector(x, LGLSXP)));
+	GCStackRoot<LogicalVector>
+	    vr(static_cast<LogicalVector*>(coerceVector(y, LGLSXP)));
+	return relop(vl.get(), vr.get(), opcode);
     }
     else if (TYPEOF(x) == RAWSXP || TYPEOF(y) == RAWSXP) {
-	x = coerceVector(x, RAWSXP);
-	y = coerceVector(y, RAWSXP);
-	ans = static_cast<VectorBase*>(raw_relop(RELOP_TYPE( PRIMVAL(op)),
-						 x, y));
+	GCStackRoot<RawVector>
+	    vl(static_cast<RawVector*>(coerceVector(x, RAWSXP)));
+	GCStackRoot<RawVector>
+	    vr(static_cast<RawVector*>(coerceVector(y, RAWSXP)));
+	return relop(vl.get(), vr.get(), opcode);
     } else errorcall(call, _("comparison of these types is not implemented"));
-
-    GeneralBinaryAttributeCopier()(ans, xv, yv);
-    return ans;
+    return 0;  // -Wall
 }
 
 /* i1 = i % n1; i2 = i % n2;
@@ -180,213 +216,6 @@ SEXP attribute_hidden do_relop_dflt(SEXP call, SEXP op, SEXP xarg, SEXP yarg)
 	i1 = (++i1 == n1) ? 0 : i1,\
 	i2 = (++i2 == n2) ? 0 : i2,\
 	++i)
-
-static SEXP integer_relop(RELOP_TYPE code, SEXP s1, SEXP s2)
-{
-    int i, i1, i2, n, n1, n2;
-    int x1, x2;
-    SEXP ans;
-
-    n1 = LENGTH(s1);
-    n2 = LENGTH(s2);
-    n = (n1 > n2) ? n1 : n2;
-    PROTECT(s1);
-    PROTECT(s2);
-    ans = allocVector(LGLSXP, n);
-
-    switch (code) {
-    case EQOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    x1 = INTEGER(s1)[i1];
-	    x2 = INTEGER(s2)[i2];
-	    if (x1 == NA_INTEGER || x2 == NA_INTEGER)
-		LOGICAL(ans)[i] = NA_LOGICAL;
-	    else
-		LOGICAL(ans)[i] = (x1 == x2);
-	}
-	break;
-    case NEOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    x1 = INTEGER(s1)[i1];
-	    x2 = INTEGER(s2)[i2];
-	    if (x1 == NA_INTEGER || x2 == NA_INTEGER)
-		LOGICAL(ans)[i] = NA_LOGICAL;
-	    else
-		LOGICAL(ans)[i] = (x1 != x2);
-	}
-	break;
-    case LTOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    x1 = INTEGER(s1)[i1];
-	    x2 = INTEGER(s2)[i2];
-	    if (x1 == NA_INTEGER || x2 == NA_INTEGER)
-		LOGICAL(ans)[i] = NA_LOGICAL;
-	    else
-		LOGICAL(ans)[i] = (x1 < x2);
-	}
-	break;
-    case GTOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    x1 = INTEGER(s1)[i1];
-	    x2 = INTEGER(s2)[i2];
-	    if (x1 == NA_INTEGER || x2 == NA_INTEGER)
-		LOGICAL(ans)[i] = NA_LOGICAL;
-	    else
-		LOGICAL(ans)[i] = (x1 > x2);
-	}
-	break;
-    case LEOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    x1 = INTEGER(s1)[i1];
-	    x2 = INTEGER(s2)[i2];
-	    if (x1 == NA_INTEGER || x2 == NA_INTEGER)
-		LOGICAL(ans)[i] = NA_LOGICAL;
-	    else
-		LOGICAL(ans)[i] = (x1 <= x2);
-	}
-	break;
-    case GEOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    x1 = INTEGER(s1)[i1];
-	    x2 = INTEGER(s2)[i2];
-	    if (x1 == NA_INTEGER || x2 == NA_INTEGER)
-		LOGICAL(ans)[i] = NA_LOGICAL;
-	    else
-		LOGICAL(ans)[i] = (x1 >= x2);
-	}
-	break;
-    }
-    UNPROTECT(2);
-    return ans;
-}
-
-static SEXP real_relop(RELOP_TYPE code, SEXP s1, SEXP s2)
-{
-    int i, i1, i2, n, n1, n2;
-    double x1, x2;
-    SEXP ans;
-
-    n1 = LENGTH(s1);
-    n2 = LENGTH(s2);
-    n = (n1 > n2) ? n1 : n2;
-    PROTECT(s1);
-    PROTECT(s2);
-    ans = allocVector(LGLSXP, n);
-
-    switch (code) {
-    case EQOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    x1 = REAL(s1)[i1];
-	    x2 = REAL(s2)[i2];
-	    if (ISNAN(x1) || ISNAN(x2))
-		LOGICAL(ans)[i] = NA_LOGICAL;
-	    else
-		LOGICAL(ans)[i] = (x1 == x2);
-	}
-	break;
-    case NEOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    x1 = REAL(s1)[i1];
-	    x2 = REAL(s2)[i2];
-	    if (ISNAN(x1) || ISNAN(x2))
-		LOGICAL(ans)[i] = NA_LOGICAL;
-	    else
-		LOGICAL(ans)[i] = (x1 != x2);
-	}
-	break;
-    case LTOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    x1 = REAL(s1)[i1];
-	    x2 = REAL(s2)[i2];
-	    if (ISNAN(x1) || ISNAN(x2))
-		LOGICAL(ans)[i] = NA_LOGICAL;
-	    else
-		LOGICAL(ans)[i] = (x1 < x2);
-	}
-	break;
-    case GTOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    x1 = REAL(s1)[i1];
-	    x2 = REAL(s2)[i2];
-	    if (ISNAN(x1) || ISNAN(x2))
-		LOGICAL(ans)[i] = NA_LOGICAL;
-	    else
-		LOGICAL(ans)[i] = (x1 > x2);
-	}
-	break;
-    case LEOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    x1 = REAL(s1)[i1];
-	    x2 = REAL(s2)[i2];
-	    if (ISNAN(x1) || ISNAN(x2))
-		LOGICAL(ans)[i] = NA_LOGICAL;
-	    else
-		LOGICAL(ans)[i] = (x1 <= x2);
-	}
-	break;
-    case GEOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    x1 = REAL(s1)[i1];
-	    x2 = REAL(s2)[i2];
-	    if (ISNAN(x1) || ISNAN(x2))
-		LOGICAL(ans)[i] = NA_LOGICAL;
-	    else
-		LOGICAL(ans)[i] = (x1 >= x2);
-	}
-	break;
-    }
-    UNPROTECT(2);
-    return ans;
-}
-
-static SEXP complex_relop(RELOP_TYPE code, SEXP s1, SEXP s2, SEXP call)
-{
-    int i, i1, i2, n, n1, n2;
-    Rcomplex x1, x2;
-    SEXP ans;
-
-    if (code != EQOP && code != NEOP) {
-	errorcall(call, _("invalid comparison with complex values"));
-    }
-
-    n1 = LENGTH(s1);
-    n2 = LENGTH(s2);
-    n = (n1 > n2) ? n1 : n2;
-    PROTECT(s1);
-    PROTECT(s2);
-    ans = allocVector(LGLSXP, n);
-
-    switch (code) {
-    case EQOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    x1 = COMPLEX(s1)[i1];
-	    x2 = COMPLEX(s2)[i2];
-	    if (ISNAN(x1.r) || ISNAN(x1.i) ||
-		ISNAN(x2.r) || ISNAN(x2.i))
-		LOGICAL(ans)[i] = NA_LOGICAL;
-	    else
-		LOGICAL(ans)[i] = (x1.r == x2.r && x1.i == x2.i);
-	}
-	break;
-    case NEOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    x1 = COMPLEX(s1)[i1];
-	    x2 = COMPLEX(s2)[i2];
-	    if (ISNAN(x1.r) || ISNAN(x1.i) ||
-		ISNAN(x2.r) || ISNAN(x2.i))
-		LOGICAL(ans)[i] = NA_LOGICAL;
-	    else
-		LOGICAL(ans)[i] = (x1.r != x2.r || x1.i != x2.i);
-	}
-	break;
-    default:
-	/* never happens (-Wall) */
-	break;
-    }
-    UNPROTECT(2);
-    return ans;
-}
-
 
 /* POSIX allows EINVAL when one of the strings contains characters
    outside the collation domain. */
@@ -499,68 +328,6 @@ static SEXP string_relop(RELOP_TYPE code, SEXP s1, SEXP s2)
     UNPROTECT(3);
     return ans;
 }
-
-static SEXP raw_relop(RELOP_TYPE code, SEXP s1, SEXP s2)
-{
-    int i, i1, i2, n, n1, n2;
-    Rbyte x1, x2;
-    SEXP ans;
-
-    n1 = LENGTH(s1);
-    n2 = LENGTH(s2);
-    n = (n1 > n2) ? n1 : n2;
-    PROTECT(s1);
-    PROTECT(s2);
-    ans = allocVector(LGLSXP, n);
-
-    switch (code) {
-    case EQOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    x1 = RAW(s1)[i1];
-	    x2 = RAW(s2)[i2];
-	    LOGICAL(ans)[i] = (x1 == x2);
-	}
-	break;
-    case NEOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    x1 = RAW(s1)[i1];
-	    x2 = RAW(s2)[i2];
-	    LOGICAL(ans)[i] = (x1 != x2);
-	}
-	break;
-    case LTOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    x1 = RAW(s1)[i1];
-	    x2 = RAW(s2)[i2];
-	    LOGICAL(ans)[i] = (x1 < x2);
-	}
-	break;
-    case GTOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    x1 = RAW(s1)[i1];
-	    x2 = RAW(s2)[i2];
-	    LOGICAL(ans)[i] = (x1 > x2);
-	}
-	break;
-    case LEOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    x1 = RAW(s1)[i1];
-	    x2 = RAW(s2)[i2];
-	    LOGICAL(ans)[i] = (x1 <= x2);
-	}
-	break;
-    case GEOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    x1 = RAW(s1)[i1];
-	    x2 = RAW(s2)[i2];
-	    LOGICAL(ans)[i] = (x1 >= x2);
-	}
-	break;
-    }
-    UNPROTECT(2);
-    return ans;
-}
-
 
 SEXP bitwiseAnd(SEXP a, SEXP b)
 {
