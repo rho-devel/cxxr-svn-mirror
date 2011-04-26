@@ -1057,9 +1057,12 @@ static SEXP real_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2)
 
 /* Mathematical Functions of One Argument */
 
-// FunctionWrapper for VectorOps::UnaryFunction.  Warns if function
+// FunctorWrapper for VectorOps::UnaryFunction.  Warns if function
 // application gives rise to any new NaNs.
-class NaNWarner {
+template <typename, typename, typename> class NaNWarner;
+
+template <>
+class NaNWarner<double, double, double (*)(double)> {
 public:
     NaNWarner(double (*f)(double))
 	: m_f(f), m_any_NaN(false)
@@ -1067,6 +1070,8 @@ public:
 
     double operator()(double in)
     {
+	if (isNA(in))
+	    return ElementTraits<double>::NA();
 	double ans = m_f(in);
 	if (isnan(ans) && !isnan(in))
 	    m_any_NaN = true;

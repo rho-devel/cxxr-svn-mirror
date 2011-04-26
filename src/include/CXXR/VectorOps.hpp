@@ -101,6 +101,99 @@ namespace CXXR {
 	/** @brief Monitor function application for unary functions.
 	 *
 	 * VectorOps::UnaryFunction takes as a template parameter a \a
+	 * FunctorWrapper class template.  The apply() method of
+	 * UnaryFunction creates an object from this template, and
+	 * delegates to it the task of calling the unary function; the
+	 * \a FunctorWrapper object can then monitor any special
+	 * conditions that occur, and take appropriate action either
+	 * immediately (for example by raising an error and/or
+	 * modifying the result value) or when processing of the input
+	 * vector is complete (typically by providing one or more
+	 * warnings).
+	 *
+	 * This template is the default value of the \a FunctorWrapper
+	 * template parameter, and its effect is to ensure that if the
+	 * argument to the unary function is NA, then the result is
+	 * set to NA (without actually calling the unary function).
+	 * If different behaviour is required, another class can be
+	 * created using this class as a model.
+	 *
+	 * @tparam argument_type Element type of the input vector of
+	 *           the UnaryFunction.
+	 *
+	 * @tparam result_type Element type of the result of the
+	 *           UnaryFunction.
+	 *
+	 * @tparam Functor Function or function object type,
+	 *           representing a unary function.
+	 *           <tt>ElementTraits<argument_type>::Data::Type</tt>
+	 *           must be convertible to the type of the argument
+	 *           of this function.  The result of the function
+	 *           must be assignable to \a result_type .
+	 */
+	template <typename argument_type,
+		  typename result_type,
+		  typename Functor>
+	class UnaryNAPropagator
+	    : public std::unary_function<argument_type, result_type> {
+	public:
+	    /** @brief Constructor.
+	     *
+	     * @param f Pointer to an object of type \a Functor
+	     *          defining the unary function whose operation
+	     *          this \a FunctorWrapper is to monitor.
+	     */
+	    UnaryNAPropagator(const Functor& f)
+		: m_func(f)
+	    {}
+		
+	    /** @brief Monitored invocation of \a f .
+	     *
+	     * The apply() method of an object instantiating the
+	     * VectorOps::UnaryFunction template will call this
+	     * function to generate a value for an element of the
+	     * output vector from the value of the corresponding
+	     * element of the input vector, using the functor \a f .
+	     *
+	     * @param in Element of the input vector to which \a f is
+	     *          to be applied. 
+	     *
+	     * @return If \a in is NA, then
+	     * ElementTraits<result_type>::NA(), and in this case \a f
+	     * is not actually called.  Otherwise, the result of
+	     * applying \a f to the element data of \a in .
+	     */
+	    result_type operator()(const argument_type& in)
+	    {
+		return (isNA(in) ? ElementTraits<result_type>::NA() 
+			: (m_func)(elementData(in)));
+	    }
+
+	    /** @brief Raise warnings after processing a vector.
+	     *
+	     * The apply() method of an object instantiating the
+	     * VectorOps::UnaryFunction template will call this
+	     * function once all the elements of the input vector have
+	     * been processed.  Typically this function will do
+	     * nothing if no abnormalities have occurred during the
+	     * lifetime of this \a FunctorWrapper object , otherwise
+	     * it will raise one or more warnings.  (Note that the
+	     * lifetime of a \a FunctorWrapper object corresponds to
+	     * the processing of an input vector by the apply() method
+	     * of UnaryFunction.)
+	     *
+	     * The default behaviour, implemented here, is to do
+	     * nothing.
+	     */
+	    void warnings()
+	    {}
+	private:
+	    Functor m_func;
+	};
+
+	/** @brief Monitor function application for unary functions.
+	 *
+	 * VectorOps::UnaryFunction takes as a template parameter a \a
 	 * FunctorWrapper class.  The apply() method of UnaryFunction
 	 * creates an object of the \a FunctorWrapper class, and
 	 * delegates to it the task of calling the unary function; the
@@ -206,15 +299,17 @@ namespace CXXR {
 	 *           result_type and \a argument_type appropriately).
 	 *
 	 * @tparam FunctorWrapper Each invocation of apply() will
-	 *           create an object of this class, and delegate to
-	 *           it the task of calling the unary function; the \a
+	 *           create an object of class
+	 *           FunctorWrapper<Functor>, and delegate to it the
+	 *           task of calling the unary function; the \a
 	 *           FunctorWrapper objects can then monitor any
-	 *           abnormal conditions.  See the description of
-	 *           VectorOps::NullUnaryFunctionWrapper for
-	 *           further information.
+	 *           special conditions.  See the description of
+	 *           VectorOps::UnaryNAPropagator for further
+	 *           information.
 	 */
 	template <class AttributeCopier, typename Functor,
-		  class FunctorWrapper = NullUnaryFunctorWrapper<Functor> >
+		  template <typename, typename, typename> class FunctorWrapper
+                  = UnaryNAPropagator>
 	class UnaryFunction {
 	public:
 	    /** @brief Constructor.
@@ -374,17 +469,17 @@ namespace CXXR {
 	/** @brief Monitor function application for binary functions.
 	 *
 	 * VectorOps::BinaryFunction takes as a template parameter a
-	 * \a FunctorWrapper class.  The apply() method of
-	 * BinaryFunction creates an object of the \a FunctorWrapper
-	 * class, and delegates to it the task of calling the binary
-	 * function; the \a FunctorWrapper object can then monitor any
-	 * special conditions that occur, and take appropriate action
-	 * either immediately (for example by raising an error and/or
+	 * \a FunctorWrapper class template.  The apply() method of
+	 * BinaryFunction creates an object from this template, and
+	 * delegates to it the task of calling the binary function;
+	 * the \a FunctorWrapper object can then monitor any special
+	 * conditions that occur, and take appropriate action either
+	 * immediately (for example by raising an error and/or
 	 * modifying the result value) or when processing of the input
 	 * vector is complete (typically by providing one or more
 	 * warnings).
 	 *
-	 * This class is the default value of the \a FunctorWrapper
+	 * This template is the default value of the \a FunctorWrapper
 	 * template parameter, and its effect is to ensure that if
 	 * either of the arguments to the binary function is NA, then
 	 * the result is set to NA (without actually calling the
@@ -436,11 +531,6 @@ namespace CXXR {
 	     * function to generate a value for an element of the
 	     * output vector from the values of the corresponding
 	     * elements of the operands, using the functor \a f .
-	     * This function will monitor the operation of \a f , and
-	     * take appropriate action if abnormalities occur, for
-	     * example by raising an error, modifying the return
-	     * value, and/or recording the abnormality for later
-	     * reporting by warnings().
 	     *
 	     * @param left First argument to which \a f is to be applied.
 	     *
@@ -668,7 +758,8 @@ namespace CXXR {
 
 	// ***** Implementations of non-inlined templated functions. *****
 
-	template <class AttributeCopier, typename Functor, class FunctorWrapper>
+	template <class AttributeCopier, typename Functor,
+                  template <typename, typename, typename> class FunctorWrapper>
 	template <class Vout, class Vin>
 	Vout* UnaryFunction<AttributeCopier,
 			    Functor,
@@ -678,15 +769,10 @@ namespace CXXR {
 	    typedef typename Vout::element_type Outelt;
 	    size_t vsize = v->size();
 	    GCStackRoot<Vout> ans(CXXR_NEW(Vout(vsize)));
-	    FunctorWrapper fwrapper(m_f);
+	    FunctorWrapper<Inelt, Outelt, Functor> fwrapper(m_f);
 	    for (size_t i = 0; i < vsize; ++i) {
 		const Inelt elt = (*v)[i];
-		Outelt result;
-		if (isNA(elt))
-		    result = ElementTraits<Outelt>::NA();
-		else
-		    result = fwrapper(elementData(elt));
-		(*ans)[i] = result;
+		(*ans)[i] = fwrapper(elt);
 	    }
 	    fwrapper.warnings();
 	    AttributeCopier attrib_copier;
