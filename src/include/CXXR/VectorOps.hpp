@@ -373,46 +373,59 @@ namespace CXXR {
 
 	/** @brief Monitor function application for binary functions.
 	 *
-	 * VectorOps::BinaryFunction takes as a template parameter a \a
-	 * FunctorWrapper class.  The apply() method of BinaryFunction
-	 * creates an object of the \a FunctorWrapper class, and
-	 * delegates to it the task of calling the binary function; the
-	 * \a FunctorWrapper object can then monitor any abnormal
-	 * conditions that occur, and take appropriate action either
-	 * immediately (typically by raising an error) or when
-	 * processing of the input vector is complete (typically by
-	 * providing one or more warnings).
+	 * VectorOps::BinaryFunction takes as a template parameter a
+	 * \a FunctorWrapper class.  The apply() method of
+	 * BinaryFunction creates an object of the \a FunctorWrapper
+	 * class, and delegates to it the task of calling the binary
+	 * function; the \a FunctorWrapper object can then monitor any
+	 * special conditions that occur, and take appropriate action
+	 * either immediately (for example by raising an error and/or
+	 * modifying the result value) or when processing of the input
+	 * vector is complete (typically by providing one or more
+	 * warnings).
 	 *
 	 * This class is the default value of the \a FunctorWrapper
-	 * template parameter, and its behaviour is to apply no
-	 * monitoring at all.  If different behaviour is required,
+	 * template parameter, and its effect is to ensure that if
+	 * either of the arguments to the binary function is NA, then
+	 * the result is set to NA (without actually calling the
+	 * binary function).  If different behaviour is required,
 	 * another class can be created using this class as a model.
 	 *
-	 * @tparam Functor a function object class inheriting from an
-	 *           instantiation of the std::binary_function template
-	 *           (or otherwise defining nested types \a
-	 *           result_type , \a first_argument_type and \a
-	 *           second_argument_type appropriately).
+	 * @tparam first_argument_type Element type of the first
+	 *           operand to the BinaryFunction.
+	 *
+	 * @tparam second_argument_type Element type of the second
+	 *           operand to the BinaryFunction.
+	 *
+	 * @tparam result_type Element type of the result of the
+	 *           BinaryFunction.
+	 *
+	 * @tparam Functor Function or function object type,
+	 *           representing a binary function.
+	 *           <tt>ElementTraits<first_argument_type>::Data::Type</tt>
+	 *           must be convertible to the type of the first
+	 *           argument of this function, and likewise
+	 *           <tt>ElementTraits<second_argument_type>::Data::Type</tt>
+	 *           must be convertible to the type of the second
+	 *           argument of this function.  The result of the
+	 *           function must be assignable to \a result_type .
 	 */
-	template <class Functor>
-	class NullBinaryFunctorWrapper
-	    : public std::binary_function<typename Functor::first_argument_type,
-					  typename Functor::second_argument_type,
-					  typename Functor::result_type> {
+	template <typename first_argument_type,
+		  typename second_argument_type,
+		  typename result_type,
+		  typename Functor>
+	class BinaryNAPropagator
+	    : public std::binary_function<first_argument_type,
+					  second_argument_type,
+					  result_type> {
 	public:
-	    // See para. 3 of ISO14882:2003 Sec. 14.6.2 for why these
-	    // typedefs aren't inherited from std::unary_function:
-	    typedef typename Functor::first_argument_type first_argument_type;
-	    typedef typename Functor::second_argument_type second_argument_type;
-	    typedef typename Functor::result_type result_type;
-
 	    /** @brief Constructor.
 	     *
 	     * @param f Pointer to an object of type \a Functor
 	     *          defining the binary function whose operation
 	     *          this \a FunctorWrapper is to monitor.
 	     */
-	    NullBinaryFunctorWrapper(const Functor& f)
+	    BinaryNAPropagator(const Functor& f)
 		: m_func(f)
 	    {}
 		
@@ -429,15 +442,21 @@ namespace CXXR {
 	     * value, and/or recording the abnormality for later
 	     * reporting by warnings().
 	     *
-	     * @param in Input value to which \a f is to be applied.
+	     * @param left First argument to which \a f is to be applied.
 	     *
-	     * @result The result of applying \a f to \a in , possibly
-	     * modified if abnormalities occurred.
+	     * @param right Second argument to which \a f is to be applied.
+	     *
+	     * @return If either \a left or \a right is NA, then
+	     * ElementTraits<result_type>::NA(), and in this case \a f is not
+	     * actually called.  Otherwise, the result of applying \a
+	     * f to the element data of \a left and \a right .
 	     */
 	    result_type operator()(const first_argument_type& left,
 				   const second_argument_type& right)
 	    {
-		return (m_func)(left, right);
+		return (isNA(left) || isNA(right) ?
+			ElementTraits<result_type>::NA() 
+			: (m_func)(elementData(left), elementData(right)));
 	    }
 
 	    /** @brief Raise warnings after processing a vector.
@@ -462,6 +481,75 @@ namespace CXXR {
 	    Functor m_func;
 	};
 
+	/** @brief Monitor function application for binary functions.
+	 *
+	 * This class is a possible value of the \a FunctorWrapper
+	 * template parameter of VectorOps::BinaryFunction, and its
+	 * behaviour is to apply no special monitoring at all.
+	 *
+	 * @tparam first_argument_type Element type of the first
+	 *           operand to the BinaryFunction.
+	 *
+	 * @tparam second_argument_type Element type of the second
+	 *           operand to the BinaryFunction.
+	 *
+	 * @tparam result_type Element type of the result of the
+	 *           BinaryFunction.
+	 *
+	 * @tparam Functor Function or function object type,
+	 *           representing a binary function.
+	 *           <tt>ElementTraits<first_argument_type>::Data::Type</tt>
+	 *           must be convertible to the type of the first
+	 *           argument of this function, and likewise
+	 *           <tt>ElementTraits<second_argument_type>::Data::Type</tt>
+	 *           must be convertible to the type of the second
+	 *           argument of this function.  The result of the
+	 *           function must be assignable to \a result_type .
+	 */
+	template <typename first_argument_type,
+		  typename second_argument_type,
+		  typename result_type,
+		  typename Functor>
+	class NullBinaryFunctorWrapper
+	    : public std::binary_function<typename Functor::first_argument_type,
+					  typename Functor::second_argument_type,
+					  typename Functor::result_type> {
+	public:
+	    /** @brief Constructor.
+	     *
+	     * @param f Pointer to an object of type \a Functor
+	     *          defining the binary function whose operation
+	     *          this \a FunctorWrapper is to monitor.
+	     */
+	    NullBinaryFunctorWrapper(const Functor& f)
+		: m_func(f)
+	    {}
+		
+	    /** @brief Monitored invocation of \a f .
+	     *
+	     * @param left First argument to which \a f is to be applied.
+	     *
+	     * @param right Second argument to which \a f is to be applied.
+	     *
+	     * @return The result of applying \a f to the element data
+	     * of \a left and \a right .
+	     */
+	    result_type operator()(const first_argument_type& left,
+				   const second_argument_type& right)
+	    {
+		return (m_func)(elementData(left), elementData(right));
+	    }
+
+	    /** @brief Raise warnings after processing a vector.
+	     *
+	     * The behaviour implemented here is to do nothing.
+	     */
+	    void warnings()
+	    {}
+	private:
+	    Functor m_func;
+	};
+
 	/** @brief Class used to apply a binary function to vectors.
 	 *
 	 * An object of this class is used to create a vector from two
@@ -477,9 +565,6 @@ namespace CXXR {
 	 * recycled as necessary; in this case a warning is raised if
 	 * shorter operand has non-zero length but its length is not
 	 * an exact submultiple of the length of the longer operand.
-	 * If either of the operand elements is NA then the result
-	 * element will automatically be set to NA without invoking
-	 * the binary function.
 	 *
 	 * @tparam AttributeCopier The apply() method will create an
 	 *           object of this class and use it to determine
@@ -495,15 +580,17 @@ namespace CXXR {
 	 *           second_argument_type appropriately).
 	 *
 	 * @tparam FunctorWrapper Each invocation of apply() will
-	 *           create an object of this class, and delegate to
-	 *           it the task of calling the binary function; the \a
+	 *           create an object of class
+	 *           FunctorWrapper<Functor>, and delegate to it the
+	 *           task of calling the binary function; the \a
 	 *           FunctorWrapper objects can then monitor any
-	 *           abnormal conditions.  See the description of
-	 *           VectorOps::NullBinaryFunctionWrapper for
-	 *           further information.
+	 *           special conditions.  See the description of
+	 *           VectorOps::BinaryNAPropagator for further
+	 *           information.
 	 */
 	template <class AttributeCopier, typename Functor,
-		  class FunctorWrapper = NullBinaryFunctorWrapper<Functor> >
+		  template <typename, typename, typename, typename> class FunctorWrapper
+	          = BinaryNAPropagator>
 	class BinaryFunction {
 	public:
 	    /** @brief Constructor.
@@ -607,7 +694,8 @@ namespace CXXR {
 	    return ans;
 	}
 
-	template <class AttributeCopier, typename Functor, class FunctorWrapper>
+	template <class AttributeCopier, typename Functor,
+		  template <typename, typename, typename, typename> class FunctorWrapper>
 	template <class Vout, class Vl, class Vr>
 	Vout* BinaryFunction<AttributeCopier,
 			     Functor,
@@ -632,7 +720,8 @@ namespace CXXR {
 	    return ans;
 	}
 
-	template <class AttributeCopier, typename Functor, class FunctorWrapper>
+	template <class AttributeCopier, typename Functor,
+		  template <typename, typename, typename, typename> class FunctorWrapper>
 	template <int flag, class Vout, class Vl, class Vr>
 	void BinaryFunction<AttributeCopier,
 			    Functor,
@@ -650,19 +739,14 @@ namespace CXXR {
 		Rf_warning(_("longer object length is not"
 			     " a multiple of shorter object length"));
 	    size_t outsize = vout->size();
-	    FunctorWrapper fwrapper(m_f);
+	    FunctorWrapper<Lelt, Relt, Outelt, Functor> fwrapper(m_f);
 	    size_t il = 0;
 	    size_t ir = 0;
 	    size_t iout = 0;
 	    while (iout < outsize) {
 		const Lelt lelt = (*vl)[il++];
 		const Relt relt = (*vr)[ir++];
-		Outelt result;
-		if (isNA(lelt) || isNA(relt))
-		    result = ElementTraits<Outelt>::NA();
-		else
-		    result = fwrapper(elementData(lelt), elementData(relt));
-		(*vout)[iout++] = result;
+		(*vout)[iout++] = fwrapper(lelt, relt);
 		if (flag < 0 && il == lsize)
 		    il = 0;
 		if (flag > 0 && ir == rsize)
