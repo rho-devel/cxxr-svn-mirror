@@ -601,9 +601,9 @@ namespace CXXR {
 		  typename result_type,
 		  typename Functor>
 	class NullBinaryFunctorWrapper
-	    : public std::binary_function<typename Functor::first_argument_type,
-					  typename Functor::second_argument_type,
-					  typename Functor::result_type> {
+	    : public std::binary_function<first_argument_type,
+					  second_argument_type,
+					  result_type> {
 	public:
 	    /** @brief Constructor.
 	     *
@@ -791,7 +791,9 @@ namespace CXXR {
 	    size_t lsize = vl->size();
 	    size_t rsize = vr->size();
 	    GCStackRoot<Vout> ans;
-	    if (lsize == rsize) {
+	    if (lsize == 0 || rsize == 0) {
+		ans = CXXR_NEW(Vout(0));
+	    } else if (lsize == rsize) {
 		ans = CXXR_NEW(Vout(lsize));
 		mapElements<0>(ans.get(), vl, vr);
 	    } else if (lsize > rsize) {

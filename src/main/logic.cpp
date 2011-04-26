@@ -41,6 +41,7 @@
 #include "Defn.h"
 
 #include "CXXR/GCStackRoot.hpp"
+#include "CXXR/RawVector.h"
 #include "CXXR/VectorOps.hpp"
 
 using namespace CXXR;
@@ -48,9 +49,89 @@ using namespace VectorOps;
 
 static SEXP lunary(SEXP, SEXP, SEXP);
 static SEXP lbinary(SEXP, SEXP, SEXP);
-static SEXP binaryLogic(int code, SEXP s1, SEXP s2);
-static SEXP binaryLogic2(int code, SEXP s1, SEXP s2);
 
+namespace {
+    struct AndOp {
+	int operator()(int l, int r) const
+	{
+	    if (l == 0 || r == 0)
+		return 0;
+	    if (isNA(l) || isNA(r))
+		return ElementTraits<int>::NA();
+	    return 1;
+	}
+    };
+
+    struct OrOp {
+	int operator()(int l, int r) const
+	{
+	    if ((!isNA(l) && l != 0)
+		|| (!isNA(r) && r != 0))
+		return 1;
+	    if (isNA(l) || isNA(r))
+		return ElementTraits<int>::NA();
+	    return 0;
+	}
+    };
+
+    LogicalVector* binaryLogic(int opcode, const LogicalVector* l,
+			       const LogicalVector* r)
+    {
+	switch (opcode) {
+	case 1:
+	    {
+		BinaryFunction<GeneralBinaryAttributeCopier, AndOp,
+		               NullBinaryFunctorWrapper> bf;
+		return bf.apply<LogicalVector>(l, r);
+	    }
+	case 2:
+	    {
+		BinaryFunction<GeneralBinaryAttributeCopier, OrOp,
+		               NullBinaryFunctorWrapper> bf;
+		return bf.apply<LogicalVector>(l, r);
+	    }
+	case 3:
+	    Rf_error(_("Unary operator `!' called with two arguments"));
+	}
+	return 0;  // -Wall
+    }
+
+    struct BitwiseAndOp {
+	int operator()(int l, int r) const
+	{
+	    return l & r;
+	}
+    };
+
+    struct BitwiseOrOp {
+	int operator()(int l, int r) const
+	{
+	    return l | r;
+	    return 0;
+	}
+    };
+
+    RawVector* bitwiseLogic(int opcode, const RawVector* l, const RawVector* r)
+    {
+	switch (opcode) {
+	case 1:
+	    {
+		BinaryFunction<GeneralBinaryAttributeCopier, BitwiseAndOp,
+		               NullBinaryFunctorWrapper> bf;
+		return bf.apply<RawVector>(l, r);
+	    }
+	case 2:
+	    {
+		BinaryFunction<GeneralBinaryAttributeCopier, BitwiseOrOp,
+		               NullBinaryFunctorWrapper> bf;
+		return bf.apply<RawVector>(l, r);
+	    }
+	case 3:
+	    Rf_error(_("Unary operator `!' called with two arguments"));
+	}
+	return 0;  // -Wall
+    }
+}
 
 /* & | ! */
 SEXP attribute_hidden do_logic(SEXP call, SEXP op, SEXP args, SEXP env)
@@ -74,39 +155,26 @@ SEXP attribute_hidden do_logic(SEXP call, SEXP op, SEXP args, SEXP env)
 static SEXP lbinary(SEXP call, SEXP op, SEXP args)
 {
 /* logical binary : "&" or "|" */
-    SEXP xarg = CAR(args);
-    SEXP yarg = CADR(args);
-    if (isRaw(xarg) && isRaw(yarg)) {
+    SEXP x = CAR(args);
+    SEXP y = CADR(args);
+    if (isRaw(x) && isRaw(y)) {
     }
-    else if (!isNumber(xarg) || !isNumber(yarg))
+    else if (!isNumber(x) || !isNumber(y))
 	errorcall(call,
-		  _("operations are possible only for numeric, logical or complex types"));
-    GCStackRoot<VectorBase> x(static_cast<VectorBase*>(xarg));
-    GCStackRoot<VectorBase> y(static_cast<VectorBase*>(yarg));
-    GCStackRoot<VectorBase> ans;
-    checkOperandsConformable(x, y);
-
-    int nx = length(x);
-    int ny = length(y);
-    bool mismatch = false;
-    if(nx > 0 && ny > 0) {
-	if(nx > ny) mismatch = nx % ny;
-	else mismatch = ny % nx;
-    }
-    if (mismatch)
-	warningcall(call,
-		    _("longer object length is not a multiple of shorter object length"));
+		  _("operations are possible only for"
+		    " numeric, logical or complex types"));
 
     if (isRaw(x) && isRaw(y)) {
-	ans = static_cast<VectorBase*>(binaryLogic2(PRIMVAL(op), x, y));
+	RawVector* vl = static_cast<RawVector*>(x);
+	RawVector* vr = static_cast<RawVector*>(y);
+	return bitwiseLogic(PRIMVAL(op), vl, vr);
     } else {
-	x = static_cast<VectorBase*>(SETCAR(args, coerceVector(x, LGLSXP)));
-	y = static_cast<VectorBase*>(SETCADR(args, coerceVector(y, LGLSXP)));
-	ans = static_cast<VectorBase*>(binaryLogic(PRIMVAL(op), x, y));
+	GCStackRoot<LogicalVector>
+	    vl(static_cast<LogicalVector*>(coerceVector(x, LGLSXP)));
+	GCStackRoot<LogicalVector>
+	    vr(static_cast<LogicalVector*>(coerceVector(y, LGLSXP)));
+	return binaryLogic(PRIMVAL(op), vl, vr);
     }
-
-    GeneralBinaryAttributeCopier()(ans, x, y);
-    return ans;
 }
 
 // Note that this specifically implements logical (or for RAWSXP,
@@ -218,86 +286,6 @@ SEXP attribute_hidden do_logic2(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-static SEXP binaryLogic(int code, SEXP s1, SEXP s2)
-{
-    int i, n, n1, n2;
-    int x1, x2;
-    SEXP ans;
-
-    n1 = LENGTH(s1);
-    n2 = LENGTH(s2);
-    n = (n1 > n2) ? n1 : n2;
-    if (n1 == 0 || n2 == 0) {
-	ans = allocVector(LGLSXP, 0);
-	return ans;
-    }
-    ans = allocVector(LGLSXP, n);
-
-    switch (code) {
-    case 1:		/* & : AND */
-	for (i = 0; i < n; i++) {
-	    x1 = LOGICAL(s1)[i % n1];
-	    x2 = LOGICAL(s2)[i % n2];
-	    if (x1 == 0 || x2 == 0)
-		LOGICAL(ans)[i] = 0;
-	    else if (x1 == NA_LOGICAL || x2 == NA_LOGICAL)
-		LOGICAL(ans)[i] = NA_LOGICAL;
-	    else
-		LOGICAL(ans)[i] = 1;
-	}
-	break;
-    case 2:		/* | : OR */
-	for (i = 0; i < n; i++) {
-	    x1 = LOGICAL(s1)[i % n1];
-	    x2 = LOGICAL(s2)[i % n2];
-	    if ((x1 != NA_LOGICAL && x1) || (x2 != NA_LOGICAL && x2))
-		LOGICAL(ans)[i] = 1;
-	    else if (x1 == 0 && x2 == 0)
-		LOGICAL(ans)[i] = 0;
-	    else
-		LOGICAL(ans)[i] = NA_LOGICAL;
-	}
-	break;
-    case 3:
-	error(_("Unary operator `!' called with two arguments"));
-	break;
-    }
-    return ans;
-}
-
-static SEXP binaryLogic2(int code, SEXP s1, SEXP s2)
-{
-    int i, n, n1, n2;
-    int x1, x2;
-    SEXP ans;
-
-    n1 = LENGTH(s1);
-    n2 = LENGTH(s2);
-    n = (n1 > n2) ? n1 : n2;
-    if (n1 == 0 || n2 == 0) {
-	ans = allocVector(RAWSXP, 0);
-	return ans;
-    }
-    ans = allocVector(RAWSXP, n);
-
-    switch (code) {
-    case 1:		/* & : AND */
-	for (i = 0; i < n; i++) {
-	    x1 = RAW(s1)[i % n1];
-	    x2 = RAW(s2)[i % n2];
-	    RAW(ans)[i] = x1 & x2;
-	}
-	break;
-    case 2:		/* | : OR */
-	for (i = 0; i < n; i++) {
-	    x1 = RAW(s1)[i % n1];
-	    x2 = RAW(s2)[i % n2];
-	    RAW(ans)[i] = x1 | x2;
-	}
-	break;
-    }
-    return ans;
-}
 
 #define _OP_ALL 1
 #define _OP_ANY 2
