@@ -76,6 +76,29 @@ namespace CXXR {
 		to->copyAttributes(from, true);
 	    }
 	};
+	/** @brief Control attribute copying for unary functions.
+	 *
+	 * VectorOps::UnaryFunction takes as a template parameter an
+	 * \a AttributeCopier class which determines which attributes
+	 * are copied from the input vector to the output vector.
+	 *
+	 * This class is a possible value of the \a AttributeCopier
+	 * parameter, and its behaviour is to copy the 'names', 'dim'
+	 * and 'dimnames' attributes if present.
+	 */
+	struct CopyLayoutAttributes
+	    : std::binary_function<VectorBase*, VectorBase*, void> {
+	    /** @brief Copy 'names', 'dim' and 'dimnames' attributes.
+	     *
+	     * @param to Non-null pointer to the vector to which
+	     *          attributes are to be copied.
+	     *
+	     * @param from Non-null pointer to the vector from which
+	     *          attributes are to be copied.
+	     */
+	    void operator()(VectorBase* to, const VectorBase* from);
+	};
+
 
 	/** @brief Control attribute copying for unary functions.
 	 *

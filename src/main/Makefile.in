@@ -48,7 +48,7 @@ SOURCES_CXX = \
         RealVector.cpp Renviron.cpp ReturnBailout.cpp \
         S3Launcher.cpp S4Object.cpp SEXP_downcast.cpp StdFrame.cpp \
         String.cpp StringVector.cpp Subscripting.cpp Symbol.cpp \
-	UncachedString.cpp \
+	UnaryFunction.cpp UncachedString.cpp \
         VectorBase.cpp VectorFrame.cpp \
         WeakRef.cpp \
 	apply.cpp agrep.cpp arithmetic.cpp array.cpp attrib.cpp \

@@ -48,10 +48,10 @@
 using namespace CXXR;
 using namespace VectorOps;
 
-static SEXP lunary(SEXP, SEXP, SEXP);
-static SEXP lbinary(SEXP, SEXP, SEXP);
-
+// Functionality to support do_logic() :
 namespace {
+    // Special handling is needed for '&' to ensure
+    // that FALSE & NA -> FALSE
     struct AndOp {
 	int operator()(int l, int r) const
 	{
@@ -63,6 +63,8 @@ namespace {
 	}
     };
 
+    // Special handling is needed for '|' to ensure
+    // that TRUE | NA -> TRUE
     struct OrOp {
 	int operator()(int l, int r) const
 	{
@@ -91,13 +93,11 @@ namespace {
 		               NullBinaryFunctorWrapper> bf;
 		return bf.apply<LogicalVector>(l, r);
 	    }
-	case 3:
-	    Rf_error(_("Unary operator `!' called with two arguments"));
 	}
 	return 0;  // -Wall
     }
 
-    RawVector* bitwiseLogic(int opcode, const RawVector* l, const RawVector* r)
+    RawVector* bitwiseBinary(int opcode, const RawVector* l, const RawVector* r)
     {
 	using namespace boost::lambda;
 	switch (opcode) {
@@ -115,10 +115,52 @@ namespace {
 		                       NullBinaryFunctorWrapper>(_1 | _2)
 		    .apply<RawVector>(l, r);
 	    }
-	case 3:
-	    Rf_error(_("Unary operator `!' called with two arguments"));
 	}
 	return 0;  // -Wall
+    }
+
+    RObject* lbinary(RObject* op, RObject* args)
+    {
+	/* logical binary : "&" or "|" */
+	SEXP x = CAR(args);
+	SEXP y = CADR(args);
+	if (x && x->sexptype() == RAWSXP
+	    && y && y->sexptype() == RAWSXP) {
+	    // Bitwise operations:
+	    RawVector* vl = static_cast<RawVector*>(x);
+	    RawVector* vr = static_cast<RawVector*>(y);
+	    return bitwiseBinary(PRIMVAL(op), vl, vr);
+	}
+	if (!isNumber(x) || !isNumber(y))
+	    Rf_error(_("operations are possible only for"
+		       " numeric, logical or complex types"));
+	GCStackRoot<LogicalVector>
+	    vl(static_cast<LogicalVector*>(coerceVector(x, LGLSXP)));
+	GCStackRoot<LogicalVector>
+	    vr(static_cast<LogicalVector*>(coerceVector(y, LGLSXP)));
+	return binaryLogic(PRIMVAL(op), vl, vr);
+    }
+
+    RObject* lnot(RObject* arg)
+    {
+	using namespace boost::lambda;
+	if (arg && arg->sexptype() == RAWSXP) {
+	    // Bit inversion:
+	    RawVector* rv = static_cast<RawVector*>(arg);
+	    return
+		makeUnaryFunction<CopyLayoutAttributes>(_1^0xff)
+		.apply<RawVector>(rv);
+	} else if (!isLogical(arg) && !isNumber(arg)) {
+	    if (Rf_length(arg) == 0U)  // For back-compatibility
+		return CXXR_NEW(LogicalVector(0));
+	    Rf_error(_("invalid argument type"));
+	}
+	// Logical negation:
+	GCStackRoot<LogicalVector>
+	    lv(static_cast<LogicalVector*>(coerceVector(arg, LGLSXP)));
+	return
+	    makeUnaryFunction<CopyLayoutAttributes>(!_1)
+	    .apply<LogicalVector>(lv.get());
     }
 }
 
@@ -127,97 +169,19 @@ SEXP attribute_hidden do_logic(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans;
 
+    checkArity(op, args);
     if (DispatchGroup("Ops",call, op, args, env, &ans))
 	return ans;
-    switch (length(args)) {
+    switch (PRIMVAL(op)) {
     case 1:
-	return lunary(call, op, CAR(args));
     case 2:
-	return lbinary(call, op, args);
+	return lbinary(op, args);
+    case 3:
+	return lnot(CAR(args));
     default:
-	error(_("binary operations require two arguments"));
-	return R_NilValue;	/* for -Wall */
+	error(_("internal error in do_logic"));
     }
-}
-
-#define isRaw(x) (TYPEOF(x) == RAWSXP)
-static SEXP lbinary(SEXP call, SEXP op, SEXP args)
-{
-/* logical binary : "&" or "|" */
-    SEXP x = CAR(args);
-    SEXP y = CADR(args);
-    if (isRaw(x) && isRaw(y)) {
-    }
-    else if (!isNumber(x) || !isNumber(y))
-	errorcall(call,
-		  _("operations are possible only for"
-		    " numeric, logical or complex types"));
-
-    if (isRaw(x) && isRaw(y)) {
-	RawVector* vl = static_cast<RawVector*>(x);
-	RawVector* vr = static_cast<RawVector*>(y);
-	return bitwiseLogic(PRIMVAL(op), vl, vr);
-    } else {
-	GCStackRoot<LogicalVector>
-	    vl(static_cast<LogicalVector*>(coerceVector(x, LGLSXP)));
-	GCStackRoot<LogicalVector>
-	    vr(static_cast<LogicalVector*>(coerceVector(y, LGLSXP)));
-	return binaryLogic(PRIMVAL(op), vl, vr);
-    }
-}
-
-// Note that this specifically implements logical (or for RAWSXP,
-// bitwise) negation, not a general unary function: the op arg is
-// ignored.
-
-static SEXP lunary(SEXP call, SEXP op, SEXP arg)
-{
-    SEXP x, dim, dimnames, names;
-    int i, len;
-
-    len = LENGTH(arg);
-    if (!isLogical(arg) && !isNumber(arg) && !isRaw(arg)) {
-	/* For back-compatibility */
-	if (!len) return allocVector(LGLSXP, 0);
-	errorcall(call, _("invalid argument type"));
-    }
-    PROTECT(names = getAttrib(arg, R_NamesSymbol));
-    PROTECT(dim = getAttrib(arg, R_DimSymbol));
-    PROTECT(dimnames = getAttrib(arg, R_DimNamesSymbol));
-    PROTECT(x = allocVector(isRaw(arg) ? RAWSXP : LGLSXP, len));
-    switch(TYPEOF(arg)) {
-    case LGLSXP:
-	for (i = 0; i < len; i++)
-	    LOGICAL(x)[i] = (LOGICAL(arg)[i] == NA_LOGICAL) ?
-		NA_LOGICAL : LOGICAL(arg)[i] == 0;
-	break;
-    case INTSXP:
-	for (i = 0; i < len; i++)
-	    LOGICAL(x)[i] = (INTEGER(arg)[i] == NA_INTEGER) ?
-		NA_LOGICAL : INTEGER(arg)[i] == 0;
-	break;
-    case REALSXP:
-	for (i = 0; i < len; i++)
-	    LOGICAL(x)[i] = ISNAN(REAL(arg)[i]) ?
-		NA_LOGICAL : REAL(arg)[i] == 0;
-	break;
-    case CPLXSXP:
-	for (i = 0; i < len; i++)
-	    LOGICAL(x)[i] = (ISNAN(COMPLEX(arg)[i].r) || ISNAN(COMPLEX(arg)[i].i))
-		? NA_LOGICAL : (COMPLEX(arg)[i].r == 0. && COMPLEX(arg)[i].i == 0.);
-	break;
-    case RAWSXP:
-	for (i = 0; i < len; i++)
-	    RAW(x)[i] = 0xFF ^ RAW(arg)[i];
-	break;
-    default:
-	UNIMPLEMENTED_TYPE("lunary", arg);
-    }
-    if(names != R_NilValue) setAttrib(x, R_NamesSymbol, names);
-    if(dim != R_NilValue) setAttrib(x, R_DimSymbol, dim);
-    if(dimnames != R_NilValue) setAttrib(x, R_DimNamesSymbol, dimnames);
-    UNPROTECT(4);
-    return x;
+    return 0;  // -Wall
 }
 
 /* && || */
