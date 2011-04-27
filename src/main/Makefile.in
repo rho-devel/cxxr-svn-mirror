@@ -31,7 +31,7 @@ SOURCES_C = complex.c gram.c gramLatex.c gramRd.c inlined.c unzip.c
 
 SOURCES_CXX = \
 	ArgList.cpp ArgMatcher.cpp \
-	Browser.cpp BuiltInFunction.cpp ByteCode.cpp \
+	BinaryFunction.cpp Browser.cpp BuiltInFunction.cpp ByteCode.cpp \
 	CConverters.cpp CachedString.cpp CellPool.cpp Closure.cpp \
 	ClosureContext.cpp CommandLineArgs.cpp ComplexVector.cpp ConsCell.cpp \
 	DotInternal.cpp DottedArgs.cpp \
@@ -49,7 +49,7 @@ SOURCES_CXX = \
         S3Launcher.cpp S4Object.cpp SEXP_downcast.cpp StdFrame.cpp \
         String.cpp StringVector.cpp Subscripting.cpp Symbol.cpp \
 	UncachedString.cpp \
-        VectorBase.cpp VectorFrame.cpp VectorOps.cpp \
+        VectorBase.cpp VectorFrame.cpp \
         WeakRef.cpp \
 	apply.cpp agrep.cpp arithmetic.cpp array.cpp attrib.cpp \
 	base.cpp bind.cpp builtin.cpp \

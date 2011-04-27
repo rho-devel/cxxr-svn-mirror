@@ -39,10 +39,11 @@
 #endif
 
 #include "Defn.h"
-
+#include "boost/lambda/lambda.hpp"
+#include "CXXR/BinaryFunction.hpp"
 #include "CXXR/GCStackRoot.hpp"
 #include "CXXR/RawVector.h"
-#include "CXXR/VectorOps.hpp"
+#include "CXXR/UnaryFunction.hpp"
 
 using namespace CXXR;
 using namespace VectorOps;
@@ -96,35 +97,23 @@ namespace {
 	return 0;  // -Wall
     }
 
-    struct BitwiseAndOp {
-	int operator()(int l, int r) const
-	{
-	    return l & r;
-	}
-    };
-
-    struct BitwiseOrOp {
-	int operator()(int l, int r) const
-	{
-	    return l | r;
-	    return 0;
-	}
-    };
-
     RawVector* bitwiseLogic(int opcode, const RawVector* l, const RawVector* r)
     {
+	using namespace boost::lambda;
 	switch (opcode) {
 	case 1:
 	    {
-		BinaryFunction<GeneralBinaryAttributeCopier, BitwiseAndOp,
-		               NullBinaryFunctorWrapper> bf;
-		return bf.apply<RawVector>(l, r);
+		return
+		    makeBinaryFunction<GeneralBinaryAttributeCopier,
+		                       NullBinaryFunctorWrapper>(_1 & _2)
+		    .apply<RawVector>(l, r);
 	    }
 	case 2:
 	    {
-		BinaryFunction<GeneralBinaryAttributeCopier, BitwiseOrOp,
-		               NullBinaryFunctorWrapper> bf;
-		return bf.apply<RawVector>(l, r);
+		return
+		    makeBinaryFunction<GeneralBinaryAttributeCopier,
+		                       NullBinaryFunctorWrapper>(_1 | _2)
+		    .apply<RawVector>(l, r);
 	    }
 	case 3:
 	    Rf_error(_("Unary operator `!' called with two arguments"));

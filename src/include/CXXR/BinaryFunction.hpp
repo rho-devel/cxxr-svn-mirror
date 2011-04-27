@@ -32,14 +32,13 @@
  *  http://www.r-project.org/Licenses/
  */
 
-/** @file VectorOps.hpp
+/** @file BinaryFunction.hpp
  *
- * @brief Functionality to support common operations on R vectors,
- * matrices and arrays.
+ * @brief Class VectorOps::BinaryFunction and related functions.
  */
 
-#ifndef VECTOROPS_HPP
-#define VECTOROPS_HPP 1
+#ifndef BINARYFUNCTION_HPP
+#define BINARYFUNCTION_HPP 1
 
 #include "CXXR/VectorBase.h"
 #include "CXXR/errors.h"
@@ -47,336 +46,11 @@
 namespace CXXR {
    /** @brief Services to support common operations on R vectors and arrays.
      *
-     * This class, all of whose members are static, encapsulates
-     * services supporting various commonly occurring operations on R
-     * vector objects, including R matrices and arrays.
+     * This namespace encapsulates services supporting various
+     * commonly occurring operations on R vector objects, including R
+     * matrices and arrays.
      */
     namespace VectorOps {
-
-	// ***** UNARY FUNCTIONS *****
-
-	/** @brief Control attribute copying for unary functions.
-	 *
-	 * VectorOps::UnaryFunction takes as a template parameter an
-	 * \a AttributeCopier class which determines which attributes
-	 * are copied from the input vector to the output vector.
-	 *
-	 * This class is a possible value of the \a AttributeCopier
-	 * parameter, and its behaviour is to copy all attributes
-	 * across, along with the S4 object status.
-	 */
-	struct CopyAllAttributes
-	    : std::binary_function<VectorBase*, VectorBase*, void> {
-	    /** @brief Copy all attributes and S4 object status.
-	     *
-	     * @param to Non-null pointer to the vector to which
-	     *          attributes are to be copied.
-	     *
-	     * @param from Non-null pointer to the vector from which
-	     *          attributes are to be copied.
-	     */
-	    void operator()(VectorBase* to, const VectorBase* from)
-	    {
-		to->copyAttributes(from, true);
-	    }
-	};
-
-	/** @brief Control attribute copying for unary functions.
-	 *
-	 * VectorOps::UnaryFunction takes as a template parameter an
-	 * \a AttributeCopier class which determines which attributes
-	 * are copied from the input vector to the output vector.
-	 *
-	 * This class can be used as the value of the \a AttributeCopier
-	 * parameter, and its behaviour is to copy no attributes at all.
-	 */
-	struct CopyNoAttributes
-	    : std::binary_function<VectorBase*, VectorBase*, void> {
-	    /** @brief Copy no attributes.
-	     */
-	    void operator()(VectorBase*, const VectorBase*)
-	    {}
-	};
-
-	/** @brief Monitor function application for unary functions.
-	 *
-	 * VectorOps::UnaryFunction takes as a template parameter a \a
-	 * FunctorWrapper class template.  The apply() method of
-	 * UnaryFunction creates an object from this template, and
-	 * delegates to it the task of calling the unary function; the
-	 * \a FunctorWrapper object can then monitor any special
-	 * conditions that occur, and take appropriate action either
-	 * immediately (for example by raising an error and/or
-	 * modifying the result value) or when processing of the input
-	 * vector is complete (typically by providing one or more
-	 * warnings).
-	 *
-	 * This template is the default value of the \a FunctorWrapper
-	 * template parameter, and its effect is to ensure that if the
-	 * argument to the unary function is NA, then the result is
-	 * set to NA (without actually calling the unary function).
-	 * If different behaviour is required, another class can be
-	 * created using this class as a model.
-	 *
-	 * @tparam argument_type Element type of the input vector of
-	 *           the UnaryFunction.
-	 *
-	 * @tparam result_type Element type of the result of the
-	 *           UnaryFunction.
-	 *
-	 * @tparam Functor Function or function object type,
-	 *           representing a unary function.
-	 *           <tt>ElementTraits<argument_type>::Data::Type</tt>
-	 *           must be convertible to the type of the argument
-	 *           of this function.  The result of the function
-	 *           must be assignable to \a result_type .
-	 */
-	template <typename argument_type,
-		  typename result_type,
-		  typename Functor>
-	class UnaryNAPropagator
-	    : public std::unary_function<argument_type, result_type> {
-	public:
-	    /** @brief Constructor.
-	     *
-	     * @param f Pointer to an object of type \a Functor
-	     *          defining the unary function whose operation
-	     *          this \a FunctorWrapper is to monitor.
-	     */
-	    UnaryNAPropagator(const Functor& f)
-		: m_func(f)
-	    {}
-		
-	    /** @brief Monitored invocation of \a f .
-	     *
-	     * The apply() method of an object instantiating the
-	     * VectorOps::UnaryFunction template will call this
-	     * function to generate a value for an element of the
-	     * output vector from the value of the corresponding
-	     * element of the input vector, using the functor \a f .
-	     *
-	     * @param in Element of the input vector to which \a f is
-	     *          to be applied. 
-	     *
-	     * @return If \a in is NA, then
-	     * ElementTraits<result_type>::NA(), and in this case \a f
-	     * is not actually called.  Otherwise, the result of
-	     * applying \a f to the element data of \a in .
-	     */
-	    result_type operator()(const argument_type& in)
-	    {
-		return (isNA(in) ? ElementTraits<result_type>::NA() 
-			: (m_func)(elementData(in)));
-	    }
-
-	    /** @brief Raise warnings after processing a vector.
-	     *
-	     * The apply() method of an object instantiating the
-	     * VectorOps::UnaryFunction template will call this
-	     * function once all the elements of the input vector have
-	     * been processed.  Typically this function will do
-	     * nothing if no abnormalities have occurred during the
-	     * lifetime of this \a FunctorWrapper object , otherwise
-	     * it will raise one or more warnings.  (Note that the
-	     * lifetime of a \a FunctorWrapper object corresponds to
-	     * the processing of an input vector by the apply() method
-	     * of UnaryFunction.)
-	     *
-	     * The default behaviour, implemented here, is to do
-	     * nothing.
-	     */
-	    void warnings()
-	    {}
-	private:
-	    Functor m_func;
-	};
-
-	/** @brief Monitor function application for unary functions.
-	 *
-	 * VectorOps::UnaryFunction takes as a template parameter a \a
-	 * FunctorWrapper class.  The apply() method of UnaryFunction
-	 * creates an object of the \a FunctorWrapper class, and
-	 * delegates to it the task of calling the unary function; the
-	 * \a FunctorWrapper object can then monitor any abnormal
-	 * conditions that occur, and take appropriate action either
-	 * immediately (typically by raising an error) or when
-	 * processing of the input vector is complete (typically by
-	 * providing one or more warnings).
-	 *
-	 * This class is the default value of the \a FunctorWrapper
-	 * template parameter, and its behaviour is to apply no
-	 * monitoring at all.  If different behaviour is required,
-	 * another class can be created using this class as a model.
-	 *
-	 * @tparam Functor a function object class inheriting from an
-	 *           instantiation of the std::unary_function template
-	 *           (or otherwise defining nested types \a
-	 *           result_type and \a argument_type appropriately).
-	 */
-	template <class Functor>
-	class NullUnaryFunctorWrapper
-	    : public std::unary_function<typename Functor::argument_type,
-					 typename Functor::result_type> {
-	public:
-	    // See para. 3 of ISO14882:2003 Sec. 14.6.2 for why these
-	    // typedefs aren't inherited from std::unary_function:
-	    typedef typename Functor::argument_type argument_type;
-	    typedef typename Functor::result_type result_type;
-
-	    /** @brief Constructor.
-	     *
-	     * @param f Pointer to an object of type \a Functor
-	     *          defining the unary function whose operation
-	     *          this \a FunctorWrapper is to monitor.
-	     */
-	    NullUnaryFunctorWrapper(const Functor& f)
-		: m_func(f)
-	    {}
-		
-	    /** @brief Monitored invocation of \a f .
-	     *
-	     * The apply() method of an object instantiating the
-	     * VectorOps::UnaryFunction template will call this
-	     * function to generate a value for the output vector from
-	     * a value from the input vector using the functor \a f .
-	     * This function will monitor the operation of \a f , and
-	     * take appropriate action if abnormalities occur, for
-	     * example by raising an error, modifying the return
-	     * value, and/or recording the abnormality for later
-	     * reporting by warnings().
-	     *
-	     * @param in Input value to which \a f is to be applied.
-	     *
-	     * @result The result of applying \a f to \a in , possibly
-	     * modified if abnormalities occurred.
-	     */
-	    result_type operator()(const argument_type& in)
-	    {
-		return (m_func)(in);
-	    }
-
-	    /** @brief Raise warnings after processing a vector.
-	     *
-	     * The apply() method of an object instantiating the
-	     * VectorOps::UnaryFunction template will call this
-	     * function once all the elements of the input vector have
-	     * been processed.  Typically this function will do
-	     * nothing if no abnormalities have occurred during the
-	     * lifetime of this \a FunctorWrapper object , otherwise
-	     * it will raise one or more warnings.  (Note that the
-	     * lifetime of a \a FunctorWrapper object corresponds to
-	     * the processing of an input vector by the apply() method
-	     * of UnaryFunction.)
-	     *
-	     * The default behaviour, implemented here, is to do
-	     * nothing.
-	     */
-	    void warnings()
-	    {}
-	private:
-	    Functor m_func;
-	};
-
-	/** @brief Class used to transform a vector elementwise using
-	 *         unary function.
-	 *
-	 * An object of this class is used to map one vector into
-	 * new vector of equal size, with each element of the output
-	 * vector being obtained from the corresponding element of the
-	 * input vector by the application of a unary function.  NAs
-	 * in the input vector are carried across into NAs in the
-	 * output vector.
-	 *
-	 * @tparam AttributeCopier The apply() method will create an
-	 *           object of this class and use it to determine
-	 *           which attributes are copied from the input vector
-	 *           to the output vector.  See the description of
-	 *           VectorOps::CopyAllAttributes for an example.
-	 *
-	 * @tparam Functor a function object class inheriting from an
-	 *           instantiation of the std::unary_function template
-	 *           (or otherwise defining nested types \a
-	 *           result_type and \a argument_type appropriately).
-	 *
-	 * @tparam FunctorWrapper Each invocation of apply() will
-	 *           create an object of class
-	 *           FunctorWrapper<Functor>, and delegate to it the
-	 *           task of calling the unary function; the \a
-	 *           FunctorWrapper objects can then monitor any
-	 *           special conditions.  See the description of
-	 *           VectorOps::UnaryNAPropagator for further
-	 *           information.
-	 */
-	template <class AttributeCopier, typename Functor,
-		  template <typename, typename, typename> class FunctorWrapper
-                  = UnaryNAPropagator>
-	class UnaryFunction {
-	public:
-	    /** @brief Constructor.
-	     *
-	     * @param f Pointer to an object of type \a Functor
-	     *          defining the unary function that this
-	     *          UnaryFunction object will use to generate an
-	     *          output vector from an input vector.
-	     */
-	    UnaryFunction(const Functor& f = Functor())
-		: m_f(f)
-	    {}
-
-	    /** @brief Apply a unary function to a vector.
-	     *
-	     * @tparam Vout Class of vector to be produced as a
-	     *           result.  It must be possible to assign values
-	     *           of the return type of \a f to the elements of
-	     *           a vector of type \a Vout .
-	     *
-	     * @tparam Vin Class of vector to be taken as input.  It
-	     *           must be possible implicitly to convert the
-	     *           elements of a \a Vin to the input type of \a
-	     *           f .
-	     *
-	     * @param v Non-null pointer to the input vector.
-	     *
-	     * @result Pointer to the result vector, a newly created
-	     * vector of the same size as \a v , with each element of
-	     * the output vector being obtained from the corresponding
-	     * element of the input vector by the application of \a f
-	     * , except that NAs in the input vector are carried
-	     * across into NAs in the output vector.
-	     */
-	    template <class Vout, class Vin>
-	    Vout* apply(const Vin* v);
-	private:
-	    Functor m_f;
-	};
-
-	/** @brief Create a UnaryFunction object from a functor.
-	 *
-	 * @tparam AttributeCopier The apply() method will create an
-	 *           object of this class and use it to determine
-	 *           which attributes are copied from the input vector
-	 *           to the output vector.  See the description of
-	 *           VectorOps::CopyAllAttributes for an example.
-	 *
-	 * @tparam Functor a function object class inheriting from an
-	 *           instantiation of the std::unary_function template
-	 *           (or otherwise defining nested types \a
-	 *           result_type and \a argument_type appropriately).
-	 *
-	 * @param f Pointer to an object of type \a Functor defining
-	 *          the unary function that this UnaryFunction object
-	 *          will use to generate an output vector from an
-	 *          input vector.
-	 */
-	template <class AttributeCopier, typename Functor>
-	static UnaryFunction<AttributeCopier, Functor>
-	makeUnaryFunction(Functor f)
-	{
-	    return UnaryFunction<AttributeCopier, Functor>(f);
-	}
-
-	// ***** BINARY FUNCTIONS *****
-
 	/** @brief Are binary operands consistent?
 	 *
 	 * This function checks the operands of a binary vector
@@ -643,14 +317,15 @@ namespace CXXR {
 	/** @brief Class used to apply a binary function to vectors.
 	 *
 	 * An object of this class is used to create a vector from two
-	 * others (the operands), which must be conformable as tested
-	 * by checkOperandsConformable().
+	 * others (the operands); the operands must be conformable as
+	 * tested by checkOperandsConformable().
 	 * 
-	 * The result will have the same number of elements as the
-	 * larger of the operands, and each element of the result is
-	 * obtained by applying the binary function to the
-	 * corresponding elements of the two operands (treating them
-	 * for this purpose as vectors).  If the operands are of
+	 * If either operand has size zero then the result will have
+	 * size zero.  Otherwise, the result will have the same number
+	 * of elements as the larger of the operands, and each element
+	 * of the result is obtained by applying the binary function
+	 * to the corresponding elements of the two operands (treating
+	 * them for this purpose as vectors).  If the operands are of
 	 * unequal length, the elements in the shorter operand are
 	 * recycled as necessary; in this case a warning is raised if
 	 * shorter operand has non-zero length but its length is not
@@ -663,11 +338,8 @@ namespace CXXR {
 	 *           VectorOps::GeneralBinaryAttributeCopier for a
 	 *           commonly used example.
 	 *
-	 * @tparam Functor a function object class inheriting from an
-	 *           instantiation of the std::binary_function template
-	 *           (or otherwise defining nested types \a
-	 *           result_type , \a first_argument_type and \a
-	 *           second_argument_type appropriately).
+	 * @tparam Functor Function or function object type,
+	 *           representing a binary function.
 	 *
 	 * @tparam FunctorWrapper Each invocation of apply() will
 	 *           create an object of class
@@ -679,7 +351,8 @@ namespace CXXR {
 	 *           information.
 	 */
 	template <class AttributeCopier, typename Functor,
-		  template <typename, typename, typename, typename> class FunctorWrapper
+		  template <typename, typename,
+                            typename, typename> class FunctorWrapper
 	          = BinaryNAPropagator>
 	class BinaryFunction {
 	public:
@@ -703,12 +376,12 @@ namespace CXXR {
 	     *
 	     * @tparam Vl Class of vector forming the first operand.  It
 	     *           must be possible implicitly to convert the
-	     *           elements of a \a Vl to the type of the first
+	     *           element data type of \a Vl to the type of the first
 	     *           argument of \a f .
 	     *
 	     * @tparam Vr Class of vector forming the second operand.  It
 	     *           must be possible implicitly to convert the
-	     *           elements of a \a Vr to the type of the second
+	     *           element data type of \a Vr to the type of the second
 	     *           argument of \a f .
 	     *
 	     * @param vl Non-null pointer to the first operand.
@@ -732,22 +405,62 @@ namespace CXXR {
 
 	/** @brief Create a BinaryFunction object from a functor.
 	 *
-	 * @tparam AttributeCopier The apply() method will create an
-	 *           object of this class and use it to determine
-	 *           which attributes are copied from the input vector
-	 *           to the output vector.  See the description of
+	 * @tparam AttributeCopier The apply() method of the resulting
+	 *           BinaryFunction object will create an object of
+	 *           this class and use it to determine which
+	 *           attributes are copied from the operands to the
+	 *           output vector.  See the description of
 	 *           VectorOps::GeneralBinaryAttributeCopier for a
 	 *           commonly used example.
 	 *
-	 * @tparam Functor a function object class inheriting from an
-	 *           instantiation of the std::binary_function template
-	 *           (or otherwise defining nested types \a
-	 *           result_type , \a first_argument_type and \a
-	 *           second_argument_type appropriately).
+	 * @tparam FunctorWrapper The apply() method of the resulting
+	 *           BinaryFunction object will create an object of
+	 *           class FunctorWrapper<Functor>, and delegate to it
+	 *           the task of calling \a f ; the \a FunctorWrapper
+	 *           objects can then monitor any special conditions.
+	 *           See the description of
+	 *           VectorOps::BinaryNAPropagator for further
+	 *           information.
+	 *
+	 * @tparam Functor Function or function object type,
+	 *           representing a binary function.
 	 *
 	 * @param f Pointer to an object of type \a Functor defining
-	 *          the binary function that the resulting BinaryFunction object
-	 *          will use to generate an output vector from the operands.
+	 *          the binary function that the resulting
+	 *          BinaryFunction object will use to generate an
+	 *          output vector from the operands.
+	 */
+	template <class AttributeCopier,
+		  template <typename, typename,
+                            typename, typename> class FunctorWrapper,
+		  typename Functor>
+	static BinaryFunction<AttributeCopier, Functor, FunctorWrapper>
+	makeBinaryFunction(Functor f)
+	{
+	    return BinaryFunction<AttributeCopier, Functor, FunctorWrapper>(f);
+	}
+
+	/** @brief Create a BinaryFunction object from a functor.
+	 *
+	 * This differs from the previous function only in that the
+	 * FunctorWrapper of the BinaryFunction is automatically set
+	 * to BinaryNAPropagator.
+	 *
+	 * @tparam AttributeCopier The apply() method of the resulting
+	 *           BinaryFunction object will create an object of
+	 *           this class and use it to determine which
+	 *           attributes are copied from the operands to the
+	 *           output vector.  See the description of
+	 *           VectorOps::GeneralBinaryAttributeCopier for a
+	 *           commonly used example.
+	 *
+	 * @tparam Functor Function or function object type,
+	 *           representing a binary function.
+	 *
+	 * @param f Pointer to an object of type \a Functor defining
+	 *          the binary function that the resulting
+	 *          BinaryFunction object will use to generate an
+	 *          output vector from the operands.
 	 */
 	template <class AttributeCopier, typename Functor>
 	static BinaryFunction<AttributeCopier, Functor>
@@ -759,29 +472,8 @@ namespace CXXR {
 	// ***** Implementations of non-inlined templated functions. *****
 
 	template <class AttributeCopier, typename Functor,
-                  template <typename, typename, typename> class FunctorWrapper>
-	template <class Vout, class Vin>
-	Vout* UnaryFunction<AttributeCopier,
-			    Functor,
-			    FunctorWrapper>::apply(const Vin* v)
-	{
-	    typedef typename Vin::element_type Inelt;
-	    typedef typename Vout::element_type Outelt;
-	    size_t vsize = v->size();
-	    GCStackRoot<Vout> ans(CXXR_NEW(Vout(vsize)));
-	    FunctorWrapper<Inelt, Outelt, Functor> fwrapper(m_f);
-	    for (size_t i = 0; i < vsize; ++i) {
-		const Inelt elt = (*v)[i];
-		(*ans)[i] = fwrapper(elt);
-	    }
-	    fwrapper.warnings();
-	    AttributeCopier attrib_copier;
-	    attrib_copier(ans, v);
-	    return ans;
-	}
-
-	template <class AttributeCopier, typename Functor,
-		  template <typename, typename, typename, typename> class FunctorWrapper>
+		  template <typename, typename,
+                            typename, typename> class FunctorWrapper>
 	template <class Vout, class Vl, class Vr>
 	Vout* BinaryFunction<AttributeCopier,
 			     Functor,
@@ -809,7 +501,8 @@ namespace CXXR {
 	}
 
 	template <class AttributeCopier, typename Functor,
-		  template <typename, typename, typename, typename> class FunctorWrapper>
+		  template <typename, typename,
+                            typename, typename> class FunctorWrapper>
 	template <int flag, class Vout, class Vl, class Vr>
 	void BinaryFunction<AttributeCopier,
 			    Functor,
@@ -845,4 +538,4 @@ namespace CXXR {
     }  // namespace VectorOps
 }  // namespace CXXR
 
-#endif  // VECTOROPS_HPP
+#endif  // BINARYFUNCTION_HPP

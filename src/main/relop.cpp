@@ -46,9 +46,9 @@
 
 #include "basedecl.h"
 
+#include "CXXR/BinaryFunction.hpp"
 #include "CXXR/GCStackRoot.hpp"
 #include "CXXR/LogicalVector.h"
-#include "CXXR/VectorOps.hpp"
 
 using namespace std;
 using namespace CXXR;

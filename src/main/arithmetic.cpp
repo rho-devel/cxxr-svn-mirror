@@ -75,9 +75,9 @@ extern "C" {
 #include <errno.h>
 #include <math.h>
 
-#include <functional>
+#include "CXXR/BinaryFunction.hpp"
 #include "CXXR/GCStackRoot.hpp"
-#include "CXXR/VectorOps.hpp"
+#include "CXXR/UnaryFunction.hpp"
 
 using namespace CXXR;
 using namespace VectorOps;

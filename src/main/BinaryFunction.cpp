@@ -32,12 +32,12 @@
  *  http://www.r-project.org/Licenses/
  */
 
-/** @file VectorOps.cpp
+/** @file BinaryFunction.cpp
  *
- * Implementation of functions and classes in VectorOps namespace.
+ * @brief Implementation of VectorOps::BinaryFunction and related functions.
  */
 
-#include "CXXR/VectorOps.hpp"
+#include "CXXR/BinaryFunction.hpp"
 
 #include "CXXR/Symbol.h"
 
