@@ -259,16 +259,17 @@ namespace CXXR {
 	 */
 	void setNames(StringVector* names);
 
-	/** @brief Reduce the number of elements in the vector.
+	/** @brief Adjust the number of elements in the vector.
 	 *
-	 * @param new_size New size required.  Zero is permissible,
-	 *          but the new size must not be greater than the
-	 *          current size.
-	 *
-	 * @deprecated May be withdrawn in future.  Currently used by
-	 * SETLENGTH() (which itself is little used).
+	 * @param new_size New size required.  Zero is permissible.
+	 *          Derived classes may impose further constraints:
+	 *          for example in FixedVector \a new_size must not be
+	 *          greater than the current size.
 	 */
-	void shrink(size_t new_size);
+	virtual void setSize(size_t new_size)
+	{
+	    m_size = new_size;
+	}
 
 	/** @brief Number of elements in the vector.
 	 *
@@ -355,6 +356,8 @@ inline int LENGTH(SEXP x)
  *         document for R 2.4.1, this is only used for certain hash
  *         tables, and signifies the number of used slots in the
  *         table.
+ *
+ * @deprecated May be withdrawn in the future.
  */
 #ifndef __cplusplus
 int TRUELENGTH(SEXP x);
@@ -376,14 +379,18 @@ inline int TRUELENGTH(SEXP x)
  *          the current length.
  *
  * @deprecated May be withdrawn in future.  Currently used in
- * library/stats/src/isoreg.c .
+ * library/stats/src/isoreg.c , and possibly in packages.
  */
 void SETLENGTH(SEXP x, int v);
 
 /**
  * Set 'true length' of vector.
+ *
  * @param x Pointer to a CXXR::VectorBase .
+ *
  * @param v The required new 'true length'.
+ *
+ * @deprecated May be withdrawn in the future.
  */
 #ifndef __cplusplus
 void SET_TRUELENGTH(SEXP x, int v);

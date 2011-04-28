@@ -47,7 +47,7 @@
 #ifdef __cplusplus
 
 #include "R_ext/Arith.h"
-#include "CXXR/DumbVector.hpp"
+#include "CXXR/FixedVector.hpp"
 #include "CXXR/SEXP_downcast.hpp"
 
 namespace CXXR {
@@ -65,14 +65,14 @@ namespace CXXR {
     }
 
     template <>
-    inline const char* DumbVector<double, REALSXP>::staticTypeName()
+    inline const char* FixedVector<double, REALSXP>::staticTypeName()
     {
 	return "numeric";
     }
 
     /** @brief Vector of real numbers.
      */
-    typedef CXXR::DumbVector<double, REALSXP> RealVector;
+    typedef CXXR::FixedVector<double, REALSXP> RealVector;
 }  // namespace CXXR
 
 extern "C" {

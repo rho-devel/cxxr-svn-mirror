@@ -109,14 +109,6 @@ void VectorBase::setNames(StringVector* names)
     setAttribute(NamesSymbol, names);
 }
 
-void VectorBase::shrink(size_t new_size)
-{
-    if (new_size > m_size)
-	Rf_error("VectorBase::shrink() :"
-		 " requested size exceeds current size.");
-    m_size = new_size;
-}
-
 // Rf_allocVector is still in memory.cpp (for the time being).
 
 Rboolean Rf_isVector(SEXP s)
@@ -144,5 +136,5 @@ void SETLENGTH(SEXP x, int v)
     CXXR::VectorBase* vb = dynamic_cast<CXXR::VectorBase*>(x);
     if (!vb)
 	Rf_error("SETLENGTH invoked for a non-vector.");
-    vb->shrink(v);
+    vb->setSize(v);
 }

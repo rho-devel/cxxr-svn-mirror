@@ -42,16 +42,20 @@
 #define ELEMENTTRAITS_HPP 1
 
 namespace CXXR {
-   /** @brief Class encapsulating traits of R vector element types.
-    *
-    * This templated class, all of whose members are static, is used
-    * to record characteristics of types capable of being used as the
-    * elements of R data vectors, to facilitate the writing of generic
-    * algorithms manipulating such vectors.
-    *
-    * @tparam T A type capable of being used as the element type of an
-    *           R data vector.
-    */
+    struct True {};
+
+    struct False {};
+
+    /** @brief Class encapsulating traits of R vector element types.
+     *
+     * This templated class, all of whose members are static, is used
+     * to record characteristics of types capable of being used as the
+     * elements of R data vectors, to facilitate the writing of generic
+     * algorithms manipulating such vectors.
+     *
+     * @tparam T A type capable of being used as the element type of an
+     *           R data vector.
+     */
     template <typename T>
     struct ElementTraits {
 	/** @brief Information about the data payload.
@@ -91,6 +95,33 @@ namespace CXXR {
 	    {
 		return t;
 	    }
+	};  // struct Data
+
+	/** @brief Do elements of this type require construction?
+	 *
+	 * Specializations will define \c MustConstruct::TruthType to
+	 * be True if element type \a T has a nontrivial default
+	 * constructor.
+	 *
+	 * In the default case, covered here, \c
+	 * MustConstruct::TruthType is defined to False, signifying
+	 * that no construction is required.
+	 */
+	struct MustConstruct {
+	    typedef False TruthType;
+	};
+
+	/** @brief Does this type have a destructor?
+	 *
+	 * Specializations will define \c MustDestruct::TruthType to
+	 * be True if element type \a T has a nontrivial destructor.
+	 *
+	 * In the default case, covered here, \c
+	 * MustDestruct::TruthType is defined to False, signifying
+	 * that no destructor call is required.
+	 */
+	struct MustDestruct {
+	    typedef False TruthType;
 	};
 
 	/** @brief Value to be used if 'not available'.
