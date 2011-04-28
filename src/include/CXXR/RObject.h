@@ -46,8 +46,8 @@
 
 #ifdef __cplusplus
 
-#include "CXXR/GCEdge.hpp"
 #include "CXXR/GCNode.hpp"
+#include "CXXR/RHandle.hpp"
 #include "CXXR/uncxxr.h"
 
 extern "C" {
@@ -268,80 +268,6 @@ namespace CXXR {
      */
     class RObject : public GCNode {
     public:
-	/** @brief Smart pointer used to control the copying of RObjects.
-	 *
-	 * This class encapsulates a T* pointer, where T is derived
-	 * from RObject, and is used to manage the copying of
-	 * subobjects when an RObject is copied.  For most purposes,
-	 * it behaves essentially like a GCEdge<T>.  However, when a Handle
-	 * is copied, it checks whether the object, \a x say, that it
-	 * points to is clonable.  If it is, then the copied Handle
-	 * will point to a clone of \a x ; if not, then the copy will
-	 * point to \a x itself.
-	 *
-	 * @param T RObject or a class publicly derived from RObject.
-	 */
-	template <class T = RObject>
-	class Handle : public GCEdge<T> {
-	public:
-	    Handle()
-	    {}
-
-	    /** @brief Primary constructor.
-	     *
-	     * @param target Pointer to the object to which this
-	     *          GCEdge is to refer.
-	     *
-	     * @note Unless \a target is a null pointer, this
-	     * constructor should be called only as part of the
-	     * construction of the object derived from GCNode of which
-	     * this GCEdge forms a part.
-	     */
-	    explicit Handle(T* target)
-		: GCEdge<T>(target)
-	    {}
-
-	    /** @brief Copy constructor.
-	     *
-	     * @param pattern Handle to be copied.  Suppose \a pattern
-	     *          points to an object \a x .  If \a x is clonable
-	     *          object, i.e. an object of a class that
-	     *          non-trivially implements RObject::clone(),
-	     *          then the newly created Handle will point to a
-	     *          clone of \a x ; otherwise it will point to \a
-	     *          x itself.  If \a pattern encapsulates a null
-	     *          pointer, so will the created object.
-	     */
-	    Handle(const Handle<T>& pattern)
-		: GCEdge<T>(cloneOrSelf(pattern))
-	    {}
-
-	    /** @brief Assignment operator.
-	     *
-	     * Note that this does not attempt to clone \a source: it
-	     * merely changes this Handle to point to the same T
-	     * object (if any) as \a source.
-	     */
-	    Handle<T>& operator=(const Handle<T>& source)
-	    {
-		GCEdge<T>::operator=(source);
-		return *this;
-	    }
-
-	    /** @brief Assignment from pointer.
-	     *
-	     * Note that this does not attempt to clone \a newtarget: it
-	     * merely changes this Handle to point to \a newtarget.
-	     */
-	    Handle<T>& operator=(T* newtarget)
-	    {
-		GCEdge<T>::operator=(newtarget);
-		return *this;
-	    }
-	private:
-	    static T* cloneOrSelf(T*);
-	};
-		
 	/** @brief Get object attributes.
 	 *
 	 * @return Pointer to the attributes of this object.
@@ -624,15 +550,8 @@ namespace CXXR {
 	bool m_active_binding : 1;
 	bool m_binding_locked : 1;
     private:
-	Handle<PairList> m_attrib;
+	RHandle<PairList> m_attrib;
     };
-
-    template <class T>
-    T* RObject::Handle<T>::cloneOrSelf(T* pattern)
-    {
-        T* t = clone(pattern);
-	return (t ? t : pattern);
-    }
 }  // namespace CXXR
 
 /** @brief Pointer to an RObject.

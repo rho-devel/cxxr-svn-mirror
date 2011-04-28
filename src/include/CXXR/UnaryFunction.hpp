@@ -426,31 +426,32 @@ namespace CXXR {
 	{
 	    return UnaryFunction<AttributeCopier, Functor>(f);
 	}
-	// ***** Implementations of non-inlined templated functions. *****
-
-	template <class AttributeCopier, typename Functor,
-                  template <typename, typename, typename> class FunctorWrapper>
-	template <class Vout, class Vin>
-	Vout* UnaryFunction<AttributeCopier,
-			    Functor,
-			    FunctorWrapper>::apply(const Vin* v)
-	{
-	    typedef typename Vin::element_type Inelt;
-	    typedef typename Vout::element_type Outelt;
-	    size_t vsize = v->size();
-	    GCStackRoot<Vout> ans(CXXR_NEW(Vout(vsize)));
-	    FunctorWrapper<Inelt, Outelt, Functor> fwrapper(m_f);
-	    for (size_t i = 0; i < vsize; ++i) {
-		const Inelt elt = (*v)[i];
-		(*ans)[i] = fwrapper(elt);
-	    }
-	    fwrapper.warnings();
-	    AttributeCopier attrib_copier;
-	    attrib_copier(ans, v);
-	    return ans;
-	}
-
     }  // namespace VectorOps
 }  // namespace CXXR
+
+
+// ***** Implementations of non-inlined templated functions. *****
+
+template <class AttributeCopier, typename Functor,
+	  template <typename, typename, typename> class FunctorWrapper>
+template <class Vout, class Vin>
+Vout* CXXR::VectorOps::UnaryFunction<AttributeCopier,
+				     Functor,
+				     FunctorWrapper>::apply(const Vin* v)
+{
+    typedef typename Vin::element_type Inelt;
+    typedef typename Vout::element_type Outelt;
+    size_t vsize = v->size();
+    GCStackRoot<Vout> ans(CXXR_NEW(Vout(vsize)));
+    FunctorWrapper<Inelt, Outelt, Functor> fwrapper(m_f);
+    for (size_t i = 0; i < vsize; ++i) {
+	const Inelt elt = (*v)[i];
+	(*ans)[i] = fwrapper(elt);
+    }
+    fwrapper.warnings();
+    AttributeCopier attrib_copier;
+    attrib_copier(ans, v);
+    return ans;
+}
 
 #endif  // UNARYFUNCTION_HPP

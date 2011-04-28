@@ -250,82 +250,82 @@ namespace CXXR {
 
 	void visitElements(const_visitor* v, True);
     };
+}  // namespace CXXR
 
 
-    // ***** Implementation of non-inlined members *****
+// ***** Implementation of non-inlined members *****
 
 #include "localization.h"
 #include "R_ext/Error.h"
 
-    template <typename T, SEXPTYPE ST>
-    FixedVector<T, ST>::FixedVector(size_t sz, const T& initializer)
-	: VectorBase(ST, sz), m_data(singleton()), m_blocksize(0)
-    {
-	if (sz > 1)
-	    allocData(sz);
-	constructElements(typename ElementTraits<T>::MustConstruct::TruthType());
-	std::fill(begin(), end(), initializer);
-    }
+template <typename T, SEXPTYPE ST>
+CXXR::FixedVector<T, ST>::FixedVector(size_t sz, const T& initializer)
+    : VectorBase(ST, sz), m_data(singleton()), m_blocksize(0)
+{
+    if (sz > 1)
+	allocData(sz);
+    constructElements(typename ElementTraits<T>::MustConstruct::TruthType());
+    std::fill(begin(), end(), initializer);
+}
 
-    template <typename T, SEXPTYPE ST>
-    FixedVector<T, ST>::FixedVector(const FixedVector<T, ST>& pattern)
-	: VectorBase(pattern), m_data(singleton()), m_blocksize(0)
-    {
-	size_t sz = size();
-	if (sz > 1)
-	    allocData(sz);
-	constructElements(typename ElementTraits<T>::MustConstruct::TruthType());
-	std::copy(pattern.begin(), pattern.end(), begin());
-    }
+template <typename T, SEXPTYPE ST>
+CXXR::FixedVector<T, ST>::FixedVector(const FixedVector<T, ST>& pattern)
+    : VectorBase(pattern), m_data(singleton()), m_blocksize(0)
+{
+    size_t sz = size();
+    if (sz > 1)
+	allocData(sz);
+    constructElements(typename ElementTraits<T>::MustConstruct::TruthType());
+    std::copy(pattern.begin(), pattern.end(), begin());
+}
 
-    template <typename T, SEXPTYPE ST>
-    void FixedVector<T, ST>::allocData(size_t sz)
-    {
-	m_blocksize = sz*sizeof(T);
-	// Check for integer overflow:
-	if (m_blocksize/sizeof(T) != sz)
-	    Rf_error(_("request to create impossibly large vector."));
-	m_data = static_cast<T*>(MemoryBank::allocate(m_blocksize));
-    }
+template <typename T, SEXPTYPE ST>
+void CXXR::FixedVector<T, ST>::allocData(size_t sz)
+{
+    m_blocksize = sz*sizeof(T);
+    // Check for integer overflow:
+    if (m_blocksize/sizeof(T) != sz)
+	Rf_error(_("request to create impossibly large vector."));
+    m_data = static_cast<T*>(MemoryBank::allocate(m_blocksize));
+}
 
-    template <typename T, SEXPTYPE ST>
-    FixedVector<T, ST>* FixedVector<T, ST>::clone() const
-    {
-	// Can't use CXXR_NEW because the comma confuses GNU cpp:
-	return expose(new FixedVector<T, ST>(*this));
-    }
+template <typename T, SEXPTYPE ST>
+CXXR::FixedVector<T, ST>* CXXR::FixedVector<T, ST>::clone() const
+{
+    // Can't use CXXR_NEW because the comma confuses GNU cpp:
+    return expose(new FixedVector<T, ST>(*this));
+}
 
-    template <typename T, SEXPTYPE ST>
-    void FixedVector<T, ST>::constructElements(True)
-    {
-	iterator pend = end();
-	for (iterator p = begin(); p < pend; ++p)
-	    new (p) T;
-    }
+template <typename T, SEXPTYPE ST>
+void CXXR::FixedVector<T, ST>::constructElements(True)
+{
+    iterator pend = end();
+    for (iterator p = begin(); p < pend; ++p)
+	new (p) T;
+}
 
-    template <typename T, SEXPTYPE ST>
-    void FixedVector<T, ST>::destructElements(size_t new_size, True)
-    {
-	// Destroy in reverse order, following C++ convention:
-	for (T* p = m_data + size() - 1; p >= m_data + new_size; --p)
-	    p->~T();
-    }
+template <typename T, SEXPTYPE ST>
+void CXXR::FixedVector<T, ST>::destructElements(size_t new_size, True)
+{
+    // Destroy in reverse order, following C++ convention:
+    for (T* p = m_data + size() - 1; p >= m_data + new_size; --p)
+	p->~T();
+}
 
-    template <typename T, SEXPTYPE ST>
-    void FixedVector<T, ST>::setSize(size_t new_size)
-    {
-	if (new_size > size())
-	    Rf_error("cannot increase size of this vector");
-	destructElements(new_size,
-			 typename ElementTraits<T>::MustDestruct::TruthType());
-	VectorBase::setSize(new_size);
-    }
+template <typename T, SEXPTYPE ST>
+void CXXR::FixedVector<T, ST>::setSize(size_t new_size)
+{
+    if (new_size > size())
+	Rf_error("cannot increase size of this vector");
+    destructElements(new_size,
+		     typename ElementTraits<T>::MustDestruct::TruthType());
+    VectorBase::setSize(new_size);
+}
 
-    template <typename T, SEXPTYPE ST>
-    const char* FixedVector<T, ST>::typeName() const
-    {
-	return FixedVector<T, ST>::staticTypeName();
-    }
-}  // namespace CXXR
+template <typename T, SEXPTYPE ST>
+const char* CXXR::FixedVector<T, ST>::typeName() const
+{
+    return FixedVector<T, ST>::staticTypeName();
+}
 
 #endif  // FIXEDVECTOR_HPP

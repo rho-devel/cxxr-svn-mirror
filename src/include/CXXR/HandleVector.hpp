@@ -49,25 +49,25 @@
 #include "CXXR/VectorBase.h"
 
 namespace CXXR {
-    /** @brief Vector of RObject::Handle smart pointers.
+    /** @brief Vector of RHandle smart pointers.
      *
      * This is a templated class to represent a vector whose elements
-     * are are smart pointers of type \c RObject::Handle<T>.  As
-     * explained in the documentation for \c RObject::Handle, copying
+     * are are smart pointers of type \c RHandle<T>.  As
+     * explained in the documentation for \c RHandle, copying
      * the vector will copy the objects pointed to, provided that they
      * are clonable.
      *
      * @param T This should be RObject or a type (publicly) derived
-     * from RObject.  The vector elements will be of type \c Handle<T>.
+     * from RObject.  The vector elements will be of type \c RHandle<T>.
      *
      * @param ST The required ::SEXPTYPE of the vector.
      */
     template <typename T, SEXPTYPE ST>
     class HandleVector : public VectorBase {
     private:
-	typedef std::vector<Handle<T>, Allocator<Handle<T> > > Vector;
+	typedef std::vector<RHandle<T>, Allocator<RHandle<T> > > Vector;
     public:
-	typedef Handle<T> element_type;
+	typedef RHandle<T> element_type;
 	typedef typename Vector::const_iterator const_iterator;
 
 	/** @brief Create a vector.
@@ -79,7 +79,7 @@ namespace CXXR {
 	 *          \a T* in the HandleVector.
 	 */
 	explicit HandleVector(size_t sz, T* init = 0)
-	    : VectorBase(ST, sz), m_data(sz, Handle<T>(init))
+	    : VectorBase(ST, sz), m_data(sz, RHandle<T>(init))
 	{}
 
 	/** @brief Copy constructor.
@@ -95,7 +95,7 @@ namespace CXXR {
 	{
 	    for (unsigned int i = 0; i < m_data.size(); ++i) {
 		// Use copy constructor to apply object copying logic:
-		Handle<T> handle(pattern.m_data[i]);
+		RHandle<T> handle(pattern.m_data[i]);
 		m_data[i] = handle;
 	    }
 	}
@@ -107,7 +107,7 @@ namespace CXXR {
 	 *
 	 * @return the specified element.
 	 */
-        Handle<T>& operator[](unsigned int index)
+        RHandle<T>& operator[](unsigned int index)
 	{
 	    return m_data[index];
 	}
@@ -119,7 +119,7 @@ namespace CXXR {
 	 *
 	 * @return the specified element.
 	 */
-	const Handle<T>& operator[](unsigned int index) const
+	const RHandle<T>& operator[](unsigned int index) const
 	{
 	    return m_data[index];
 	}

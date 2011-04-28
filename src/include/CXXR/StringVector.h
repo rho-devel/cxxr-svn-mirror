@@ -56,10 +56,10 @@
 namespace CXXR {
     // Template specializations:
     template <>
-    inline const RObject::Handle<String>&
-    ElementTraits<RObject::Handle<String> >::NA()
+    inline const RHandle<String>&
+    ElementTraits<RHandle<String> >::NA()
     {
-	static RObject::Handle<String> ans(String::NA());
+	static RHandle<String> ans(String::NA());
 	return ans;
     }
 
@@ -85,7 +85,7 @@ namespace CXXR {
 
 	/** @brief Copy constructor.
 	 *
-	 * Copy the StringVector, using the RObject::Handle copying
+	 * Copy the StringVector, using the RHandle copying
 	 * semantics.
 	 *
 	 * @param pattern StringVector to be copied.

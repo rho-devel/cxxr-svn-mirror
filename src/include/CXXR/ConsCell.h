@@ -237,7 +237,7 @@ namespace CXXR {
     private:
 	friend class PairList;
 
-	Handle<> m_car;
+	RHandle<> m_car;
 	GCEdge<PairList> m_tail;
 	GCEdge<const RObject> m_tag;
 

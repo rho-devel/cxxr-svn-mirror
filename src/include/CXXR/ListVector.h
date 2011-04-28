@@ -56,16 +56,16 @@ namespace CXXR {
 
     // Template specializations:
     template <>
-    inline const RObject::Handle<RObject>&
-    ElementTraits<RObject::Handle<RObject> >::NA()
+    inline const RHandle<RObject>&
+    ElementTraits<RHandle<RObject> >::NA()
     {
-	static RObject::Handle<RObject> ans(0);
+	static RHandle<RObject> ans(0);
 	return ans;
     }
 
     template <>
     inline bool
-    isNA<RObject::Handle<RObject> >(const RObject::Handle<RObject>&)
+    isNA<RHandle<RObject> >(const RHandle<RObject>&)
     {
 	return false;
     }
@@ -76,7 +76,7 @@ namespace CXXR {
 	return "list";
     }
 
-    /** @brief General vector of RObject::Handle<RObject>.
+    /** @brief General vector of RHandle<RObject>.
      */
     class ListVector : public HandleVector<RObject, VECSXP> {
     public:
@@ -92,7 +92,7 @@ namespace CXXR {
 
 	/** @brief Copy constructor.
 	 *
-	 * Copy the ListVector, using the RObject::Handle copying semantics.
+	 * Copy the ListVector, using the RHandle copying semantics.
 	 *
 	 * @param pattern ListVector to be copied.
 	 */

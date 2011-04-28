@@ -468,74 +468,76 @@ namespace CXXR {
 	{
 	    return BinaryFunction<AttributeCopier, Functor>(f);
 	}
-
-	// ***** Implementations of non-inlined templated functions. *****
-
-	template <class AttributeCopier, typename Functor,
-		  template <typename, typename,
-                            typename, typename> class FunctorWrapper>
-	template <class Vout, class Vl, class Vr>
-	Vout* BinaryFunction<AttributeCopier,
-			     Functor,
-			     FunctorWrapper>::apply(const Vl* vl, const Vr* vr)
-	{
-	    checkOperandsConformable(vl, vr);
-	    size_t lsize = vl->size();
-	    size_t rsize = vr->size();
-	    GCStackRoot<Vout> ans;
-	    if (lsize == 0 || rsize == 0) {
-		ans = CXXR_NEW(Vout(0));
-	    } else if (lsize == rsize) {
-		ans = CXXR_NEW(Vout(lsize));
-		mapElements<0>(ans.get(), vl, vr);
-	    } else if (lsize > rsize) {
-		ans = CXXR_NEW(Vout(lsize));
-		mapElements<1>(ans.get(), vl, vr);
-	    } else {
-		ans = CXXR_NEW(Vout(rsize));
-		mapElements<-1>(ans.get(), vl, vr);
-	    }
-	    AttributeCopier attrib_copier;
-	    attrib_copier(ans, vl, vr);
-	    return ans;
-	}
-
-	template <class AttributeCopier, typename Functor,
-		  template <typename, typename,
-                            typename, typename> class FunctorWrapper>
-	template <int flag, class Vout, class Vl, class Vr>
-	void BinaryFunction<AttributeCopier,
-			    Functor,
-			    FunctorWrapper>::mapElements(Vout* vout,
-							 const Vl* vl,
-							 const Vr* vr)
-	{
-	    typedef typename Vl::element_type Lelt;
-	    typedef typename Vr::element_type Relt;
-	    typedef typename Vout::element_type Outelt;
-	    size_t lsize = vl->size();
-	    size_t rsize = vr->size();
-	    if ((flag < 0 && rsize%lsize != 0)
-		|| (flag > 0 && lsize%rsize != 0))
-		Rf_warning(_("longer object length is not"
-			     " a multiple of shorter object length"));
-	    size_t outsize = vout->size();
-	    FunctorWrapper<Lelt, Relt, Outelt, Functor> fwrapper(m_f);
-	    size_t il = 0;
-	    size_t ir = 0;
-	    size_t iout = 0;
-	    while (iout < outsize) {
-		const Lelt lelt = (*vl)[il++];
-		const Relt relt = (*vr)[ir++];
-		(*vout)[iout++] = fwrapper(lelt, relt);
-		if (flag < 0 && il == lsize)
-		    il = 0;
-		if (flag > 0 && ir == rsize)
-		    ir = 0;
-	    }
-	    fwrapper.warnings();
-	}
     }  // namespace VectorOps
 }  // namespace CXXR
+
+
+// ***** Implementations of non-inlined templated functions. *****
+
+template <class AttributeCopier, typename Functor,
+	  template <typename, typename,
+		    typename, typename> class FunctorWrapper>
+template <class Vout, class Vl, class Vr>
+Vout* CXXR::VectorOps::BinaryFunction<AttributeCopier,
+		                      Functor,
+		                      FunctorWrapper>::apply(const Vl* vl,
+							     const Vr* vr)
+{
+    checkOperandsConformable(vl, vr);
+    size_t lsize = vl->size();
+    size_t rsize = vr->size();
+    GCStackRoot<Vout> ans;
+    if (lsize == 0 || rsize == 0) {
+	ans = CXXR_NEW(Vout(0));
+    } else if (lsize == rsize) {
+	ans = CXXR_NEW(Vout(lsize));
+	mapElements<0>(ans.get(), vl, vr);
+    } else if (lsize > rsize) {
+	ans = CXXR_NEW(Vout(lsize));
+	mapElements<1>(ans.get(), vl, vr);
+    } else {
+	ans = CXXR_NEW(Vout(rsize));
+	mapElements<-1>(ans.get(), vl, vr);
+    }
+    AttributeCopier attrib_copier;
+    attrib_copier(ans, vl, vr);
+    return ans;
+}
+
+template <class AttributeCopier, typename Functor,
+	  template <typename, typename,
+		    typename, typename> class FunctorWrapper>
+template <int flag, class Vout, class Vl, class Vr>
+void CXXR::VectorOps::BinaryFunction<AttributeCopier,
+				     Functor,
+				     FunctorWrapper>::mapElements(Vout* vout,
+								  const Vl* vl,
+								  const Vr* vr)
+{
+    typedef typename Vl::element_type Lelt;
+    typedef typename Vr::element_type Relt;
+    typedef typename Vout::element_type Outelt;
+    size_t lsize = vl->size();
+    size_t rsize = vr->size();
+    if ((flag < 0 && rsize%lsize != 0)
+	|| (flag > 0 && lsize%rsize != 0))
+	Rf_warning(_("longer object length is not"
+		     " a multiple of shorter object length"));
+    size_t outsize = vout->size();
+    FunctorWrapper<Lelt, Relt, Outelt, Functor> fwrapper(m_f);
+    size_t il = 0;
+    size_t ir = 0;
+    size_t iout = 0;
+    while (iout < outsize) {
+	const Lelt lelt = (*vl)[il++];
+	const Relt relt = (*vr)[ir++];
+	(*vout)[iout++] = fwrapper(lelt, relt);
+	if (flag < 0 && il == lsize)
+	    il = 0;
+	if (flag > 0 && ir == rsize)
+	    ir = 0;
+    }
+    fwrapper.warnings();
+}
 
 #endif  // BINARYFUNCTION_HPP
