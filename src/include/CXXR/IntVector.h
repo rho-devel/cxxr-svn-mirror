@@ -47,7 +47,7 @@
 #ifdef __cplusplus
 
 #include "R_ext/Arith.h"
-#include "CXXR/DumbVector.hpp"
+#include "CXXR/FixedVector.hpp"
 #include "CXXR/SEXP_downcast.hpp"
 
 #ifndef USE_TYPE_CHECKING_STRICT
@@ -63,14 +63,14 @@ namespace CXXR {
     }
 
     template <>
-    inline const char* DumbVector<int, INTSXP>::staticTypeName()
+    inline const char* FixedVector<int, INTSXP>::staticTypeName()
     {
 	return "integer";
     }
 
     /** @brief Vector of truth values.
      */
-    typedef CXXR::DumbVector<int, INTSXP> IntVector;
+    typedef CXXR::FixedVector<int, INTSXP> IntVector;
 }  // namespace CXXR
 
 extern "C" {

@@ -48,7 +48,7 @@ typedef unsigned char Rbyte;
 
 #ifdef __cplusplus
 
-#include "CXXR/DumbVector.hpp"
+#include "CXXR/FixedVector.hpp"
 #include "CXXR/SEXP_downcast.hpp"
 
 namespace CXXR {
@@ -67,14 +67,14 @@ namespace CXXR {
     }
 
     template <>
-    inline const char* DumbVector<Rbyte, RAWSXP>::staticTypeName()
+    inline const char* FixedVector<Rbyte, RAWSXP>::staticTypeName()
     {
 	return "raw";
     }
 
     /** @brief Vector of 'raw bytes'.
      */
-    typedef CXXR::DumbVector<Rbyte, RAWSXP> RawVector;
+    typedef CXXR::FixedVector<Rbyte, RAWSXP> RawVector;
 }  // namespace CXXR
 
 extern "C" {

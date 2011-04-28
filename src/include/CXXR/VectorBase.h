@@ -59,8 +59,8 @@ namespace CXXR {
     class ListVector;
     class StringVector;
 
-    template <typename T, SEXPTYPE ST> class DumbVector;
-    typedef DumbVector<int, INTSXP> IntVector;
+    template <typename T, SEXPTYPE ST> class FixedVector;
+    typedef FixedVector<int, INTSXP> IntVector;
 
     /** @brief Untemplated base class for R vectors.
      */

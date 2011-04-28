@@ -48,7 +48,7 @@
 #ifdef __cplusplus
 
 #include "R_ext/Arith.h"
-#include "CXXR/DumbVector.hpp"
+#include "CXXR/FixedVector.hpp"
 #include "CXXR/SEXP_downcast.hpp"
 
 namespace CXXR {
@@ -61,14 +61,14 @@ namespace CXXR {
     }
 
     template <>
-    inline const char* DumbVector<Rcomplex, CPLXSXP>::staticTypeName()
+    inline const char* FixedVector<Rcomplex, CPLXSXP>::staticTypeName()
     {
 	return "complex";
     }
 
     /** @brief Vector of complex numbers.
      */
-    typedef CXXR::DumbVector<Rcomplex, CPLXSXP> ComplexVector;
+    typedef CXXR::FixedVector<Rcomplex, CPLXSXP> ComplexVector;
 }  // namespace CXXR
 
 extern "C" {
