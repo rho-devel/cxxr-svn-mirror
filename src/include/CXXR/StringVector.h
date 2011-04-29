@@ -55,12 +55,13 @@
 
 namespace CXXR {
     // Template specializations:
-    template <>
-    inline const RHandle<String>&
-    ElementTraits<RHandle<String> >::NA()
-    {
-	static RHandle<String> ans(String::NA());
-	return ans;
+    namespace ElementTraits {
+	template <>
+	inline const RHandle<String>& NA<RHandle<String> >()
+	{
+	    static RHandle<String> ans(String::NA());
+	    return ans;
+	}
     }
 
     template <>

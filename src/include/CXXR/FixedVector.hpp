@@ -71,7 +71,7 @@ namespace CXXR {
 	{
 	    if (sz > 1)
 		allocData(sz);
-	    constructElements(typename ElementTraits<T>::MustConstruct::TruthType());
+	    constructElements(typename ElementTraits::MustConstruct<T>::TruthType());
 	}
 
 	/** @brief Create a vector, and fill with a specified initial
@@ -185,8 +185,7 @@ namespace CXXR {
 	const char* typeName() const;
 
 	// Virtual function of GCNode:
-	//void visitReferents(const_visitor* v) const
-	//{}  // FIXME
+	void visitReferents(const_visitor* v) const;
     protected:
 	/**
 	 * Declared protected to ensure that FixedVector objects are
@@ -195,14 +194,13 @@ namespace CXXR {
 	~FixedVector()
 	{
 	    destructElements(0,
-			     typename ElementTraits<T>::MustDestruct::TruthType());
+			     typename ElementTraits::MustDestruct<T>::TruthType());
 	    if (m_blocksize > 0)
 		MemoryBank::deallocate(m_data, m_blocksize);
 	}
 
 	// Virtual function of GCNode:
-	//void detachReferents()
-	//{}  // FIXME
+	void detachReferents();
     private:
 	T* m_data;  // pointer to the vector's data block.
 	size_t m_blocksize;  // size of externally allocated data
@@ -245,10 +243,10 @@ namespace CXXR {
 	}
 
 	// Helper functions for visitReferents():
-	void visitElements(const_visitor*, False)
+	void visitElements(const_visitor*, False) const
 	{}
 
-	void visitElements(const_visitor* v, True);
+	void visitElements(const_visitor* v, True) const;
     };
 }  // namespace CXXR
 
@@ -264,7 +262,7 @@ CXXR::FixedVector<T, ST>::FixedVector(size_t sz, const T& initializer)
 {
     if (sz > 1)
 	allocData(sz);
-    constructElements(typename ElementTraits<T>::MustConstruct::TruthType());
+    constructElements(typename ElementTraits::MustConstruct<T>::TruthType());
     std::fill(begin(), end(), initializer);
 }
 
@@ -275,7 +273,7 @@ CXXR::FixedVector<T, ST>::FixedVector(const FixedVector<T, ST>& pattern)
     size_t sz = size();
     if (sz > 1)
 	allocData(sz);
-    constructElements(typename ElementTraits<T>::MustConstruct::TruthType());
+    constructElements(typename ElementTraits::MustConstruct<T>::TruthType());
     std::copy(pattern.begin(), pattern.end(), begin());
 }
 
@@ -313,12 +311,19 @@ void CXXR::FixedVector<T, ST>::destructElements(size_t new_size, True)
 }
 
 template <typename T, SEXPTYPE ST>
+void CXXR::FixedVector<T, ST>::detachReferents()
+{
+    detachElements(typename ElementTraits::HasReferents<T>::TruthType());
+    VectorBase::detachReferents();
+}
+
+template <typename T, SEXPTYPE ST>
 void CXXR::FixedVector<T, ST>::setSize(size_t new_size)
 {
     if (new_size > size())
 	Rf_error("cannot increase size of this vector");
     destructElements(new_size,
-		     typename ElementTraits<T>::MustDestruct::TruthType());
+		     typename ElementTraits::MustDestruct<T>::TruthType());
     VectorBase::setSize(new_size);
 }
 
@@ -326,6 +331,13 @@ template <typename T, SEXPTYPE ST>
 const char* CXXR::FixedVector<T, ST>::typeName() const
 {
     return FixedVector<T, ST>::staticTypeName();
+}
+
+template <typename T, SEXPTYPE ST>
+void CXXR::FixedVector<T, ST>::visitReferents(const_visitor* v) const
+{
+    visitElements(v, typename ElementTraits::HasReferents<T>::TruthType());
+    VectorBase::visitReferents(v);
 }
 
 #endif  // FIXEDVECTOR_HPP

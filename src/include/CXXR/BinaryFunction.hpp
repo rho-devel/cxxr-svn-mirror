@@ -218,9 +218,10 @@ namespace CXXR {
 	    result_type operator()(const first_argument_type& left,
 				   const second_argument_type& right)
 	    {
-		return (isNA(left) || isNA(right) ?
-			ElementTraits<result_type>::NA() 
-			: (m_func)(elementData(left), elementData(right)));
+		return (ElementTraits::isNA(left) || ElementTraits::isNA(right)
+			? ElementTraits::NA<result_type>() 
+			: (m_func)(ElementTraits::data(left),
+				   ElementTraits::data(right)));
 	    }
 
 	    /** @brief Raise warnings after processing a vector.
@@ -301,7 +302,8 @@ namespace CXXR {
 	    result_type operator()(const first_argument_type& left,
 				   const second_argument_type& right)
 	    {
-		return (m_func)(elementData(left), elementData(right));
+		return (m_func)(ElementTraits::data(left),
+				ElementTraits::data(right));
 	    }
 
 	    /** @brief Raise warnings after processing a vector.

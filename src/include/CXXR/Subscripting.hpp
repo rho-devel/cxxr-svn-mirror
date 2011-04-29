@@ -620,7 +620,7 @@ namespace CXXR {
 		for (unsigned int d = 0; d < ndims; ++d) {
 		    const DimIndexer& di = dimindexer[d];
 		    int index = (*di.indices)[di.indexnum];
-		    if (isNA(index)) {
+		    if (ElementTraits::isNA(index)) {
 			naindex = true;
 			break;
 		    }
@@ -629,7 +629,7 @@ namespace CXXR {
 		    iin += (index - 1)*di.stride;
 		}
 		(*result)[iout]
-		    = (naindex ? ElementTraits<typename V::element_type>::NA()
+		    = (naindex ? ElementTraits::NA<typename V::element_type>()
 		       : (*vnc)[iin]);
 		// Advance the index selection:
 		{
@@ -679,7 +679,7 @@ namespace CXXR {
 	    // TODO: Move NA-detection back into the canonicalisation
 	    // process.
 	    for (unsigned int i = 0; i < ni; ++i)
-		if (isNA((*indices)[i]))
+		if (ElementTraits::isNA((*indices)[i]))
 		    Rf_error(_("NAs subscripts are not allowed"
 			       " in this context"));
 	}
@@ -702,9 +702,10 @@ namespace CXXR {
 			 " a multiple of replacement length"));
 	for (unsigned int i = 0; i < ni; ++i) {
 	    int index = (*indices)[i];
-	    if (!isNA(index)) {
+	    if (!ElementTraits::isNA(index)) {
 		const Rval& rval = (*rhs)[i % rhs_size];
-		(*ans)[index - 1] = (isNA(rval) ? ElementTraits<Lval>::NA()
+		(*ans)[index - 1] = (ElementTraits::isNA(rval)
+				     ? ElementTraits::NA<Lval>()
 				     : Rval(rval));
 	    }
 	}
@@ -724,8 +725,8 @@ namespace CXXR {
 	for (unsigned int i = 0; i < ni; ++i) {
 	    int index = (*indices)[i];
 	    // Note that zero and negative indices ought not to occur.
-	    if (isNA(index) || index > int(vsize))
-		(*ans)[i] = ElementTraits<typename V::element_type>::NA();
+	    if (ElementTraits::isNA(index) || index > int(vsize))
+		(*ans)[i] = ElementTraits::NA<typename V::element_type>();
 	    else (*ans)[i] = (*vnc)[index - 1];
 	}
 	setVectorAttributes(ans, v, indices);

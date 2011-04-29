@@ -52,16 +52,18 @@
 
 namespace CXXR {
     // Template specializations:
+    namespace ElementTraits {
     template <>
-    inline const double& ElementTraits<double>::NA()
+    inline const double& NA<double>()
     {
 	return NA_REAL;
     }
 
     template <>
-    inline bool ElementTraits<double>::isNA(const double& t)
+    inline bool isNA<double>(const double& t)
     {
 	return R_IsNA(t);
+    }
     }
 
     template <>

@@ -55,19 +55,20 @@ namespace CXXR {
     class ExpressionVector;
 
     // Template specializations:
-    template <>
-    inline const RHandle<RObject>&
-    ElementTraits<RHandle<RObject> >::NA()
-    {
-	static RHandle<RObject> ans(0);
-	return ans;
-    }
+    namespace ElementTraits {
+	template <>
+	inline const RHandle<RObject>& NA<RHandle<RObject> >()
+	{
+	    static RHandle<RObject> ans(0);
+	    return ans;
+	}
 
-    template <>
-    inline bool
-    isNA<RHandle<RObject> >(const RHandle<RObject>&)
-    {
-	return false;
+	template <>
+	inline bool
+	isNA<RHandle<RObject> >(const RHandle<RObject>&)
+	{
+	    return false;
+	}
     }
 
     template <>

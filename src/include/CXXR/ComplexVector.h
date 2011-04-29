@@ -53,11 +53,13 @@
 
 namespace CXXR {
     // Template specializations:
-    template <>
-    inline const Rcomplex& ElementTraits<Rcomplex>::NA()
-    {
-	static Rcomplex ans(NA_REAL, NA_REAL);
-	return ans;
+    namespace ElementTraits {
+	template <>
+	inline const Rcomplex& NA<Rcomplex>()
+	{
+	    static Rcomplex ans(NA_REAL, NA_REAL);
+	    return ans;
+	}
     }
 
     template <>

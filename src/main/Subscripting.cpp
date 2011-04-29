@@ -38,7 +38,7 @@ Subscripting::canonicalize(const IntVector* raw_indices, size_t range_size)
     unsigned int max_index = 0;
     for (unsigned int i = 0; i < rawsize; ++i) {
 	int index = (*raw_indices)[i];
-	if (isNA(index))
+	if (ElementTraits::isNA(index))
 	    anyNA = true;
 	else if (index < 0)
 	    anyneg = true;
@@ -93,8 +93,8 @@ Subscripting::canonicalize(const LogicalVector* raw_indices, size_t range_size)
 	unsigned int iout = 0;
 	for (unsigned int iin = 0; iin < nmax; ++iin) {
 	    int logical = (*raw_indices)[iin % rawsize];
-	    if (isNA(logical))
-		(*ans)[iout++] = ElementTraits<int>::NA();
+	    if (ElementTraits::isNA(logical))
+		(*ans)[iout++] = ElementTraits::NA<int>();
 	    else if (logical != 0)
 		(*ans)[iout++] = iin + 1;
 	}
@@ -160,7 +160,7 @@ Subscripting::canonicalize(const StringVector* raw_indices, size_t range_size,
     for (unsigned int iraw = 0; iraw < rawsize; ++iraw) {
 	String* subscript = (*raw_indices)[iraw];
 	if (subscript == String::NA())
-	    (*ans)[iraw] = ElementTraits<int>::NA();
+	    (*ans)[iraw] = ElementTraits::NA<int>();
 	else {
 	    GCRoot<CachedString>
 		csubscript(SEXP_downcast<CachedString*>(subscript));
@@ -375,7 +375,7 @@ void Subscripting::processUseNames(VectorBase* v, const IntVector* indices)
 	RObject* newname = (*usenames)[i];
 	if (newname) {
 	    int index = (*indices)[i];
-	    if (!isNA(index))
+	    if (!ElementTraits::isNA(index))
 		(*newnames)[index - 1] = SEXP_downcast<String*>(newname);
 	}
     }

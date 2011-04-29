@@ -34,8 +34,7 @@
 
 /** @file ElementTraits.hpp
  *
- * @brief Class and supporting functions encapsulating traits of R
- * vector element types.
+ * @brief Namespace encapsulating traits of R vector element types.
  */
 
 #ifndef ELEMENTTRAITS_HPP
@@ -46,18 +45,14 @@ namespace CXXR {
 
     struct False {};
 
-    /** @brief Class encapsulating traits of R vector element types.
+    /** @brief Namespace encapsulating traits of R vector element types.
      *
-     * This templated class, all of whose members are static, is used
-     * to record characteristics of types capable of being used as the
-     * elements of R data vectors, to facilitate the writing of generic
-     * algorithms manipulating such vectors.
-     *
-     * @tparam T A type capable of being used as the element type of an
-     *           R data vector.
+     * This namespace is used to record characteristics of types
+     * capable of being used as the elements of R data vectors, to
+     * facilitate the writing of generic algorithms manipulating such
+     * vectors.
      */
-    template <typename T>
-    struct ElementTraits {
+    namespace ElementTraits {
 	/** @brief Information about the data payload.
 	 *
 	 * In some element types, including all the standard R atomic
@@ -75,9 +70,13 @@ namespace CXXR {
 	 * This class provides facilities to allow generic programs to
 	 * handle both these cases straightforwardly.  As defined
 	 * here, the class deals with the first case described above;
-	 * specializations of the ElementTraits template can be used
-	 * to address the second case.
+	 * specializations of the Data template can be used to address
+	 * the second case.
+	 *
+	 * @tparam T A type capable of being used as the element type
+	 *           of an R data vector. 
 	 */
+	template <typename T>
 	struct Data {
 	    /** @brief Type of the data payload held in this element
 	     * type.
@@ -97,6 +96,43 @@ namespace CXXR {
 	    }
 	};  // struct Data
 
+	/** @brief Function object for detaching referents.
+	 *
+	 * For element types for which \c HasReferents::TruthType is
+	 * True, this struct will be specialized into a function
+	 * object which will detach the referents of a particular
+	 * element \a t .
+	 *
+	 * @tparam T A type capable of being used as the element type
+	 *           of an R data vector. 
+	 */
+	template <typename T>
+	struct DetachReferents : std::unary_function<T, void> {
+	    void operator()(const T& t) const
+	    {}
+	};
+
+	/** @brief Do elements of this type refer to GCNode objects?
+	 *
+	 * Specializations will define \c HasReferents::TruthType to
+	 * be True if objects of element type \a T may incorporate
+	 * references or (more likely) pointers to GCNode objects.
+	 * Such types will also specialize the VisitReferents and
+	 * DetachReferents function object types.
+	 *
+	 * In the default case, covered here, \c
+	 * HasReferent::TruthType is defined to False, signifying
+	 * that no special handling regarding garbage collection is
+	 * required.
+	 *
+	 * @tparam T A type capable of being used as the element type
+	 *           of an R data vector. 
+	 */
+	template <typename T>
+	struct HasReferents {
+	    typedef False TruthType;
+	};
+
 	/** @brief Do elements of this type require construction?
 	 *
 	 * Specializations will define \c MustConstruct::TruthType to
@@ -106,7 +142,11 @@ namespace CXXR {
 	 * In the default case, covered here, \c
 	 * MustConstruct::TruthType is defined to False, signifying
 	 * that no construction is required.
+	 *
+	 * @tparam T A type capable of being used as the element type
+	 *           of an R data vector. 
 	 */
+	template <typename T>
 	struct MustConstruct {
 	    typedef False TruthType;
 	};
@@ -119,10 +159,53 @@ namespace CXXR {
 	 * In the default case, covered here, \c
 	 * MustDestruct::TruthType is defined to False, signifying
 	 * that no destructor call is required.
+	 *
+	 * @tparam T A type capable of being used as the element type
+	 *           of an R data vector. 
 	 */
+	template <typename T>
 	struct MustDestruct {
 	    typedef False TruthType;
 	};
+
+	/** @brief Function object for visiting referents.
+	 *
+	 * For element types for which \c HasReferents::TruthType is
+	 * True, this struct will be specialized into a function
+	 * object which will conduct a visitor \a v to the referents
+	 * of a particular element \a t .
+	 *
+	 * @tparam T A type capable of being used as the element type
+	 *           of an R data vector. 
+	 */
+	template <typename T>
+	struct VisitReferents : std::unary_function<T, void> {
+	    VisitReferents(GCNode::const_visitor* v)
+	    {}
+
+	    void operator()(const T& t) const
+	    {}
+	};
+
+	/** @brief Access the data payload of an R vector element.
+	 *
+	 * This templated function is syntactic sugar for the
+	 * Data::get() function.  It should not be specialized:
+	 * instead specialize ElementTraits::Data itself.
+	 *
+	 * @tparam T type used as an element in the CXXR
+	 *           implementation of an R vector type.
+	 *
+	 * @param t Reference to an object of type \a T .
+	 *
+	 * @return reference to the data payload contained within \a t .
+	 */
+	template <typename T>
+	inline const typename ElementTraits::Data<T>::Type&
+	data(const T& t)
+	{
+	    return Data<T>::get(t);
+	}
 
 	/** @brief Value to be used if 'not available'.
 	 *
@@ -134,19 +217,12 @@ namespace CXXR {
 	 * @note For some types, e.g. Rbyte, the value returned is not
 	 * distinct from ordinary values of the type.  See
 	 * hasDistinctNA().
-	 */
-	static const T& NA();
-
-	/** @brief Does a type have a distinct 'not available' value?
 	 *
-	 * @return true iff the range of type \a T includes a distinct
-	 * value to signify that the actual value of the quantity is not
-	 * available.
+	 * @tparam T A type capable of being used as the element type
+	 *           of an R data vector. 
 	 */
-	inline static bool hasDistinctNA()
-	{
-	    return isNA(NA());
-	}
+	template <typename T>
+	const T& NA();
 
 	/** @brief Does a value represent a distinct 'not available'
 	 *  status?
@@ -156,55 +232,28 @@ namespace CXXR {
 	 * @return true iff \a t has a distinct value (or possibly,
 	 * one of a set of distinct values) signifying that the actual
 	 * value of this quantity is not available.
+	 *
+	 * @tparam T A type capable of being used as the element type
+	 *           of an R data vector. 
 	 */
-	inline static bool isNA(const T& t)
+	template <typename T>
+	inline bool isNA(const T& t)
 	{
-	    return t == NA();
+	    return t == NA<T>();
 	}
-    };  // struct ElementTraits
 
-    /** @brief Access the data payload of an R vector element.
-     *
-     * This templated function is syntactic sugar for the Data::get()
-     * function of the ElementTraits class template.  It should not be
-     * specialized: instead specialize ElementTraits itself.
-     *
-     * @tparam T type used as an element in the CXXR implementation of
-     *           an R vector type.
-     *
-     * @param t Reference to an object of type \a T .
-     *
-     * @return reference to the data payload contained within \a t .
-     */
-    template <typename T>
-    inline const typename ElementTraits<T>::Data::Type&
-    elementData(const T& t)
-    {
-	return ElementTraits<T>::Data::get(t);
-    }
-
-    /** @brief Does a value represent a distinct 'not available'
-     *  status?
-     *
-     * This templated function is syntactic sugar for the isNA()
-     * method of the ElementTraits class template.  It should not be
-     * specialized: instead specialize ElementTraits itself.
-     *
-     * @tparam T type used as an element in the CXXR implementation of
-     *           an R vector type.
-     *
-     * @param t A value of type \a T .
-     *
-     * @return true iff \a t has a distinct value (or possibly, one of
-     * a set of distinct values) signifying that the actual value of
-     * this quantity is not available.
-     */
-    template <typename T>
-    inline bool isNA(const T& t)
-    {
-	return ElementTraits<T>::isNA(t);
-    }
-
+	/** @brief Does a type have a distinct 'not available' value?
+	 *
+	 * @return true iff the range of type \a T includes a distinct
+	 * value to signify that the actual value of the quantity is
+	 * not available.
+	 */
+	template <typename T>
+	inline bool hasDistinctNA()
+	{
+	    return isNA(NA<T>());
+	}
+    }  // namespace ElementTraits
 }  // namespace CXXR;
 
 #endif  // ELEMENTTRAITS_HPP

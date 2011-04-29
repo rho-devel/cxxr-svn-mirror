@@ -184,8 +184,9 @@ namespace CXXR {
 	     */
 	    result_type operator()(const argument_type& in)
 	    {
-		return (isNA(in) ? ElementTraits<result_type>::NA() 
-			: (m_func)(elementData(in)));
+		return (ElementTraits::isNA(in)
+			? ElementTraits::NA<result_type>() 
+			: (m_func)(ElementTraits::data(in)));
 	    }
 
 	    /** @brief Raise warnings after processing a vector.

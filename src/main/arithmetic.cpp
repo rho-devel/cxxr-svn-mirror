@@ -1070,8 +1070,8 @@ public:
 
     double operator()(double in)
     {
-	if (isNA(in))
-	    return ElementTraits<double>::NA();
+	if (ElementTraits::isNA(in))
+	    return ElementTraits::NA<double>();
 	double ans = m_f(in);
 	if (isnan(ans) && !isnan(in))
 	    m_any_NaN = true;

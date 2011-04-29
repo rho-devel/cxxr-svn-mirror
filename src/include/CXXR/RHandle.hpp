@@ -42,6 +42,7 @@
 #ifndef RHANDLE_HPP
 #define RHANDLE_HPP
 
+#include "CXXR/ElementTraits.hpp"
 #include "CXXR/GCEdge.hpp"
 
 namespace CXXR {
@@ -119,7 +120,50 @@ namespace CXXR {
 	}
     private:
 	static T* cloneOrSelf(T*);
-    };
+    };  // class template RHandle
+
+    // Partial specializations of ElementTraits:
+    namespace ElementTraits {
+	template <class T>
+	struct DetachReferents<RHandle<T> >
+	    : std::unary_function<T, void> {
+	    void operator()(const RHandle<T>& t) const
+	    {
+		t->detachReferents();
+	    }
+	};
+
+	template <class T>
+	struct HasReferents<RHandle<T> > {
+	    typedef True TruthType;
+	};
+
+	template <class T>
+	struct MustConstruct<RHandle<T> > {
+	    typedef True TruthType;
+	};
+
+	template <class T>
+	struct MustDestruct<RHandle<T> > {
+	    typedef True TruthType;
+	};
+
+	template <class T>
+	class VisitReferents<RHandle<T> >
+	    : public std::unary_function<T, void> {
+	public:
+	    VisitReferents(GCNode::const_visitor* v)
+		: m_v(v)
+	    {}
+
+	    void operator()(const RHandle<T>& t) const
+	    {
+		t->visitReferents(m_v);
+	    }
+	private:
+	    GCNode::const_visitor* m_v;
+	};
+    }  // namespace ElementTraits
 }  // namespace CXXR
 
 
