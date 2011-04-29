@@ -129,7 +129,8 @@ namespace CXXR {
 	    : std::unary_function<T, void> {
 	    void operator()(const RHandle<T>& t) const
 	    {
-		t->detachReferents();
+		if (t.get())
+		    t->detachReferents();
 	    }
 	};
 
@@ -158,7 +159,8 @@ namespace CXXR {
 
 	    void operator()(const RHandle<T>& t) const
 	    {
-		t->visitReferents(m_v);
+		if (t.get())
+		    (*m_v)(t);
 	    }
 	private:
 	    GCNode::const_visitor* m_v;

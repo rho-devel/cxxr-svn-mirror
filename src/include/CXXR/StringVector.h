@@ -50,7 +50,7 @@
 #ifdef __cplusplus
 
 #include <iostream>
-#include "CXXR/HandleVector.hpp"
+#include "CXXR/FixedVector.hpp"
 #include "CXXR/SEXP_downcast.hpp"
 
 namespace CXXR {
@@ -65,14 +65,14 @@ namespace CXXR {
     }
 
     template <>
-    inline const char* HandleVector<String, STRSXP>::staticTypeName()
+    inline const char* FixedVector<RHandle<String>, STRSXP>::staticTypeName()
     {
 	return "character";
     }
 
     /** @brief Vector of strings.
      */
-    class StringVector : public CXXR::HandleVector<String, STRSXP> {
+    class StringVector : public CXXR::FixedVector<RHandle<String>, STRSXP> {
     public:
 	/** @brief Create a StringVector.
 	 *
@@ -81,7 +81,7 @@ namespace CXXR {
 	 *          CachedString::blank().
 	 */
 	explicit StringVector(size_t sz)
-	    : HandleVector<String, STRSXP>(sz, CachedString::blank())
+	    : FixedVector<RHandle<String>, STRSXP>(sz, CachedString::blank())
 	{}
 
 	/** @brief Copy constructor.
@@ -92,7 +92,7 @@ namespace CXXR {
 	 * @param pattern StringVector to be copied.
 	 */
 	StringVector(const StringVector& pattern)
-	    : HandleVector<String, STRSXP>(pattern)
+	    : FixedVector<RHandle<String>, STRSXP>(pattern)
 	{}
 
 	/** @brief Create a StringVector containing a single string.
@@ -105,7 +105,7 @@ namespace CXXR {
 	 *          by the single vector element.
 	 */
 	explicit StringVector(CachedString* string)
-	    : HandleVector<String, STRSXP>(1, string)
+	    : FixedVector<RHandle<String>, STRSXP>(1, string)
 	{}
 
 	/** @brief Create a StringVector containing a single std::string.
@@ -122,8 +122,8 @@ namespace CXXR {
 	 */
 	explicit StringVector(const std::string& str,
 			      cetype_t encoding = CE_NATIVE)
-	    : HandleVector<String, STRSXP>(1,
-					   CachedString::obtain(str, encoding))
+	    : FixedVector<RHandle<String>,
+                          STRSXP>(1, CachedString::obtain(str, encoding))
 	{}
 
 	// Virtual function of RObject:

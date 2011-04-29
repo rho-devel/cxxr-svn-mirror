@@ -40,6 +40,7 @@
 #ifndef FIXEDVECTOR_HPP
 #define FIXEDVECTOR_HPP 1
 
+#include <algorithm>
 #include "CXXR/VectorBase.h"
 
 namespace CXXR {
@@ -77,13 +78,16 @@ namespace CXXR {
 	/** @brief Create a vector, and fill with a specified initial
 	 *         value.
 	 *
+	 * @tparam U type assignable to \a T .
+	 *
 	 * @param sz Number of elements required.  Zero is
 	 *          permissible.
 	 *
 	 * @param initializer Initial value to be assigned to every
 	 *          element.
 	 */
-	FixedVector(size_t sz, const T& initializer);
+	template <typename U>
+	FixedVector(size_t sz, const U& initializer);
 
 	/** @brief Copy constructor.
 	 *
@@ -257,7 +261,8 @@ namespace CXXR {
 #include "R_ext/Error.h"
 
 template <typename T, SEXPTYPE ST>
-CXXR::FixedVector<T, ST>::FixedVector(size_t sz, const T& initializer)
+template <typename U>
+CXXR::FixedVector<T, ST>::FixedVector(size_t sz, const U& initializer)
     : VectorBase(ST, sz), m_data(singleton()), m_blocksize(0)
 {
     if (sz > 1)
@@ -311,6 +316,13 @@ void CXXR::FixedVector<T, ST>::destructElements(size_t new_size, True)
 }
 
 template <typename T, SEXPTYPE ST>
+void CXXR::FixedVector<T, ST>::detachElements(True)
+{
+    //std::for_each(begin(), end(), ElementTraits::DetachReferents<T>());
+    setSize(0);
+}
+
+template <typename T, SEXPTYPE ST>
 void CXXR::FixedVector<T, ST>::detachReferents()
 {
     detachElements(typename ElementTraits::HasReferents<T>::TruthType());
@@ -331,6 +343,12 @@ template <typename T, SEXPTYPE ST>
 const char* CXXR::FixedVector<T, ST>::typeName() const
 {
     return FixedVector<T, ST>::staticTypeName();
+}
+
+template <typename T, SEXPTYPE ST>
+void CXXR::FixedVector<T, ST>::visitElements(const_visitor* v, True) const
+{
+    std::for_each(begin(), end(), ElementTraits::VisitReferents<T>(v));
 }
 
 template <typename T, SEXPTYPE ST>

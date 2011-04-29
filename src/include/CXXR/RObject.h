@@ -485,7 +485,12 @@ namespace CXXR {
 	 */
 	virtual void unpackGPBits(unsigned int gpbits);
 
-	// Virtual function of GCNode:
+	// Virtual functions of GCNode:
+	void detachReferents()
+	{
+	    m_attrib.detach();
+	}
+
 	void visitReferents(const_visitor* v) const;
     protected:
 	/**
@@ -503,12 +508,6 @@ namespace CXXR {
 	RObject(const RObject& pattern);
 
 	virtual ~RObject() {}
-
-	// Virtual function of GCNode:
-	void detachReferents()
-	{
-	    m_attrib.detach();
-	}
     private:
 	static const unsigned char s_sexptype_mask = 0x3f;
 	static const unsigned char s_S4_mask = 0x40;
