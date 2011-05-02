@@ -40,7 +40,6 @@
 #ifndef FIXEDVECTOR_HPP
 #define FIXEDVECTOR_HPP 1
 
-#include <algorithm>
 #include "CXXR/VectorBase.h"
 
 namespace CXXR {
@@ -257,6 +256,7 @@ namespace CXXR {
 
 // ***** Implementation of non-inlined members *****
 
+#include <algorithm>
 #include "localization.h"
 #include "R_ext/Error.h"
 

@@ -48,38 +48,22 @@
 
 #ifdef __cplusplus
 
-#include "CXXR/HandleVector.hpp"
+#include "CXXR/FixedVector.hpp"
 #include "CXXR/SEXP_downcast.hpp"
 
 namespace CXXR {
     class ExpressionVector;
 
     // Template specializations:
-    namespace ElementTraits {
-	template <>
-	inline const RHandle<RObject>& NA<RHandle<RObject> >()
-	{
-	    static RHandle<RObject> ans(0);
-	    return ans;
-	}
-
-	template <>
-	inline bool
-	isNA<RHandle<RObject> >(const RHandle<RObject>&)
-	{
-	    return false;
-	}
-    }
-
     template <>
-    inline const char* HandleVector<RObject, VECSXP>::staticTypeName()
+    inline const char* FixedVector<RHandle<>, VECSXP>::staticTypeName()
     {
 	return "list";
     }
 
     /** @brief General vector of RHandle<RObject>.
      */
-    class ListVector : public HandleVector<RObject, VECSXP> {
+    class ListVector : public FixedVector<RHandle<>, VECSXP> {
     public:
 	/** @brief Create a ListVector.
          *
@@ -88,7 +72,7 @@ namespace CXXR {
 	 *          permissible.
 	 */
 	explicit ListVector(size_t sz)
-	    : HandleVector<RObject, VECSXP>(sz)
+	    : FixedVector<RHandle<>, VECSXP>(sz)
 	{}
 
 	/** @brief Copy constructor.
@@ -98,7 +82,7 @@ namespace CXXR {
 	 * @param pattern ListVector to be copied.
 	 */
 	ListVector(const ListVector& pattern)
-	    : HandleVector<RObject, VECSXP>(pattern)
+	    : FixedVector<RHandle<>, VECSXP>(pattern)
 	{}
 
 	/** @brief Construct from ExpressionVector.

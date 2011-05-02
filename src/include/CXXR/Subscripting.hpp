@@ -77,8 +77,8 @@ namespace CXXR {
      *
      * @todo A matter for possible review is the fact that during
      * subsetting and subassignment operations, CXXR sometimes makes
-     * deep copies of the elements of HandleVector objects in cases
-     * where CR gets away with simple pointer copies.
+     * deep copies of vectors of RHandle objects in cases where CR
+     * gets away with simple pointer copies.
      */
     class Subscripting {
     public:

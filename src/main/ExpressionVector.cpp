@@ -55,7 +55,7 @@ namespace CXXR {
 }
 
 ExpressionVector::ExpressionVector(ListVector& lv)
-    : HandleVector<RObject, EXPRSXP>(lv.size())
+    : FixedVector<RHandle<>, EXPRSXP>(lv.size())
 {
     for (unsigned int i = 0; i < size(); ++i)
 	(*this)[i] = lv[i];

@@ -57,10 +57,8 @@ namespace CXXR {
 }
 
 ListVector::ListVector(ExpressionVector& ev)
-    : HandleVector<RObject, VECSXP>(ev.size())
+    : FixedVector<RHandle<>, VECSXP>(ev.size())
 {
-    // The following results in unnecessary invocations of
-    // propagateAge() on the nodes pointed to.
     for (unsigned int i = 0; i < size(); ++i)
 	(*this)[i] = ev[i];
     SEXP names = Rf_getAttrib(&ev, R_NamesSymbol);

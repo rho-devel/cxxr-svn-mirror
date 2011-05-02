@@ -52,7 +52,7 @@
 
 #ifdef __cplusplus
 
-#include "CXXR/HandleVector.hpp"
+#include "CXXR/FixedVector.hpp"
 #include "CXXR/SEXP_downcast.hpp"
 
 namespace CXXR {
@@ -60,7 +60,7 @@ namespace CXXR {
 
     // Template specialization:
     template <>
-    inline const char* HandleVector<RObject, EXPRSXP>::staticTypeName()
+    inline const char* FixedVector<RHandle<>, EXPRSXP>::staticTypeName()
     {
 	return "expression";
     }
@@ -74,14 +74,14 @@ namespace CXXR {
      * @todo Replace the encapsulated pointer type RObject* with something
      * stricter (but is needs to embrace Symbol as well as Expression).
      */
-    class ExpressionVector : public HandleVector<RObject, EXPRSXP> {
+    class ExpressionVector : public FixedVector<RHandle<>, EXPRSXP> {
     public:
 	/** @brief Create an ExpressionVector.
 	 *
 	 * @param sz Number of elements required.  Zero is permissible.
 	 */
 	explicit ExpressionVector(size_t sz)
-	    : HandleVector<RObject, EXPRSXP>(sz)
+	    : FixedVector<RHandle<>, EXPRSXP>(sz)
 	{}
 
 	/** @brief Copy constructor.
@@ -92,7 +92,7 @@ namespace CXXR {
 	 * @param pattern ExpressionVector to be copied.
 	 */
 	ExpressionVector(const ExpressionVector& pattern)
-	    : HandleVector<RObject, EXPRSXP>(pattern)
+	    : FixedVector<RHandle<>, EXPRSXP>(pattern)
 	{}
 
 	/** @brief Create an ExpressionVector from a ListVector.

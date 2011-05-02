@@ -97,14 +97,10 @@ namespace CXXR {
 	{}
 
 	/** @brief Assignment operator.
-	 *
-	 * Note that this does not attempt to clone \a source: it
-	 * merely changes this RHandle to point to the same T object
-	 * (if any) as \a source.
 	 */
 	RHandle<T>& operator=(const RHandle<T>& source)
 	{
-	    GCEdge<T>::operator=(source);
+	    GCEdge<T>::operator=(cloneOrSelf(source));
 	    return *this;
 	}
 
@@ -165,6 +161,19 @@ namespace CXXR {
 	private:
 	    GCNode::const_visitor* m_v;
 	};
+
+	template <>
+	inline const RHandle<>& NA<RHandle<> >()
+	{
+	    static RHandle<> ans(0);
+	    return ans;
+	}
+
+	template <>
+	inline bool isNA<RHandle<> >(const RHandle<>&)
+	{
+	    return false;
+	}
     }  // namespace ElementTraits
 }  // namespace CXXR
 
