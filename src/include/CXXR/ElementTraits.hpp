@@ -207,40 +207,51 @@ namespace CXXR {
 	    return Data<T>::get(t);
 	}
 
-	/** @brief Value to be used if 'not available'.
+	/** @brief Function object to generate 'not available' value.
 	 *
-	 * @return The value of this type to be used if the actual
-	 * value is not available.  This for example is the value that
-	 * will be used if an element of a vector of \a T is accessed
-	 * in R using a NA index.
-	 *
-	 * @note For some types, e.g. Rbyte, the value returned is not
-	 * distinct from ordinary values of the type.  See
-	 * hasDistinctNA().
+	 * Normally this will be accessed via the NA() function
+	 * template declared at CXXR namespace level.
 	 *
 	 * @tparam T A type capable of being used as the element type
 	 *           of an R data vector. 
 	 */
 	template <typename T>
-	const T& NA();
+	struct NAFunc {
+	    /** @brief Value to be used if 'not available'.
+	     *
+	     * @return The value of type \a T to be used if the actual
+	     * value is not available.  This for example is the value that
+	     * will be used if an element of a vector of \a T is accessed
+	     * in R using a NA index.
+	     *
+	     * @note For some types, e.g. Rbyte, the value returned is not
+	     * distinct from ordinary values of the type.  See
+	     * hasDistinctNA().
+	     */
+	    const T& operator()() const;
+	};
 
-	/** @brief Does a value represent a distinct 'not available'
-	 *  status?
-	 *
-	 * @param t A value of type \a T .
-	 *
-	 * @return true iff \a t has a distinct value (or possibly,
-	 * one of a set of distinct values) signifying that the actual
-	 * value of this quantity is not available.
+	/** @brief Function object for testing 'not available' status.
 	 *
 	 * @tparam T A type capable of being used as the element type
 	 *           of an R data vector. 
 	 */
-	template <typename T>
-	inline bool isNA(const T& t)
-	{
-	    return t == NA<T>();
-	}
+	template <typename T> struct IsNA {
+	    /** @brief Does a value represent a distinct 'not available'
+	     *  status?
+	     *
+	     * @param t A value of type \a T .
+	     *
+	     * @return true iff \a t has a distinct value (or
+	     * possibly, one of a set of distinct values) signifying
+	     * that the actual value of this quantity is not
+	     * available.
+	     */
+	    bool operator()(const T& t) const
+	    {
+		return t == NAFunc<T>()();
+	    }
+	};
 
 	/** @brief Does a type have a distinct 'not available' value?
 	 *
@@ -251,9 +262,53 @@ namespace CXXR {
 	template <typename T>
 	inline bool hasDistinctNA()
 	{
-	    return isNA(NA<T>());
+	    return isNA(NAFunc<T>()());
 	}
     }  // namespace ElementTraits
+
+    /** @brief Does a value represent a distinct 'not available'
+     *  status?
+     *
+     * This templated function is syntactic sugar for the
+     * ElementTraits::IsNA() function objects.  It should not be
+     * specialized; instead specialize ElementTraits::IsNA itself.
+     *
+     * @tparam T A type capable of being used as the element type
+     *           of an R data vector. 
+     *
+     * @param t A value of type \a T .
+     *
+     * @return true iff \a t has a distinct value (or possibly,
+     * one of a set of distinct values) signifying that the actual
+     * value of this quantity is not available.
+     */
+    template <typename T> bool isNA(const T& t)
+    {
+	return ElementTraits::IsNA<T>()(t);
+    }
+
+    /** @brief Value to be used if 'not available'.
+     *
+     * This templated function is syntactic sugar for the
+     * ElementTraits::NAFunc() function objects.  It should not be
+     * specialized; instead specialize ElementTraits::NAFunc itself.
+     *
+     * @tparam T A type capable of being used as the element type
+     *           of an R data vector. 
+     *
+     * @return The value of type \a T to be used if the actual value
+     * is not available.  This for example is the value that will be
+     * used if an element of a vector of \a T is accessed in R using a
+     * NA index.
+     *
+     * @note For some types, e.g. Rbyte, the value returned is not
+     * distinct from ordinary values of the type.  See
+     * hasDistinctNA().
+     */
+    template <typename T> const T& NA()
+    {
+	return ElementTraits::NAFunc<T>()();
+    }
 }  // namespace CXXR;
 
 #endif  // ELEMENTTRAITS_HPP

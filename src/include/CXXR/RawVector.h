@@ -55,17 +55,23 @@ namespace CXXR {
     // Template specializations:
     namespace ElementTraits {
 	template <>
-	inline const Rbyte& NA<Rbyte>()
-	{
-	    static Rbyte ans(0);
-	    return ans;
-	}
+	class NAFunc<Rbyte> {
+	public:
+	    const Rbyte& operator()() const
+	    {
+		return s_na;
+	    }
+	private:
+	    static Rbyte s_na;
+	};
 
 	template <>
-	inline bool isNA<Rbyte>(const Rbyte&)
-	{
-	    return false;
-	}
+	struct IsNA<Rbyte> {
+	    bool operator()(const Rbyte&)
+	    {
+		return false;
+	    }
+	};
     }
 
     template <>

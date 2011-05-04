@@ -41,7 +41,6 @@
 
 #include <iostream>
 
-using namespace std;
 using namespace CXXR;
 
 // Force the creation of non-inline embodiments of functions callable
@@ -59,13 +58,14 @@ StringVector* StringVector::clone() const
 }
 
 namespace {
-    void indent(ostream& os, size_t margin)
+    void indent(std::ostream& os, size_t margin)
     {
-	while (margin--) os << ' ';
+	while (margin--)
+	    os << ' ';
     }
 }
 
-void CXXR::strdump(ostream& os, const StringVector& sv, size_t margin)
+void CXXR::strdump(std::ostream& os, const StringVector& sv, size_t margin)
 {
     indent(os, margin);
     os << "character:\n";

@@ -105,7 +105,6 @@
 #include "CXXR/GCStackRoot.hpp"
 #include "CXXR/Subscripting.hpp"
 
-using namespace std;
 using namespace CXXR;
 
 #if 0
@@ -1104,7 +1103,7 @@ static SEXP SimpleListAssign(SEXP call, SEXP x, SEXP s, SEXP y, int ind)
 
 static SEXP listRemove(SEXP x, SEXP s, int ind)
 {
-    vector<ConsCell*, Allocator<ConsCell*> > vcc;
+    std::vector<ConsCell*, Allocator<ConsCell*> > vcc;
     // Assemble vector of pointers to list elements:
     for (ConsCell* xp = SEXP_downcast<ConsCell*>(x);
 	 xp; xp = xp->tail())

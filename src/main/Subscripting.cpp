@@ -25,10 +25,9 @@
 #include "CXXR/RealVector.h"
 #include "CXXR/Subscripting.hpp"
 
-using namespace std;
 using namespace CXXR;
 
-pair<const IntVector*, size_t>
+std::pair<const IntVector*, size_t>
 Subscripting::canonicalize(const IntVector* raw_indices, size_t range_size)
 {
     const size_t rawsize = raw_indices->size();
@@ -38,7 +37,7 @@ Subscripting::canonicalize(const IntVector* raw_indices, size_t range_size)
     unsigned int max_index = 0;
     for (unsigned int i = 0; i < rawsize; ++i) {
 	int index = (*raw_indices)[i];
-	if (ElementTraits::isNA(index))
+	if (isNA(index))
 	    anyNA = true;
 	else if (index < 0)
 	    anyneg = true;
@@ -50,7 +49,7 @@ Subscripting::canonicalize(const IntVector* raw_indices, size_t range_size)
     if (!anyneg) {
 	// Check if raw_indices is already in the required form:
 	if (zeroes == 0)
-	    return make_pair(raw_indices, max_index);
+	    return std::make_pair(raw_indices, max_index);
 	// Otherwise suppress zeroes:
 	GCStackRoot<IntVector> ans(CXXR_NEW(IntVector(rawsize - zeroes)));
 	unsigned int iout = 0;
@@ -59,7 +58,7 @@ Subscripting::canonicalize(const IntVector* raw_indices, size_t range_size)
 	    if (index != 0)
 		(*ans)[iout++] = index;
 	}
-	return pair<const IntVector*, size_t>(ans, max_index);
+	return std::pair<const IntVector*, size_t>(ans, max_index);
     } else {  // Negative subscripts
 	if (anyNA || max_index > 0)
 	    Rf_error(_("only 0's may be mixed with negative subscripts"));
@@ -75,13 +74,13 @@ Subscripting::canonicalize(const IntVector* raw_indices, size_t range_size)
     }
 }
 
-pair<const IntVector*, size_t>
+std::pair<const IntVector*, size_t>
 Subscripting::canonicalize(const LogicalVector* raw_indices, size_t range_size)
 {
     const size_t rawsize = raw_indices->size();
     if (rawsize == 0)
-	return make_pair(CXXR_NEW(IntVector(0)), 0);
-    unsigned int nmax = max(range_size, rawsize);
+	return std::make_pair(CXXR_NEW(IntVector(0)), 0);
+    unsigned int nmax = std::max(range_size, rawsize);
     // Determine size of answer:
     size_t anssize = 0;
     for (unsigned int i = 0; i < nmax; ++i)
@@ -93,21 +92,21 @@ Subscripting::canonicalize(const LogicalVector* raw_indices, size_t range_size)
 	unsigned int iout = 0;
 	for (unsigned int iin = 0; iin < nmax; ++iin) {
 	    int logical = (*raw_indices)[iin % rawsize];
-	    if (ElementTraits::isNA(logical))
-		(*ans)[iout++] = ElementTraits::NA<int>();
+	    if (isNA(logical))
+		(*ans)[iout++] = NA<int>();
 	    else if (logical != 0)
 		(*ans)[iout++] = iin + 1;
 	}
     }
-    return pair<const IntVector*, size_t>(ans, nmax);
+    return std::pair<const IntVector*, size_t>(ans, nmax);
 }
 
-pair<const IntVector*, size_t>
+std::pair<const IntVector*, size_t>
 Subscripting::canonicalize(const RObject* subscripts, size_t range_size,
 			   const StringVector* range_names)
 {
     if (!subscripts)
-	return pair<const IntVector*, size_t>(CXXR_NEW(IntVector(0)), 0);
+	return std::pair<const IntVector*, size_t>(CXXR_NEW(IntVector(0)), 0);
     switch (subscripts->sexptype()) {
     case LGLSXP:
 	return canonicalize(static_cast<const LogicalVector*>(subscripts),
@@ -136,22 +135,22 @@ Subscripting::canonicalize(const RObject* subscripts, size_t range_size,
 		GCStackRoot<IntVector> ivec(CXXR_NEW(IntVector(range_size)));
 		for (unsigned int i = 0; i < range_size; ++i)
 		    (*ivec)[i] = i + 1;
-		return pair<const IntVector*, size_t>(ivec, range_size);
+		return std::pair<const IntVector*, size_t>(ivec, range_size);
 	    }
 	    // Else deliberate fall through to default case:
 	}
     default:
 	Rf_error(_("invalid subscript type '%s'"), subscripts->typeName());
     }
-    return pair<const IntVector*, size_t>(0, 0); // -Wall
+    return std::pair<const IntVector*, size_t>(0, 0); // -Wall
 }
 
-pair<const IntVector*, size_t>
+std::pair<const IntVector*, size_t>
 Subscripting::canonicalize(const StringVector* raw_indices, size_t range_size,
 			   const StringVector* range_names)
 {
     const size_t rawsize = raw_indices->size();
-    typedef tr1::unordered_map<GCRoot<CachedString>, unsigned int> Nmap;
+    typedef std::tr1::unordered_map<GCRoot<CachedString>, unsigned int> Nmap;
     Nmap names_map;
     unsigned int max_index = (range_names ? 0 : range_size);
     GCStackRoot<IntVector> ans(CXXR_NEW(IntVector(rawsize)));
@@ -160,7 +159,7 @@ Subscripting::canonicalize(const StringVector* raw_indices, size_t range_size,
     for (unsigned int iraw = 0; iraw < rawsize; ++iraw) {
 	String* subscript = (*raw_indices)[iraw];
 	if (subscript == String::NA())
-	    (*ans)[iraw] = ElementTraits::NA<int>();
+	    (*ans)[iraw] = NA<int>();
 	else {
 	    GCRoot<CachedString>
 		csubscript(SEXP_downcast<CachedString*>(subscript));
@@ -217,7 +216,7 @@ Subscripting::canonicalize(const StringVector* raw_indices, size_t range_size,
     // Set up the use.names attribute if necessary:
     if (max_index > range_size)
 	ans->setAttribute(UseNamesSymbol, use_names);
-    return pair<const IntVector*, size_t>(ans, max_index);
+    return std::pair<const IntVector*, size_t>(ans, max_index);
 }
 
 const ListVector*
@@ -237,7 +236,7 @@ Subscripting::canonicalizeArraySubscripts(const VectorBase* v,
 	size_t dimsize = (*dims)[d];
 	const StringVector* names
 	    = (dimnames ? static_cast<StringVector*>((*dimnames)[d].get()) : 0);
-	pair<const IntVector*, size_t> pr
+	std::pair<const IntVector*, size_t> pr
 	    = canonicalize(pl->car(), dimsize, names);
 	if (pr.second > dimsize)
 	    Rf_error(_("subscript out of bounds"));
@@ -375,7 +374,7 @@ void Subscripting::processUseNames(VectorBase* v, const IntVector* indices)
 	RObject* newname = (*usenames)[i];
 	if (newname) {
 	    int index = (*indices)[i];
-	    if (!ElementTraits::isNA(index))
+	    if (!isNA(index))
 		(*newnames)[index - 1] = SEXP_downcast<String*>(newname);
 	}
     }

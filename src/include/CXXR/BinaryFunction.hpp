@@ -218,8 +218,8 @@ namespace CXXR {
 	    result_type operator()(const first_argument_type& left,
 				   const second_argument_type& right)
 	    {
-		return (ElementTraits::isNA(left) || ElementTraits::isNA(right)
-			? ElementTraits::NA<result_type>() 
+		return (isNA(left) || isNA(right)
+			? NA<result_type>() 
 			: (m_func)(ElementTraits::data(left),
 				   ElementTraits::data(right)));
 	    }

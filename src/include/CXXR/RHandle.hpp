@@ -70,12 +70,7 @@ namespace CXXR {
 	/** @brief Primary constructor.
 	 *
 	 * @param target Pointer to the object to which this
-	 *          GCEdge is to refer.
-	 *
-	 * @note Unless \a target is a null pointer, this constructor
-	 * should be called only as part of the construction of the
-	 * object derived from GCNode of which this GCEdge forms a
-	 * part.
+	 *          RHandle is to refer.
 	 */
 	explicit RHandle(T* target)
 	    : GCEdge<T>(target)
@@ -162,18 +157,22 @@ namespace CXXR {
 	    GCNode::const_visitor* m_v;
 	};
 
-	template <>
-	inline const RHandle<>& NA<RHandle<> >()
-	{
-	    static RHandle<> ans(0);
-	    return ans;
-	}
+	template <class T>
+	struct NAFunc<RHandle<T> > {
+	    const RHandle<T>& operator()() const
+	    {
+		static RHandle<T> na;
+		return na;
+	    }
+	};
 
-	template <>
-	inline bool isNA<RHandle<> >(const RHandle<>&)
-	{
-	    return false;
-	}
+	template <class T>
+	struct IsNA<RHandle<T> > {
+	    bool operator()(const RHandle<T>& t) const
+	    {
+		return false;
+	    }
+	};
     }  // namespace ElementTraits
 }  // namespace CXXR
 

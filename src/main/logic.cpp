@@ -57,8 +57,8 @@ namespace {
 	{
 	    if (l == 0 || r == 0)
 		return 0;
-	    if (ElementTraits::isNA(l) || ElementTraits::isNA(r))
-		return ElementTraits::NA<int>();
+	    if (isNA(l) || isNA(r))
+		return NA<int>();
 	    return 1;
 	}
     };
@@ -68,11 +68,10 @@ namespace {
     struct OrOp {
 	int operator()(int l, int r) const
 	{
-	    if ((!ElementTraits::isNA(l) && l != 0)
-		|| (!ElementTraits::isNA(r) && r != 0))
+	    if ((!isNA(l) && l != 0) || (!isNA(r) && r != 0))
 		return 1;
-	    if (ElementTraits::isNA(l) || ElementTraits::isNA(r))
-		return ElementTraits::NA<int>();
+	    if (isNA(l) || isNA(r))
+		return NA<int>();
 	    return 0;
 	}
     };

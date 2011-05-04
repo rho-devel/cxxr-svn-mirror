@@ -57,11 +57,22 @@ namespace CXXR {
     // Template specializations:
     namespace ElementTraits {
 	template <>
-	inline const RHandle<String>& NA<RHandle<String> >()
-	{
-	    static RHandle<String> ans(String::NA());
-	    return ans;
-	}
+	struct NAFunc<RHandle<String> > {
+	    const RHandle<String>& operator()() const
+	    {
+		static RHandle<String> na(String::NA());
+		return na;
+	    }
+	};
+
+	template <>
+	struct IsNA<RHandle<String> > {
+	    bool operator()(const RHandle<String>& t) const
+	    {
+		typedef RHandle<String> T;
+		return t == static_cast<T>(NA<T>());
+	    }
+	};
     }
 
     template <>
