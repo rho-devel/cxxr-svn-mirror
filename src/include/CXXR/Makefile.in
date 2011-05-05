@@ -41,7 +41,7 @@ CXXR_HPPS = \
   Allocator.hpp ArgList.hpp ArgMatcher.hpp BinaryFunction.hpp CellPool.hpp \
   ElementTraits.hpp Evaluator_Context.hpp \
   FixedVector.hpp Frame.hpp GCEdge.hpp GCNode.hpp GCStackRoot.hpp \
-  HeterogeneousList.hpp MemoryBank.hpp RHandle.hpp \
+  HeterogeneousList.hpp MemoryBank.hpp NAAugment.hpp RHandle.hpp \
   SEXP_downcast.hpp SchwarzCounter.hpp StdFrame.hpp Subscripting.hpp \
   UnaryFunction.hpp VectorOps.hpp config.hpp
 

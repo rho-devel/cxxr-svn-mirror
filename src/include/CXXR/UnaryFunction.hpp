@@ -186,7 +186,7 @@ namespace CXXR {
 	    {
 		return (isNA(in)
 			? NA<result_type>() 
-			: (m_func)(ElementTraits::data(in)));
+			: result_type((m_func)(ElementTraits::data(in))));
 	    }
 
 	    /** @brief Raise warnings after processing a vector.

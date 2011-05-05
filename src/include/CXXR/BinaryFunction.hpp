@@ -220,8 +220,8 @@ namespace CXXR {
 	    {
 		return (isNA(left) || isNA(right)
 			? NA<result_type>() 
-			: (m_func)(ElementTraits::data(left),
-				   ElementTraits::data(right)));
+			: result_type((m_func)(ElementTraits::data(left),
+					       ElementTraits::data(right))));
 	    }
 
 	    /** @brief Raise warnings after processing a vector.

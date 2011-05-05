@@ -40,6 +40,8 @@
 #ifndef ELEMENTTRAITS_HPP
 #define ELEMENTTRAITS_HPP 1
 
+#include "CXXR/GCNode.hpp"
+
 namespace CXXR {
     struct True {};
 
