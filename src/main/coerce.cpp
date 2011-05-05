@@ -992,11 +992,17 @@ static SEXP Rf_coerceVectorList(SEXP v, SEXPTYPE type)
     if (type == VECSXP)
 	if (v->sexptype() == EXPRSXP) {
 	    ExpressionVector* ev = static_cast<ExpressionVector*>(v);
-	    return CXXR_NEW(ListVector(*ev));
+	    GCStackRoot<ListVector>
+		lv(CXXR_NEW(ListVector(ev->begin(), ev->end())));
+	    lv->copyAttribute(NamesSymbol, ev);
+	    return lv;
 	}
     if (type == EXPRSXP && TYPEOF(v) == VECSXP) {
-	GCStackRoot<ListVector> lv(static_cast<ListVector*>(v));
-	return CXXR_NEW(ExpressionVector(*lv));
+	ListVector* lv = static_cast<ListVector*>(v);
+	GCStackRoot<ExpressionVector>
+	    ev(CXXR_NEW(ExpressionVector(lv->begin(), lv->end())));
+	ev->copyAttribute(NamesSymbol, lv);
+	return ev;
     }
 
     if (type == STRSXP) {

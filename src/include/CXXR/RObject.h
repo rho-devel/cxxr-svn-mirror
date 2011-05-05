@@ -327,6 +327,23 @@ namespace CXXR {
 	    return pattern ? static_cast<T*>(pattern->clone()) : 0;
 	}
 
+	/** @brief Copy an attribute from one RObject to another.
+	 *
+	 * @param name Non-null pointer to the Symbol naming the
+	 *          attribute to be copied.
+	 *
+	 * @param source Non-null pointer to the object from which
+	 *          the attribute are to be copied.  If \a source does
+	 *          not have an attribute named \a name , then the
+	 *          function has no effect.
+	 */
+	void copyAttribute(const Symbol* name, const RObject* source)
+	{
+	    RObject* att = source->getAttribute(name);
+	    if (att)
+		setAttribute(name, att);
+	}
+
 	/** @brief Copy attributes from one RObject to another.
 	 *
 	 * Any existing attributes of \a *this are discarded.

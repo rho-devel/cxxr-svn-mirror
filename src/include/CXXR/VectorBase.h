@@ -56,7 +56,7 @@ extern "C" {
 }
 
 namespace CXXR {
-    class ListVector;
+    template <typename T, SEXPTYPE ST> class FixedVector;
     class StringVector;
 
     template <typename T, SEXPTYPE ST> class FixedVector;
@@ -121,7 +121,7 @@ namespace CXXR {
 	 * names, and the following element will give the column
 	 * names.
 	 */
-	const ListVector* dimensionNames() const;
+	const FixedVector<RHandle<>, VECSXP>* dimensionNames() const;
 
 	/** @brief Names associated with a particular dimension of an
 	 *  R matrix or array.
@@ -206,7 +206,7 @@ namespace CXXR {
 	 *          (rather than duplicating it), so the calling code
 	 *          must not subsequently modify it.
 	 */
-	void setDimensionNames(ListVector* names);
+	void setDimensionNames(FixedVector<RHandle<>, VECSXP>* names);
 
 	/** @brief Associate names with a particular dimension of an
 	 *  R matrix or array.

@@ -94,6 +94,20 @@ namespace CXXR {
 	 */
 	FixedVector(const FixedVector<T, ST>& pattern);
 
+	/** @brief Constructor from range.
+	 * 
+	 * @tparam An iterator type, at least a forward iterator.
+	 *
+	 * @param from Iterator designating the start of the range
+	 *          from which the FixedVector is to be constructed.
+	 *
+	 * @param to Iterator designating 'one past the end' of the
+	 *          range from which the FixedVector is to be
+	 *          constructed.
+	 */
+	template <typename FwdIter>
+	FixedVector(FwdIter from, FwdIter to);
+
 	/** @brief Element access.
 	 *
 	 * @param index Index of required element (counting from
@@ -280,6 +294,18 @@ CXXR::FixedVector<T, ST>::FixedVector(const FixedVector<T, ST>& pattern)
 	allocData(sz);
     constructElements(typename ElementTraits::MustConstruct<T>::TruthType());
     std::copy(pattern.begin(), pattern.end(), begin());
+}
+
+template <typename T, SEXPTYPE ST>
+template <typename FwdIter>
+CXXR::FixedVector<T, ST>::FixedVector(FwdIter from, FwdIter to)
+    : VectorBase(ST, std::distance(from, to)), m_data(singleton()),
+      m_blocksize(0)
+{
+    if (size() > 1)
+	allocData(size());
+    constructElements(typename ElementTraits::MustConstruct<T>::TruthType());
+    std::copy(from, to, begin());
 }
 
 template <typename T, SEXPTYPE ST>
