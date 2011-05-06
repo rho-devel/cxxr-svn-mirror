@@ -441,14 +441,16 @@ Vout* CXXR::VectorOps::UnaryFunction<AttributeCopier,
 				     FunctorWrapper>::apply(const Vin* v)
 {
     typedef typename Vin::element_type Inelt;
+    typedef typename Vin::const_iterator InIt;
     typedef typename Vout::element_type Outelt;
-    size_t vsize = v->size();
-    GCStackRoot<Vout> ans(CXXR_NEW(Vout(vsize)));
+    typedef typename Vout::iterator OutIt;
+    GCStackRoot<Vout> ans(CXXR_NEW(Vout(v->size())));
     FunctorWrapper<Inelt, Outelt, Functor> fwrapper(m_f);
-    for (size_t i = 0; i < vsize; ++i) {
-	const Inelt elt = (*v)[i];
-	(*ans)[i] = fwrapper(elt);
-    }
+    // Don't use std::transform because fwrapper may have state.
+    InIt iend = v->end();
+    OutIt oit = ans->begin();
+    for (InIt iit = v->begin(); iit != iend; ++iit)
+	*oit++ = fwrapper(*iit);
     fwrapper.warnings();
     AttributeCopier attrib_copier;
     attrib_copier(ans, v);

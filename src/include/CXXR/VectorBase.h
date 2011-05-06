@@ -308,12 +308,11 @@ namespace CXXR {
     V* VectorBase::resize(const V* pattern, size_t new_size)
     {
 	GCStackRoot<V> ans(CXXR_NEW(V(new_size)));
-	size_t patternsz = pattern->size();
-	size_t copysz = std::min(patternsz, new_size);
-	for (unsigned int i = 0; i < copysz; ++i)
-	    (*ans)[i] = (*pattern)[i];
-	for (unsigned int i = copysz; i < new_size; ++i)
-	    (*ans)[i] = NA<typename V::element_type>();
+	size_t copysz = std::min(pattern->size(), new_size);
+	typename V::const_iterator patb = pattern->begin();
+	typename V::iterator ansit
+	    = std::copy(patb, patb + copysz, ans->begin());
+	std::fill(ansit, ans->end(), NA<typename V::element_type>());
 	const StringVector* names = pattern->names();
 	if (names)
 	    ans->setNames(resize(names, new_size));

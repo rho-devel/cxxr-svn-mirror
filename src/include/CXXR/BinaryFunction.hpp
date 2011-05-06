@@ -517,29 +517,29 @@ void CXXR::VectorOps::BinaryFunction<AttributeCopier,
 								  const Vr* vr)
 {
     typedef typename Vl::element_type Lelt;
+    typedef typename Vl::const_iterator Lit;
     typedef typename Vr::element_type Relt;
-    typedef typename Vout::element_type Outelt;
-    size_t lsize = vl->size();
-    size_t rsize = vr->size();
-    if ((flag < 0 && rsize%lsize != 0)
-	|| (flag > 0 && lsize%rsize != 0))
+    typedef typename Vr::const_iterator Rit;
+    typedef typename Vout::element_type Oelt;
+    typedef typename Vout::iterator Oit;
+    FunctorWrapper<Lelt, Relt, Oelt, Functor> fwrapper(m_f);
+    Lit lit = vl->begin();
+    Lit lend = vl->end();
+    Rit rit = vr->begin();
+    Rit rend = vr->end();
+    Oit oend = vout->end();
+    for (Oit oit = vout->begin(); oit != oend; ++oit) {
+	*oit = fwrapper(*lit++, *rit++);
+	if (flag < 0 && lit == lend)
+	    lit = vl->begin();
+	if (flag > 0 && rit == rend)
+	    rit = vr->begin();
+    }
+    if ((flag < 0 && lit != vl->begin())
+	|| (flag > 0 && rit != vr->begin()))
 	Rf_warning(_("longer object length is not"
 		     " a multiple of shorter object length"));
-    size_t outsize = vout->size();
-    FunctorWrapper<Lelt, Relt, Outelt, Functor> fwrapper(m_f);
-    size_t il = 0;
-    size_t ir = 0;
-    size_t iout = 0;
-    while (iout < outsize) {
-	const Lelt lelt = (*vl)[il++];
-	const Relt relt = (*vr)[ir++];
-	(*vout)[iout++] = fwrapper(lelt, relt);
-	if (flag < 0 && il == lsize)
-	    il = 0;
-	if (flag > 0 && ir == rsize)
-	    ir = 0;
-    }
     fwrapper.warnings();
 }
-
+	
 #endif  // BINARYFUNCTION_HPP

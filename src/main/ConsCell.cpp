@@ -101,12 +101,14 @@ void ConsCell::visitReferents(const_visitor* v) const
 namespace {
     void indent(ostream& os, size_t margin)
     {
-	while (margin--) os << ' ';
+	while (margin--)
+	    os << ' ';
     }
 
     const char* sympname(const RObject* sym) {
 	const Symbol* symb = dynamic_cast<const Symbol*>(sym);
-	if (!symb) return "(SYMSXP is not a Symbol)";
+	if (!symb)
+	    return "(SYMSXP is not a Symbol)";
 	return symb->name()->c_str();
     }
 }
@@ -120,8 +122,10 @@ void CXXR::ccdump(ostream& os, const ConsCell& cc, size_t margin)
 	indent(os, margin);
 	os << "- ";
 	const RObject* tag = p->tag();
-	if (!tag) os << "(No tag):\n";
-	else if (tag->sexptype() != SYMSXP) os << "(Tag not a SYMSXP):\n";
+	if (!tag)
+	    os << "(No tag):\n";
+	else if (tag->sexptype() != SYMSXP)
+	    os << "(Tag not a SYMSXP):\n";
 	else os << sympname(tag) << ":\n";
 	// Print car:
 	const RObject* car = p->car();
@@ -132,7 +136,8 @@ void CXXR::ccdump(ostream& os, const ConsCell& cc, size_t margin)
 	    strdump(os, *sv, margin + 2);
 	else {
 	    indent(os, margin + 2);
-	    if (!car) os << "NILSXP\n";
+	    if (!car)
+		os << "NILSXP\n";
 	    else {
 		SEXPTYPE st = car->sexptype();
 		os << Rf_type2char(st);
@@ -144,28 +149,20 @@ void CXXR::ccdump(ostream& os, const ConsCell& cc, size_t margin)
     }
 }
 
-size_t CXXR::listLength(const ConsCell* start)
-{
-    size_t ans = 0;
-    while (start) {
-	++ans;
-	start = start->tail();
-    }
-    return ans;
-}
-
 // ***** C interface functions *****
 
 void SET_TAG(SEXP x, SEXP y)
 {
-    if (!x) Rf_error(_("bad value"));
+    if (!x)
+	Rf_error(_("bad value"));
     ConsCell& cc = *SEXP_downcast<ConsCell*>(x);
     cc.setTag(y);
 }
 
 SEXP SETCAR(SEXP x, SEXP y)
 {
-    if (!x) Rf_error(_("bad value"));
+    if (!x)
+	Rf_error(_("bad value"));
     ConsCell& cc = *SEXP_downcast<ConsCell*>(x);
     cc.setCar(y);
     return y;
