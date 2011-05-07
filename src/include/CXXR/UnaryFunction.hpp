@@ -40,6 +40,9 @@
 #ifndef UNARYFUNCTION_HPP
 #define UNARYFUNCTION_HPP 1
 
+#include <algorithm>
+#include <boost/lambda/bind.hpp>
+#include <boost/lambda/lambda.hpp>
 #include "CXXR/VectorBase.h"
 #include "CXXR/errors.h"
 
@@ -71,7 +74,7 @@ namespace CXXR {
 	     * @param from Non-null pointer to the vector from which
 	     *          attributes are to be copied.
 	     */
-	    void operator()(VectorBase* to, const VectorBase* from)
+	    void operator()(VectorBase* to, const VectorBase* from) const
 	    {
 		to->copyAttributes(from, true);
 	    }
@@ -96,7 +99,7 @@ namespace CXXR {
 	     * @param from Non-null pointer to the vector from which
 	     *          attributes are to be copied.
 	     */
-	    void operator()(VectorBase* to, const VectorBase* from);
+	    void operator()(VectorBase* to, const VectorBase* from) const;
 	};
 
 
@@ -113,7 +116,7 @@ namespace CXXR {
 	    : std::binary_function<VectorBase*, VectorBase*, void> {
 	    /** @brief Copy no attributes.
 	     */
-	    void operator()(VectorBase*, const VectorBase*)
+	    void operator()(VectorBase*, const VectorBase*) const
 	    {}
 	};
 
@@ -182,7 +185,7 @@ namespace CXXR {
 	     * is not actually called.  Otherwise, the result of
 	     * applying \a f to the element data of \a in .
 	     */
-	    result_type operator()(const argument_type& in)
+	    result_type operator()(const argument_type& in) const
 	    {
 		return (isNA(in)
 			? NA<result_type>() 
@@ -270,7 +273,7 @@ namespace CXXR {
 	     * @result The result of applying \a f to \a in , possibly
 	     * modified if abnormalities occurred.
 	     */
-	    result_type operator()(const argument_type& in)
+	    result_type operator()(const argument_type& in) const
 	    {
 		return (m_func)(in);
 	    }
@@ -357,7 +360,7 @@ namespace CXXR {
 	     * vector of the same size as \a v .
 	     */
 	    template <class Vout, class Vin>
-	    Vout* apply(const Vin* v);
+	    Vout* apply(const Vin* v) const;
 	private:
 	    Functor m_f;
 	};
@@ -438,19 +441,15 @@ template <class AttributeCopier, typename Functor,
 template <class Vout, class Vin>
 Vout* CXXR::VectorOps::UnaryFunction<AttributeCopier,
 				     Functor,
-				     FunctorWrapper>::apply(const Vin* v)
+				     FunctorWrapper>::apply(const Vin* v) const
 {
+    using namespace boost::lambda;
     typedef typename Vin::element_type Inelt;
-    typedef typename Vin::const_iterator InIt;
     typedef typename Vout::element_type Outelt;
-    typedef typename Vout::iterator OutIt;
     GCStackRoot<Vout> ans(CXXR_NEW(Vout(v->size())));
     FunctorWrapper<Inelt, Outelt, Functor> fwrapper(m_f);
-    // Don't use std::transform because fwrapper may have state.
-    InIt iend = v->end();
-    OutIt oit = ans->begin();
-    for (InIt iit = v->begin(); iit != iend; ++iit)
-	*oit++ = fwrapper(*iit);
+    std::transform(v->begin(), v->end(), ans->begin(),
+    		   bind<Outelt>(var(fwrapper), _1));
     fwrapper.warnings();
     AttributeCopier attrib_copier;
     attrib_copier(ans, v);

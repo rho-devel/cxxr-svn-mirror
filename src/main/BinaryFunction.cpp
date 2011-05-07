@@ -49,7 +49,7 @@ using namespace VectorOps;
 
 void GeneralBinaryAttributeCopier::apply(VectorBase* vout,
 					 const VectorBase* vl,
-					 const VectorBase* vr)
+					 const VectorBase* vr) const
 {
     // Handle layout attributes:
     {

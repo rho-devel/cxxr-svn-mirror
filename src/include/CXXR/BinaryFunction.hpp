@@ -128,7 +128,7 @@ namespace CXXR {
 	     * @param vr Non-null pointer to the second operand.
 	     */
 	    void operator()(VectorBase* vout,
-			    const VectorBase* vl, const VectorBase* vr)
+			    const VectorBase* vl, const VectorBase* vr) const
 	    {
 		if (!vl->attributes() && !vr->attributes())
 		    return;
@@ -137,7 +137,8 @@ namespace CXXR {
 	private:
 	    // Deal with non-trivial cases:
 	    void apply(VectorBase* vout,
-		    const VectorBase* vl, const VectorBase* vr);
+		       const VectorBase* vl,
+		       const VectorBase* vr) const;
 	};
 
 	/** @brief Monitor function application for binary functions.
@@ -216,7 +217,7 @@ namespace CXXR {
 	     * f to the element data of \a left and \a right .
 	     */
 	    result_type operator()(const first_argument_type& left,
-				   const second_argument_type& right)
+				   const second_argument_type& right) const
 	    {
 		return (isNA(left) || isNA(right)
 			? NA<result_type>() 
@@ -300,7 +301,7 @@ namespace CXXR {
 	     * of \a left and \a right .
 	     */
 	    result_type operator()(const first_argument_type& left,
-				   const second_argument_type& right)
+				   const second_argument_type& right) const
 	    {
 		return (m_func)(ElementTraits::data(left),
 				ElementTraits::data(right));
@@ -393,7 +394,7 @@ namespace CXXR {
 	     * @result Pointer to the result vector.
 	     */
 	    template <class Vout, class Vl, class Vr>
-	    Vout* apply(const Vl* vl, const Vr* vr);
+	    Vout* apply(const Vl* vl, const Vr* vr) const;
 	private:
 	    Functor m_f;
 
@@ -402,7 +403,7 @@ namespace CXXR {
 	    // operand is shorter, 0 if the operands are of equal
 	    // length, or +1 if the second operand is shorter.
 	    template <int flag, class Vout, class Vl, class Vr>
-	    void mapElements(Vout* vout, const Vl* vl, const Vr* vr);
+	    void mapElements(Vout* vout, const Vl* vl, const Vr* vr) const;
 	};
 
 	/** @brief Create a BinaryFunction object from a functor.
@@ -483,7 +484,7 @@ template <class Vout, class Vl, class Vr>
 Vout* CXXR::VectorOps::BinaryFunction<AttributeCopier,
 		                      Functor,
 		                      FunctorWrapper>::apply(const Vl* vl,
-							     const Vr* vr)
+							     const Vr* vr) const
 {
     checkOperandsConformable(vl, vr);
     size_t lsize = vl->size();
@@ -514,7 +515,7 @@ void CXXR::VectorOps::BinaryFunction<AttributeCopier,
 				     Functor,
 				     FunctorWrapper>::mapElements(Vout* vout,
 								  const Vl* vl,
-								  const Vr* vr)
+								  const Vr* vr) const
 {
     typedef typename Vl::element_type Lelt;
     typedef typename Vl::const_iterator Lit;
