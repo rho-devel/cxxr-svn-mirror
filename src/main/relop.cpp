@@ -50,7 +50,6 @@
 #include "CXXR/GCStackRoot.hpp"
 #include "CXXR/LogicalVector.h"
 
-using namespace std;
 using namespace CXXR;
 using namespace VectorOps;
 
@@ -60,11 +59,10 @@ namespace {
     template <template <typename> class Relop, class V>
     inline LogicalVector* relop_aux(const V* vl, const V* vr)
     {
-	using namespace rel_ops;
-	typedef typename V::element_type element_type;
+	typedef typename V::value_type value_type;
 	return
 	    BinaryFunction<GeneralBinaryAttributeCopier,
-		           Relop<element_type> >()
+		           Relop<value_type> >()
 	    .template apply<LogicalVector>(vl, vr);
     }
 
@@ -73,17 +71,17 @@ namespace {
     {
 	switch (code) {
 	case EQOP:
-	    return relop_aux<equal_to>(vl, vr);
+	    return relop_aux<std::equal_to>(vl, vr);
 	case NEOP:
-	    return relop_aux<not_equal_to>(vl, vr);
+	    return relop_aux<std::not_equal_to>(vl, vr);
 	case LTOP:
-	    return relop_aux<less>(vl, vr);
+	    return relop_aux<std::less>(vl, vr);
 	case GTOP:
-	    return relop_aux<greater>(vl, vr);
+	    return relop_aux<std::greater>(vl, vr);
 	case LEOP:
-	    return relop_aux<less_equal>(vl, vr);
+	    return relop_aux<std::less_equal>(vl, vr);
 	case GEOP:
-	    return relop_aux<greater_equal>(vl, vr);
+	    return relop_aux<std::greater_equal>(vl, vr);
 	}
 	return 0;  // -Wall
     }
@@ -93,9 +91,9 @@ namespace {
     {
 	switch (code) {
 	case EQOP:
-	    return relop_aux<equal_to>(vl, vr);
+	    return relop_aux<std::equal_to>(vl, vr);
 	case NEOP:
-	    return relop_aux<not_equal_to>(vl, vr);
+	    return relop_aux<std::not_equal_to>(vl, vr);
 	default:
 	    Rf_error(_("comparison of these types is not implemented"));
 	}

@@ -40,12 +40,11 @@
 #ifndef ELEMENTTRAITS_HPP
 #define ELEMENTTRAITS_HPP 1
 
+#include <boost/mpl/bool.hpp>
 #include "CXXR/GCNode.hpp"
 
 namespace CXXR {
-    struct True {};
-
-    struct False {};
+    using namespace boost::mpl;
 
     /** @brief Namespace encapsulating traits of R vector element types.
      *
@@ -83,7 +82,7 @@ namespace CXXR {
 	    /** @brief Type of the data payload held in this element
 	     * type.
 	     */
-	    typedef T Type;
+	    typedef T type;
 
 	    /** @brief Access the data payload.
 	     *
@@ -92,7 +91,7 @@ namespace CXXR {
 	     * @return reference to the data payload contained within
 	     * \a t .
 	     */
-	    static const Type& get(const T& t)
+	    static const type& get(const T& t)
 	    {
 		return t;
 	    }
@@ -100,10 +99,9 @@ namespace CXXR {
 
 	/** @brief Function object for detaching referents.
 	 *
-	 * For element types for which \c HasReferents::TruthType is
-	 * True, this struct will be specialized into a function
-	 * object which will detach the referents of a particular
-	 * element \a t .
+	 * For element types for which \c HasReferents is true, this
+	 * struct will be specialized into a function object which
+	 * will detach the referents of a particular element \a t .
 	 *
 	 * @tparam T A type capable of being used as the element type
 	 *           of an R data vector. 
@@ -116,59 +114,63 @@ namespace CXXR {
 
 	/** @brief Do elements of this type refer to GCNode objects?
 	 *
-	 * Specializations will define \c HasReferents::TruthType to
-	 * be True if objects of element type \a T may incorporate
+	 * Specializations will define \c HasReferents to
+	 * be true if objects of element type \a T may incorporate
 	 * references or (more likely) pointers to GCNode objects.
 	 * Such types will also specialize the VisitReferents and
 	 * DetachReferents function object types.
 	 *
-	 * In the default case, covered here, \c
-	 * HasReferent::TruthType is defined to False, signifying
-	 * that no special handling regarding garbage collection is
+	 * In the default case, covered here, \c HasReferents is
+	 * defined to false, signifying that no special handling
+	 * regarding garbage collection is required.
+	 *
+	 * @tparam T A type capable of being used as the element type
+	 *           of an R data vector. 
+	 */
+	template <typename T>
+	struct HasReferents : bool_<false>
+	{};
+
+	/** @brief Do elements of this type require construction?
+	 *
+	 * Specializations will define \c MustConstruct to
+	 * be true if element type \a T has a nontrivial default
+	 * constructor.
+	 *
+	 * In the default case, covered here, \c MustConstruct is
+	 * defined to false, signifying that no construction is
 	 * required.
 	 *
 	 * @tparam T A type capable of being used as the element type
 	 *           of an R data vector. 
+	 *
+	 * @note This metafunction is defined explicitly because the
+	 * capabilities of boost::has_trivial_constructor are
+	 * platform-dependent.
 	 */
 	template <typename T>
-	struct HasReferents {
-	    typedef False TruthType;
-	};
-
-	/** @brief Do elements of this type require construction?
-	 *
-	 * Specializations will define \c MustConstruct::TruthType to
-	 * be True if element type \a T has a nontrivial default
-	 * constructor.
-	 *
-	 * In the default case, covered here, \c
-	 * MustConstruct::TruthType is defined to False, signifying
-	 * that no construction is required.
-	 *
-	 * @tparam T A type capable of being used as the element type
-	 *           of an R data vector. 
-	 */
-	template <typename T>
-	struct MustConstruct {
-	    typedef False TruthType;
-	};
+	struct MustConstruct : bool_<false>
+	{};
 
 	/** @brief Does this type have a destructor?
 	 *
-	 * Specializations will define \c MustDestruct::TruthType to
-	 * be True if element type \a T has a nontrivial destructor.
+	 * Specializations will define \c MustDestruct to be true if
+	 * element type \a T has a nontrivial destructor.
 	 *
-	 * In the default case, covered here, \c
-	 * MustDestruct::TruthType is defined to False, signifying
-	 * that no destructor call is required.
+	 * In the default case, covered here, \c MustDestruct is
+	 * defined to false, signifying that no destructor call is
+	 * required.
 	 *
 	 * @tparam T A type capable of being used as the element type
 	 *           of an R data vector. 
+	 *
+	 * @note This metafunction is defined explicitly because the
+	 * capabilities of boost::has_trivial_destructor are
+	 * platform-dependent.
 	 */
 	template <typename T>
-	struct MustDestruct {
-	    typedef False TruthType;
-	};
+	struct MustDestruct : bool_<false>
+	{};
 
 	/** @brief Function object for visiting referents.
 	 *
@@ -203,7 +205,7 @@ namespace CXXR {
 	 * @return reference to the data payload contained within \a t .
 	 */
 	template <typename T>
-	inline const typename ElementTraits::Data<T>::Type&
+	inline const typename ElementTraits::Data<T>::type&
 	data(const T& t)
 	{
 	    return Data<T>::get(t);

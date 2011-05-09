@@ -312,7 +312,7 @@ namespace CXXR {
 	typename V::const_iterator patb = pattern->begin();
 	typename V::iterator ansit
 	    = std::copy(patb, patb + copysz, ans->begin());
-	std::fill(ansit, ans->end(), NA<typename V::element_type>());
+	std::fill(ansit, ans->end(), NA<typename V::value_type>());
 	const StringVector* names = pattern->names();
 	if (names)
 	    ans->setNames(resize(names, new_size));

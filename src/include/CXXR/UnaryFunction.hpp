@@ -444,8 +444,8 @@ Vout* CXXR::VectorOps::UnaryFunction<AttributeCopier,
 				     FunctorWrapper>::apply(const Vin* v) const
 {
     using namespace boost::lambda;
-    typedef typename Vin::element_type Inelt;
-    typedef typename Vout::element_type Outelt;
+    typedef typename Vin::value_type Inelt;
+    typedef typename Vout::value_type Outelt;
     GCStackRoot<Vout> ans(CXXR_NEW(Vout(v->size())));
     FunctorWrapper<Inelt, Outelt, Functor> fwrapper(m_f);
     std::transform(v->begin(), v->end(), ans->begin(),

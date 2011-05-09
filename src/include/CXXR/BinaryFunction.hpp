@@ -517,11 +517,11 @@ void CXXR::VectorOps::BinaryFunction<AttributeCopier,
 								  const Vl* vl,
 								  const Vr* vr) const
 {
-    typedef typename Vl::element_type Lelt;
+    typedef typename Vl::value_type Lelt;
     typedef typename Vl::const_iterator Lit;
-    typedef typename Vr::element_type Relt;
+    typedef typename Vr::value_type Relt;
     typedef typename Vr::const_iterator Rit;
-    typedef typename Vout::element_type Oelt;
+    typedef typename Vout::value_type Oelt;
     typedef typename Vout::iterator Oit;
     FunctorWrapper<Lelt, Relt, Oelt, Functor> fwrapper(m_f);
     Lit lit = vl->begin();

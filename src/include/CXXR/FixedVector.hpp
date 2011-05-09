@@ -56,7 +56,7 @@ namespace CXXR {
     template <typename T, SEXPTYPE ST>
     class FixedVector : public VectorBase {
     public:
-	typedef T element_type;
+	typedef T value_type;
 	typedef T* iterator;
 	typedef const T* const_iterator;
 
@@ -71,7 +71,8 @@ namespace CXXR {
 	{
 	    if (sz > 1)
 		allocData(sz);
-	    constructElements(typename ElementTraits::MustConstruct<T>::TruthType());
+	    if (ElementTraits::MustConstruct<T>())  // determined at compile-time
+		constructElements();
 	}
 
 	/** @brief Create a vector, and fill with a specified initial
@@ -210,8 +211,8 @@ namespace CXXR {
 	 */
 	~FixedVector()
 	{
-	    destructElements(0,
-			     typename ElementTraits::MustDestruct<T>::TruthType());
+	    if (ElementTraits::MustDestruct<T>())  // determined at compile-time
+		destructElements(0);
 	    if (m_blocksize > 0)
 		MemoryBank::deallocate(m_data, m_blocksize);
 	}
@@ -237,22 +238,13 @@ namespace CXXR {
 	// allocate the required memory block from CXXR::MemoryBank :
 	void allocData(size_t sz);
 
-	void constructElements(False)
-	{}
-
-	void constructElements(True);
-
-	void destructElements(size_t, False)
-	{}
+	void constructElements();
 
 	// Must have new_size <= current size.
-	void destructElements(size_t new_size, True);
+	void destructElements(size_t new_size);
 
 	// Helper functions for detachReferents():
-	void detachElements(False)
-	{}
-
-	void detachElements(True);
+	void detachElements();
 
 	T* singleton()
 	{
@@ -260,10 +252,7 @@ namespace CXXR {
 	}
 
 	// Helper functions for visitReferents():
-	void visitElements(const_visitor*, False) const
-	{}
-
-	void visitElements(const_visitor* v, True) const;
+	void visitElements(const_visitor* v) const;
     };
 }  // namespace CXXR
 
@@ -281,7 +270,8 @@ CXXR::FixedVector<T, ST>::FixedVector(size_t sz, const U& initializer)
 {
     if (sz > 1)
 	allocData(sz);
-    constructElements(typename ElementTraits::MustConstruct<T>::TruthType());
+    if (ElementTraits::MustConstruct<T>())  // determined at compile-time
+	constructElements();
     std::fill(begin(), end(), initializer);
 }
 
@@ -292,7 +282,8 @@ CXXR::FixedVector<T, ST>::FixedVector(const FixedVector<T, ST>& pattern)
     size_t sz = size();
     if (sz > 1)
 	allocData(sz);
-    constructElements(typename ElementTraits::MustConstruct<T>::TruthType());
+    if (ElementTraits::MustConstruct<T>())  // determined at compile-time
+	constructElements();
     std::copy(pattern.begin(), pattern.end(), begin());
 }
 
@@ -304,7 +295,8 @@ CXXR::FixedVector<T, ST>::FixedVector(FwdIter from, FwdIter to)
 {
     if (size() > 1)
 	allocData(size());
-    constructElements(typename ElementTraits::MustConstruct<T>::TruthType());
+    if (ElementTraits::MustConstruct<T>())  // determined at compile-time
+	constructElements();
     std::copy(from, to, begin());
 }
 
@@ -326,15 +318,14 @@ CXXR::FixedVector<T, ST>* CXXR::FixedVector<T, ST>::clone() const
 }
 
 template <typename T, SEXPTYPE ST>
-void CXXR::FixedVector<T, ST>::constructElements(True)
+void CXXR::FixedVector<T, ST>::constructElements()
 {
-    iterator pend = end();
-    for (iterator p = begin(); p < pend; ++p)
+    for (iterator p = begin(), pend = end(); p != pend; ++p)
 	new (p) T;
 }
 
 template <typename T, SEXPTYPE ST>
-void CXXR::FixedVector<T, ST>::destructElements(size_t new_size, True)
+void CXXR::FixedVector<T, ST>::destructElements(size_t new_size)
 {
     // Destroy in reverse order, following C++ convention:
     for (T* p = m_data + size() - 1; p >= m_data + new_size; --p)
@@ -342,7 +333,7 @@ void CXXR::FixedVector<T, ST>::destructElements(size_t new_size, True)
 }
 
 template <typename T, SEXPTYPE ST>
-void CXXR::FixedVector<T, ST>::detachElements(True)
+void CXXR::FixedVector<T, ST>::detachElements()
 {
     //std::for_each(begin(), end(), ElementTraits::DetachReferents<T>());
     setSize(0);
@@ -351,7 +342,8 @@ void CXXR::FixedVector<T, ST>::detachElements(True)
 template <typename T, SEXPTYPE ST>
 void CXXR::FixedVector<T, ST>::detachReferents()
 {
-    detachElements(typename ElementTraits::HasReferents<T>::TruthType());
+    if (ElementTraits::HasReferents<T>())  // determined at compile-time
+	detachElements();
     VectorBase::detachReferents();
 }
 
@@ -360,8 +352,8 @@ void CXXR::FixedVector<T, ST>::setSize(size_t new_size)
 {
     if (new_size > size())
 	Rf_error("cannot increase size of this vector");
-    destructElements(new_size,
-		     typename ElementTraits::MustDestruct<T>::TruthType());
+    if (ElementTraits::MustDestruct<T>())  // determined at compile-time
+	destructElements(new_size);
     VectorBase::setSize(new_size);
 }
 
@@ -372,7 +364,7 @@ const char* CXXR::FixedVector<T, ST>::typeName() const
 }
 
 template <typename T, SEXPTYPE ST>
-void CXXR::FixedVector<T, ST>::visitElements(const_visitor* v, True) const
+void CXXR::FixedVector<T, ST>::visitElements(const_visitor* v) const
 {
     std::for_each(begin(), end(), ElementTraits::VisitReferents<T>(v));
 }
@@ -380,7 +372,8 @@ void CXXR::FixedVector<T, ST>::visitElements(const_visitor* v, True) const
 template <typename T, SEXPTYPE ST>
 void CXXR::FixedVector<T, ST>::visitReferents(const_visitor* v) const
 {
-    visitElements(v, typename ElementTraits::HasReferents<T>::TruthType());
+    if (ElementTraits::HasReferents<T>())  // determined at compile-time
+	visitElements(v);
     VectorBase::visitReferents(v);
 }
 
