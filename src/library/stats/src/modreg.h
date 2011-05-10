@@ -42,6 +42,10 @@
 #include <Rinternals.h>
 /* FIXME: shouldn't we  do the  ENABLE_NLS .. include <libintl.h> part here? */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 SEXP R_isoreg(SEXP y);
 
 /* monoSpl.c : */
@@ -150,4 +154,9 @@ void F77_SUB(bvalus)(int *n, double *knot, double *coef,
 void F77_SUB(supsmu)(int *n, double *x, double *y,
 		     double *w, int *iper, double *span, double *alpha,
 		     double *smo, double *sc, double *edf);
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif
+
 #endif
