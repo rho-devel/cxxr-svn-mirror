@@ -73,9 +73,9 @@ namespace CXXR {
 	return "integer";
     }
 
-    /** @brief Vector of truth values.
+    /** @brief Vector of integer values.
      */
-    typedef CXXR::FixedVector<int, INTSXP> IntVector;
+    typedef FixedVector<int, INTSXP> IntVector;
 }  // namespace CXXR
 
 extern "C" {
