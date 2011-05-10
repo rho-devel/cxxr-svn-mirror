@@ -47,7 +47,6 @@
 #include "CXXR/StringVector.h"
 #include "CXXR/Symbol.h"
 
-using namespace std;
 using namespace CXXR;
 
 // Force the creation of non-inline embodiments of functions callable
@@ -72,7 +71,7 @@ void ConsCell::checkST(SEXPTYPE st)
     case BCODESXP:
 	break;
     default:
-	throw invalid_argument("Inappropriate SEXPTYPE for ConsCell.");
+	throw std::invalid_argument("Inappropriate SEXPTYPE for ConsCell.");
     }
 }
 
@@ -99,7 +98,7 @@ void ConsCell::visitReferents(const_visitor* v) const
 }
 
 namespace {
-    void indent(ostream& os, size_t margin)
+    void indent(std::ostream& os, std::size_t margin)
     {
 	while (margin--)
 	    os << ' ';
@@ -113,7 +112,7 @@ namespace {
     }
 }
 
-void CXXR::ccdump(ostream& os, const ConsCell& cc, size_t margin)
+void CXXR::ccdump(std::ostream& os, const ConsCell& cc, std::size_t margin)
 {
     indent(os, margin);
     os << Rf_type2char(cc.sexptype()) << '\n';
@@ -185,7 +184,7 @@ SEXP Rf_allocSExp(SEXPTYPE t)
 	ans = new ByteCode;
 	break;
     default:
-	throw invalid_argument("Inappropriate SEXPTYPE for ConsCell.");
+	throw std::invalid_argument("Inappropriate SEXPTYPE for ConsCell.");
     }
     return GCNode::expose(ans);
 }

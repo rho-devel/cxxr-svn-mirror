@@ -175,8 +175,8 @@ namespace CXXR {
 	 * attempt is being made to read from or write to elements
 	 * beyond the end of the range.
 	 */
-	static std::pair<const IntVector*, size_t>
-	canonicalize(const IntVector* raw_indices, size_t range_size);
+	static std::pair<const IntVector*, std::size_t>
+	canonicalize(const IntVector* raw_indices, std::size_t range_size);
 
 	/** @brief Obtain canonical index vector from a LogicalVector.
 	 *
@@ -214,8 +214,8 @@ namespace CXXR {
 	 * \a range_size it means that an attempt is being made to
 	 * read or write from elements beyond the end of the range.
 	 */
-	static std::pair<const IntVector*, size_t>
-	canonicalize(const LogicalVector* raw_indices, size_t range_size);
+	static std::pair<const IntVector*, std::size_t>
+	canonicalize(const LogicalVector* raw_indices, std::size_t range_size);
 
 	/** Obtain canonical index vector from an arbitrary subscript object.
 	 *
@@ -242,8 +242,8 @@ namespace CXXR {
 	 * an attempt is being made to read or write from elements
 	 * beyond the end of the range.
 	 */
-	static std::pair<const IntVector*, size_t>
-	canonicalize(const RObject* raw_indices, size_t range_size,
+	static std::pair<const IntVector*, std::size_t>
+	canonicalize(const RObject* raw_indices, std::size_t range_size,
 		     const StringVector* range_names);
 
 	/** @brief Obtain canonical index vector from an StringVector.
@@ -293,8 +293,8 @@ namespace CXXR {
 	 * to the Subscripting class, because its implementation (or
 	 * indeed its use at all) may change in the future.
 	 */
-	static std::pair<const IntVector*, size_t>
-	canonicalize(const StringVector* raw_indices, size_t range_size,
+	static std::pair<const IntVector*, std::size_t>
+	canonicalize(const StringVector* raw_indices, std::size_t range_size,
 		     const StringVector* range_names);
 
 	/** Canonicalize a list of subscript objects for indexing an R
@@ -426,7 +426,7 @@ namespace CXXR {
 	template <class VL, class VR>
 	static VL* vectorSubassign(VL* lhs,
 				   const std::pair<const IntVector*,
-				                   size_t>& indices_pr,
+				                   std::size_t>& indices_pr,
 				   const VR* rhs);
 
 	/** @brief Assign to selected elements of an R vector object.
@@ -482,7 +482,7 @@ namespace CXXR {
 	static VL* vectorSubassign(VL* lhs, const RObject* subscripts,
 				   const VR* rhs)
 	{
-	    const std::pair<const IntVector*, size_t>
+	    const std::pair<const IntVector*, std::size_t>
 		pr(canonicalize(subscripts, lhs->size(), lhs->names()));
 	    GCStackRoot<const IntVector> iv(pr.first);
 	    return vectorSubassign(lhs, pr, rhs);
@@ -561,7 +561,7 @@ namespace CXXR {
 	// Non-templated auxiliary function for arraySubset(), used to
 	// initialise the vector of DimIndexers.  The function returns
 	// the required size of the output vector.
-	static size_t createDimIndexers(DimIndexerVector* dimindexers,
+	static std::size_t createDimIndexers(DimIndexerVector* dimindexers,
 					const IntVector* source_dims,
 					const ListVector* indices);
 
@@ -605,9 +605,9 @@ namespace CXXR {
 				 bool drop)
     {
 	const IntVector* vdims = v->dimensions();
-	size_t ndims = vdims->size();
+	std::size_t ndims = vdims->size();
 	DimIndexerVector dimindexer(ndims);
-	size_t resultsize = createDimIndexers(&dimindexer, vdims, indices);
+	std::size_t resultsize = createDimIndexers(&dimindexer, vdims, indices);
 	GCStackRoot<V> result(CXXR_NEW(V(resultsize)));
 	// Copy elements across:
 	{
@@ -666,15 +666,15 @@ namespace CXXR {
     template <class VL, class VR>
     VL* Subscripting::vectorSubassign(VL* lhs,
 				      const std::pair<const IntVector*,
-				                      size_t>& indices_pr,
+				                      std::size_t>& indices_pr,
 				      const VR* rhs)
     {
 	typedef typename VL::value_type Lval;
 	typedef typename VR::value_type Rval;
 	const IntVector* indices = indices_pr.first;
-	size_t newsize = indices_pr.second;
-	size_t ni = indices->size();
-	size_t rhs_size = rhs->size();
+	std::size_t newsize = indices_pr.second;
+	std::size_t ni = indices->size();
+	std::size_t rhs_size = rhs->size();
 	if (rhs_size > 1) {
 	    // TODO: Move NA-detection back into the canonicalisation
 	    // process.
@@ -714,9 +714,9 @@ namespace CXXR {
     template <class V>
     V* Subscripting::vectorSubset(const V* v, const IntVector* indices)
     {
-	size_t ni = indices->size();
+	std::size_t ni = indices->size();
 	GCStackRoot<V> ans(CXXR_NEW(V(ni)));
-	size_t vsize = v->size();
+	std::size_t vsize = v->size();
 	// ***** FIXME *****  Currently needed because Handle's
 	// assignment operator takes a non-const RHS:
 	V* vnc = const_cast<V*>(v);

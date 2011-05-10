@@ -115,8 +115,6 @@ namespace CXXR {
 
     // Partial specializations of ElementTraits:
     namespace ElementTraits {
-	using namespace boost::mpl;
-
 	template <class T>
 	struct DetachReferents<RHandle<T> >
 	    : std::unary_function<T, void> {
@@ -128,15 +126,15 @@ namespace CXXR {
 	};
 
 	template <class T>
-	struct HasReferents<RHandle<T> > : bool_<true>
+	struct HasReferents<RHandle<T> > : boost::mpl::bool_<true>
 	{};
 
 	template <class T>
-	struct MustConstruct<RHandle<T> > : bool_<true>
+	struct MustConstruct<RHandle<T> > : boost::mpl::bool_<true>
 	{};
 
 	template <class T>
-	struct MustDestruct<RHandle<T> >  : bool_<true>
+	struct MustDestruct<RHandle<T> >  : boost::mpl::bool_<true>
 	{};
 
 	template <class T>

@@ -40,6 +40,7 @@
 #ifndef FIXEDVECTOR_HPP
 #define FIXEDVECTOR_HPP 1
 
+#include <boost/aligned_storage.hpp>
 #include "CXXR/VectorBase.h"
 
 namespace CXXR {
@@ -66,7 +67,7 @@ namespace CXXR {
 	 * @param sz Number of elements required.  Zero is
 	 *          permissible.
 	 */
-	FixedVector(size_t sz)
+	FixedVector(std::size_t sz)
 	    : VectorBase(ST, sz), m_data(singleton()), m_blocksize(0)
 	{
 	    if (sz > 1)
@@ -87,7 +88,7 @@ namespace CXXR {
 	 *          element.
 	 */
 	template <typename U>
-	FixedVector(size_t sz, const U& initializer);
+	FixedVector(std::size_t sz, const U& initializer);
 
 	/** @brief Copy constructor.
 	 *
@@ -196,7 +197,7 @@ namespace CXXR {
 	 * be withdrawn in future.  Currently used by SETLENGTH()
 	 * (which itself is little used).
 	 */
-	void setSize(size_t new_size);
+	void setSize(std::size_t new_size);
 
 	// Virtual functions of RObject:
 	FixedVector<T, ST>* clone() const;
@@ -221,14 +222,15 @@ namespace CXXR {
 	void detachReferents();
     private:
 	T* m_data;  // pointer to the vector's data block.
-	size_t m_blocksize;  // size of externally allocated data
-		 // block, or zero if this is a singleton.
+	std::size_t m_blocksize;  // size of externally allocated data
+		      // block, or zero if this is a singleton.
 
 	// If there is only one element, it is stored here, internally
 	// to the FixedVector object, rather than via a separate
 	// allocation from CXXR::MemoryBank.  We put this last, so
 	// that it will be adjacent to any trailing redzone.
-	char m_singleton_buf[sizeof(T)];
+	boost::aligned_storage<sizeof(T), boost::alignment_of<T>::value>
+	m_singleton_buf;
 
 	// Not implemented yet.  Declared to prevent
 	// compiler-generated versions:
@@ -236,19 +238,19 @@ namespace CXXR {
 
 	// If there is more than one element, this function is used to
 	// allocate the required memory block from CXXR::MemoryBank :
-	void allocData(size_t sz);
+	void allocData(std::size_t sz);
 
 	void constructElements();
 
 	// Must have new_size <= current size.
-	void destructElements(size_t new_size);
+	void destructElements(std::size_t new_size);
 
 	// Helper functions for detachReferents():
 	void detachElements();
 
 	T* singleton()
 	{
-	    return reinterpret_cast<T*>(m_singleton_buf);
+	    return static_cast<T*>(static_cast<void*>(&m_singleton_buf));
 	}
 
 	// Helper functions for visitReferents():
@@ -265,7 +267,7 @@ namespace CXXR {
 
 template <typename T, SEXPTYPE ST>
 template <typename U>
-CXXR::FixedVector<T, ST>::FixedVector(size_t sz, const U& initializer)
+CXXR::FixedVector<T, ST>::FixedVector(std::size_t sz, const U& initializer)
     : VectorBase(ST, sz), m_data(singleton()), m_blocksize(0)
 {
     if (sz > 1)
@@ -279,7 +281,7 @@ template <typename T, SEXPTYPE ST>
 CXXR::FixedVector<T, ST>::FixedVector(const FixedVector<T, ST>& pattern)
     : VectorBase(pattern), m_data(singleton()), m_blocksize(0)
 {
-    size_t sz = size();
+    std::size_t sz = size();
     if (sz > 1)
 	allocData(sz);
     if (ElementTraits::MustConstruct<T>())  // determined at compile-time
@@ -301,7 +303,7 @@ CXXR::FixedVector<T, ST>::FixedVector(FwdIter from, FwdIter to)
 }
 
 template <typename T, SEXPTYPE ST>
-void CXXR::FixedVector<T, ST>::allocData(size_t sz)
+void CXXR::FixedVector<T, ST>::allocData(std::size_t sz)
 {
     m_blocksize = sz*sizeof(T);
     // Check for integer overflow:
@@ -325,7 +327,7 @@ void CXXR::FixedVector<T, ST>::constructElements()
 }
 
 template <typename T, SEXPTYPE ST>
-void CXXR::FixedVector<T, ST>::destructElements(size_t new_size)
+void CXXR::FixedVector<T, ST>::destructElements(std::size_t new_size)
 {
     // Destroy in reverse order, following C++ convention:
     for (T* p = m_data + size() - 1; p >= m_data + new_size; --p)
@@ -348,7 +350,7 @@ void CXXR::FixedVector<T, ST>::detachReferents()
 }
 
 template <typename T, SEXPTYPE ST>
-void CXXR::FixedVector<T, ST>::setSize(size_t new_size)
+void CXXR::FixedVector<T, ST>::setSize(std::size_t new_size)
 {
     if (new_size > size())
 	Rf_error("cannot increase size of this vector");

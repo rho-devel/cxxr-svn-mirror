@@ -53,14 +53,14 @@ namespace CXXR {
 }
 
 namespace {
-    void indent(std::ostream& os, size_t margin)
+    void indent(std::ostream& os, std::size_t margin)
     {
 	while (margin--)
 	    os << ' ';
     }
 }
 
-void CXXR::strdump(std::ostream& os, const StringVector& sv, size_t margin)
+void CXXR::strdump(std::ostream& os, const StringVector& sv, std::size_t margin)
 {
     indent(os, margin);
     os << "character:\n";

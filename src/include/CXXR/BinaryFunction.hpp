@@ -487,8 +487,8 @@ Vout* CXXR::VectorOps::BinaryFunction<AttributeCopier,
 							     const Vr* vr) const
 {
     checkOperandsConformable(vl, vr);
-    size_t lsize = vl->size();
-    size_t rsize = vr->size();
+    std::size_t lsize = vl->size();
+    std::size_t rsize = vr->size();
     GCStackRoot<Vout> ans;
     if (lsize == 0 || rsize == 0) {
 	ans = CXXR_NEW(Vout(0));
