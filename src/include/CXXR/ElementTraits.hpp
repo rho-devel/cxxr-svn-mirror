@@ -106,7 +106,7 @@ namespace CXXR {
 	 */
 	template <typename T>
 	struct DetachReferents : std::unary_function<T, void> {
-	    void operator()(const T& t) const
+	    void operator()(T& t) const
 	    {}
 	};
 

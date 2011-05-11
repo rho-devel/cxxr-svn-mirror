@@ -118,10 +118,9 @@ namespace CXXR {
 	template <class T>
 	struct DetachReferents<RHandle<T> >
 	    : std::unary_function<T, void> {
-	    void operator()(const RHandle<T>& t) const
+	    void operator()(RHandle<T>& t) const
 	    {
-		if (t.get())
-		    t->detachReferents();
+		t = 0;
 	    }
 	};
 
