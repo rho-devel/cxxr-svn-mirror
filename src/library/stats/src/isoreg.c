@@ -37,18 +37,12 @@
  */
 #include <R.h>
 #include "modreg.h"
-#include "CXXR/GCStackRoot.hpp"
-#include "CXXR/IntVector.h"
-
-using namespace CXXR;
-
-extern "C" {
 
 SEXP R_isoreg(SEXP y)
 {
     int n = LENGTH(y), i, ip, known, n_ip;
     double tmp, slope;
-    SEXP yc, yf, ans;
+    SEXP yc, yf, iKnots, ans;
     const char *anms[] = {"y", "yc", "yf", "iKnots", ""};
 
     /* unneeded: y = coerceVector(y, REALSXP); */
@@ -58,7 +52,7 @@ SEXP R_isoreg(SEXP y)
     SET_VECTOR_ELT(ans, 0, y = y);
     SET_VECTOR_ELT(ans, 1, yc = allocVector(REALSXP, n+1));
     SET_VECTOR_ELT(ans, 2, yf = allocVector(REALSXP, n));
-    GCStackRoot<IntVector> iKnots(CXXR_NEW(IntVector(n)));
+    SET_VECTOR_ELT(ans, 3, iKnots= allocVector(INTSXP, n));
 
     /* yc := cumsum(0,y) */
     REAL(yc)[0] = 0.;
@@ -82,11 +76,8 @@ SEXP R_isoreg(SEXP y)
 	for (i = known; i < ip; i++)
 	    REAL(yf)[i] = (REAL(yc)[ip] - REAL(yc)[known]) / (ip - known);
     } while ((known = ip) < n);
-    
-    iKnots = CXXR_NEW(IntVector(iKnots->begin(), iKnots->begin() + n_ip));
-    SET_VECTOR_ELT(ans, 3, iKnots);
+
+    SETLENGTH(iKnots, n_ip);
     UNPROTECT(1);
     return(ans);
 }
-
-}  // extern "C"
