@@ -70,7 +70,7 @@ namespace CXXR {
 	 * @param stype The required ::SEXPTYPE.
 	 * @param sz The required number of elements in the vector.
 	 */
-	VectorBase(SEXPTYPE stype, size_t sz)
+	VectorBase(SEXPTYPE stype, std::size_t sz)
 	    : RObject(stype), m_truelength(sz), m_size(sz)
 	{}
 
@@ -183,7 +183,7 @@ namespace CXXR {
 	 * copyAttributesOnResize().
 	 */
 	template <class V>
-	static V* resize(const V* pattern, size_t new_size);
+	static V* resize(const V* pattern, std::size_t new_size);
 
 	/** @brief Associate names with the rows, columns or other
 	 *  dimensions of an R matrix or array.
@@ -261,21 +261,20 @@ namespace CXXR {
 
 	/** @brief Adjust the number of elements in the vector.
 	 *
+	 * The default implementation is simply to raise an error.
+	 *
 	 * @param new_size New size required.  Zero is permissible.
-	 *          Derived classes may impose further constraints:
-	 *          for example in FixedVector \a new_size must not be
-	 *          greater than the current size.
+	 *          If the size is increased, the extra elements will
+	 *          be initialized with default constructor of the
+	 *          element type.
 	 */
-	virtual void setSize(size_t new_size)
-	{
-	    m_size = new_size;
-	}
+	virtual void setSize(std::size_t new_size);
 
 	/** @brief Number of elements in the vector.
 	 *
 	 * @return The number of elements in the vector.
 	 */
-	size_t size() const
+	std::size_t size() const
 	{
 	    return m_size;
 	}
@@ -300,15 +299,28 @@ namespace CXXR {
 	R_len_t m_truelength;
     protected:
 	~VectorBase() {}
+
+	/** @brief Adjust the number of elements in the vector.
+	 *
+	 * Used by derived classes to modify the recorded size of the
+	 * vector.
+	 *
+	 * @param new_size New size required.
+	 */
+	void adjustSize(std::size_t new_size)
+	{
+	    m_size = new_size;
+	}
+
     private:
-	size_t m_size;
+	std::size_t m_size;
     };
 
     template <class V>
-    V* VectorBase::resize(const V* pattern, size_t new_size)
+    V* VectorBase::resize(const V* pattern, std::size_t new_size)
     {
 	GCStackRoot<V> ans(CXXR_NEW(V(new_size)));
-	size_t copysz = std::min(pattern->size(), new_size);
+	std::size_t copysz = std::min(pattern->size(), new_size);
 	typename V::const_iterator patb = pattern->begin();
 	typename V::iterator ansit
 	    = std::copy(patb, patb + copysz, ans->begin());

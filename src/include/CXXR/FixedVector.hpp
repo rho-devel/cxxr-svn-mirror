@@ -44,11 +44,18 @@
 #include "CXXR/VectorBase.h"
 
 namespace CXXR {
-    /** @brief R data vector whose capacity is fixed at construction.
+    /** @brief R data vector primarily intended for fixed-size use.
      *
      * This is a general-purpose class template to represent an R data
-     * vector.  The capacity of the vector is fixed when it is
-     * constructed.
+     * vector, and is intended particularly for the case where the
+     * size of the vector is fixed when it is constructed.
+     *
+     * Having said that, the template \e does implement setSize(),
+     * primarily to service CR code's occasional use of SETLENGTH();
+     * however, the implementation of this is rather inefficient.
+     *
+     * CXXR implements all of CR's built-in vector types using this
+     * template.
      *
      * @tparam T The type of the elements of the vector.
      *
@@ -62,18 +69,19 @@ namespace CXXR {
 	typedef const T* const_iterator;
 
 	/** @brief Create a vector, leaving its contents
-	 *         uninitialized.
+	 *         uninitialized (for POD types) or default
+	 *         constructed.
 	 *
 	 * @param sz Number of elements required.  Zero is
 	 *          permissible.
 	 */
 	FixedVector(std::size_t sz)
-	    : VectorBase(ST, sz), m_data(singleton()), m_blocksize(0)
+	    : VectorBase(ST, sz), m_data(singleton())
 	{
 	    if (sz > 1)
-		allocData(sz);
+		m_data = allocData(sz);
 	    if (ElementTraits::MustConstruct<T>())  // determined at compile-time
-		constructElements();
+		constructElements(begin(), end());
 	}
 
 	/** @brief Create a vector, and fill with a specified initial
@@ -186,17 +194,6 @@ namespace CXXR {
 	static const char* staticTypeName();
 
 	// Virtual functions of VectorBase:
-
-	/** @brief Adjust the number of elements in the vector.
-	 *
-	 * @param new_size New size required.  Zero is permissible,
-	 *          but the new size must not be greater than the
-	 *          current size.
-	 *
-	 * @deprecated The facility to resize FixedVector object may
-	 * be withdrawn in future.  Currently used by SETLENGTH()
-	 * (which itself is little used).
-	 */
 	void setSize(std::size_t new_size);
 
 	// Virtual functions of RObject:
@@ -213,22 +210,22 @@ namespace CXXR {
 	~FixedVector()
 	{
 	    if (ElementTraits::MustDestruct<T>())  // determined at compile-time
-		destructElements(0);
-	    if (m_blocksize > 0)
-		MemoryBank::deallocate(m_data, m_blocksize);
+		destructElements();
+	    if (m_data != singleton())
+		MemoryBank::deallocate(m_data, size()*sizeof(T));
 	}
 
 	// Virtual function of GCNode:
 	void detachReferents();
     private:
 	T* m_data;  // pointer to the vector's data block.
-	std::size_t m_blocksize;  // size of externally allocated data
-		      // block, or zero if this is a singleton.
 
 	// If there is only one element, it is stored here, internally
 	// to the FixedVector object, rather than via a separate
 	// allocation from CXXR::MemoryBank.  We put this last, so
-	// that it will be adjacent to any trailing redzone.
+	// that it will be adjacent to any trailing redzone.  Note
+	// that if a FixedVector is *resized* to 1, its data is held
+	// in a separate memory block, not here.
 	boost::aligned_storage<sizeof(T), boost::alignment_of<T>::value>
 	m_singleton_buf;
 
@@ -238,14 +235,13 @@ namespace CXXR {
 
 	// If there is more than one element, this function is used to
 	// allocate the required memory block from CXXR::MemoryBank :
-	void allocData(std::size_t sz);
+	static T* allocData(std::size_t sz);
 
-	void constructElements();
+	static void constructElements(iterator from, iterator to);
 
-	// Must have new_size <= current size.
-	void destructElements(std::size_t new_size);
+	void destructElements();
 
-	// Helper functions for detachReferents():
+	// Helper function for detachReferents():
 	void detachElements();
 
 	T* singleton()
@@ -253,7 +249,7 @@ namespace CXXR {
 	    return static_cast<T*>(static_cast<void*>(&m_singleton_buf));
 	}
 
-	// Helper functions for visitReferents():
+	// Helper function for visitReferents():
 	void visitElements(const_visitor* v) const;
     };
 }  // namespace CXXR
@@ -268,48 +264,47 @@ namespace CXXR {
 template <typename T, SEXPTYPE ST>
 template <typename U>
 CXXR::FixedVector<T, ST>::FixedVector(std::size_t sz, const U& initializer)
-    : VectorBase(ST, sz), m_data(singleton()), m_blocksize(0)
+    : VectorBase(ST, sz), m_data(singleton())
 {
     if (sz > 1)
-	allocData(sz);
+	m_data = allocData(sz);
     if (ElementTraits::MustConstruct<T>())  // determined at compile-time
-	constructElements();
+	constructElements(begin(), end());
     std::fill(begin(), end(), initializer);
 }
 
 template <typename T, SEXPTYPE ST>
 CXXR::FixedVector<T, ST>::FixedVector(const FixedVector<T, ST>& pattern)
-    : VectorBase(pattern), m_data(singleton()), m_blocksize(0)
+    : VectorBase(pattern), m_data(singleton())
 {
     std::size_t sz = size();
     if (sz > 1)
-	allocData(sz);
+	m_data = allocData(sz);
     if (ElementTraits::MustConstruct<T>())  // determined at compile-time
-	constructElements();
+	constructElements(begin(), end());
     std::copy(pattern.begin(), pattern.end(), begin());
 }
 
 template <typename T, SEXPTYPE ST>
 template <typename FwdIter>
 CXXR::FixedVector<T, ST>::FixedVector(FwdIter from, FwdIter to)
-    : VectorBase(ST, std::distance(from, to)), m_data(singleton()),
-      m_blocksize(0)
+    : VectorBase(ST, std::distance(from, to)), m_data(singleton())
 {
     if (size() > 1)
-	allocData(size());
+	m_data = allocData(size());
     if (ElementTraits::MustConstruct<T>())  // determined at compile-time
-	constructElements();
+	constructElements(begin(), end());
     std::copy(from, to, begin());
 }
 
 template <typename T, SEXPTYPE ST>
-void CXXR::FixedVector<T, ST>::allocData(std::size_t sz)
+T* CXXR::FixedVector<T, ST>::allocData(std::size_t sz)
 {
-    m_blocksize = sz*sizeof(T);
+    std::size_t blocksize = sz*sizeof(T);
     // Check for integer overflow:
-    if (m_blocksize/sizeof(T) != sz)
+    if (blocksize/sizeof(T) != sz)
 	Rf_error(_("request to create impossibly large vector."));
-    m_data = static_cast<T*>(MemoryBank::allocate(m_blocksize));
+    return static_cast<T*>(MemoryBank::allocate(blocksize));
 }
 
 template <typename T, SEXPTYPE ST>
@@ -320,24 +315,23 @@ CXXR::FixedVector<T, ST>* CXXR::FixedVector<T, ST>::clone() const
 }
 
 template <typename T, SEXPTYPE ST>
-void CXXR::FixedVector<T, ST>::constructElements()
+void CXXR::FixedVector<T, ST>::constructElements(iterator from, iterator to)
 {
-    for (iterator p = begin(), pend = end(); p != pend; ++p)
+    for (iterator p = from; p != to; ++p)
 	new (p) T;
 }
 
 template <typename T, SEXPTYPE ST>
-void CXXR::FixedVector<T, ST>::destructElements(std::size_t new_size)
+void CXXR::FixedVector<T, ST>::destructElements()
 {
     // Destroy in reverse order, following C++ convention:
-    for (T* p = m_data + size() - 1; p >= m_data + new_size; --p)
+    for (T* p = m_data + size() - 1; p >= m_data; --p)
 	p->~T();
 }
 
 template <typename T, SEXPTYPE ST>
 void CXXR::FixedVector<T, ST>::detachElements()
 {
-    //std::for_each(begin(), end(), ElementTraits::DetachReferents<T>());
     setSize(0);
 }
 
@@ -352,11 +346,20 @@ void CXXR::FixedVector<T, ST>::detachReferents()
 template <typename T, SEXPTYPE ST>
 void CXXR::FixedVector<T, ST>::setSize(std::size_t new_size)
 {
-    if (new_size > size())
-	Rf_error("cannot increase size of this vector");
+    std::size_t copysz = std::min(size(), new_size);
+    T* newblock = singleton();  // Setting used only if new_size == 0
+    if (new_size > 0) {
+	newblock = allocData(new_size);
+	if (ElementTraits::MustConstruct<T>())  // determined at compile-time
+	    constructElements(newblock, newblock + new_size);
+    }
+    std::copy(begin(), begin() + copysz, newblock);
     if (ElementTraits::MustDestruct<T>())  // determined at compile-time
-	destructElements(new_size);
-    VectorBase::setSize(new_size);
+	destructElements();
+    if (m_data != singleton())
+	MemoryBank::deallocate(m_data, size()*sizeof(T));
+    m_data = newblock;
+    adjustSize(new_size);
 }
 
 template <typename T, SEXPTYPE ST>

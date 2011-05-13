@@ -109,6 +109,11 @@ void VectorBase::setNames(StringVector* names)
     setAttribute(NamesSymbol, names);
 }
 
+void VectorBase::setSize(std::size_t)
+{
+    Rf_error(_("this object cannot be resized"));
+}
+
 // Rf_allocVector is still in memory.cpp (for the time being).
 
 Rboolean Rf_isVector(SEXP s)
