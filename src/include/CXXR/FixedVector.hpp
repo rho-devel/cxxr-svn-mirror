@@ -268,9 +268,8 @@ CXXR::FixedVector<T, ST>::FixedVector(std::size_t sz, const U& initializer)
 {
     if (sz > 1)
 	m_data = allocData(sz);
-    if (ElementTraits::MustConstruct<T>())  // determined at compile-time
-	constructElements(begin(), end());
-    std::fill(begin(), end(), initializer);
+    for (T *p = m_data, *pend = m_data + sz; p != pend; ++p)
+	new (p) T(initializer);
 }
 
 template <typename T, SEXPTYPE ST>
@@ -280,9 +279,10 @@ CXXR::FixedVector<T, ST>::FixedVector(const FixedVector<T, ST>& pattern)
     std::size_t sz = size();
     if (sz > 1)
 	m_data = allocData(sz);
-    if (ElementTraits::MustConstruct<T>())  // determined at compile-time
-	constructElements(begin(), end());
-    std::copy(pattern.begin(), pattern.end(), begin());
+    T* p = m_data;
+    for (const_iterator it = pattern.begin(), end = pattern.end();
+	 it != end; ++it)
+	new (p++) T(*it);
 }
 
 template <typename T, SEXPTYPE ST>
@@ -292,9 +292,9 @@ CXXR::FixedVector<T, ST>::FixedVector(FwdIter from, FwdIter to)
 {
     if (size() > 1)
 	m_data = allocData(size());
-    if (ElementTraits::MustConstruct<T>())  // determined at compile-time
-	constructElements(begin(), end());
-    std::copy(from, to, begin());
+    T* p = m_data;
+    for (const_iterator it = from; it != to; ++it)
+	new (p++) T(*it);
 }
 
 template <typename T, SEXPTYPE ST>

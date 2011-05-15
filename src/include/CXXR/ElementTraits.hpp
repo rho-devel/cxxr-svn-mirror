@@ -126,7 +126,7 @@ namespace CXXR {
 	 *           of an R data vector. 
 	 */
 	template <typename T>
-	struct HasReferents : boost::mpl::bool_<false>
+	struct HasReferents : boost::mpl::false_
 	{};
 
 	/** @brief Do elements of this type require construction?
@@ -147,7 +147,7 @@ namespace CXXR {
 	 * platform-dependent.
 	 */
 	template <typename T>
-	struct MustConstruct : boost::mpl::bool_<false>
+	struct MustConstruct : boost::mpl::false_
 	{};
 
 	/** @brief Does this type have a destructor?
@@ -167,7 +167,7 @@ namespace CXXR {
 	 * platform-dependent.
 	 */
 	template <typename T>
-	struct MustDestruct : boost::mpl::bool_<false>
+	struct MustDestruct : boost::mpl::false_
 	{};
 
 	/** @brief Function object for visiting referents.

@@ -125,15 +125,15 @@ namespace CXXR {
 	};
 
 	template <class T>
-	struct HasReferents<RHandle<T> > : boost::mpl::bool_<true>
+	struct HasReferents<RHandle<T> > : boost::mpl::true_
 	{};
 
 	template <class T>
-	struct MustConstruct<RHandle<T> > : boost::mpl::bool_<true>
+	struct MustConstruct<RHandle<T> > : boost::mpl::true_
 	{};
 
 	template <class T>
-	struct MustDestruct<RHandle<T> >  : boost::mpl::bool_<true>
+	struct MustDestruct<RHandle<T> >  : boost::mpl::true_
 	{};
 
 	template <class T>
