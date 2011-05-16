@@ -64,7 +64,7 @@
  * returns a pointer to a new object created by that constructor
  * expression.
  */
-#define CXXR_NEW(T) GCNode::expose(new T)
+#define CXXR_NEW(T) CXXR::GCNode::expose(new T)
 
 namespace CXXR {
     /** @brief Base class for objects managed by the garbage collector.

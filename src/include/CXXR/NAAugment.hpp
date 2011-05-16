@@ -146,23 +146,21 @@ namespace CXXR {
     namespace ElementTraits {
 	template <class T>
 	struct Data<NAAugment<T> > {
-	    typedef T Type;
+	    typedef T type;
 
-	    static const Type& get(const NAAugment<T>& t)
+	    static const type& get(const NAAugment<T>& t)
 	    {
 		return t.value();
 	    }
 	};
 
 	template <class T>
-	struct MustConstruct<NAAugment<T> > {
-	    typedef True TruthType;
-	};
+	struct MustConstruct<NAAugment<T> > : boost::mpl::true_ 
+	{};
 
 	template <class T>
-	struct MustDestruct<NAAugment<T> > {
-	    typedef True TruthType;
-	};
+	struct MustDestruct<NAAugment<T> >  : boost::mpl::true_
+	{};
 
 	template <class T>
 	struct NAFunc<NAAugment<T> > {

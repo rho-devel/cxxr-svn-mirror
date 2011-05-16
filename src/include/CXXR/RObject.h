@@ -268,6 +268,16 @@ namespace CXXR {
      */
     class RObject : public GCNode {
     public:
+	/** @brief Class of function object that does nothing to an RObject.
+	 *
+	 * This struct is typically used as a default template
+	 * parameter, for example in FixedVector.
+	 */
+	struct DoNothing : std::unary_function<RObject*, void> {
+	    void operator()(RObject*)
+	    {}
+	};
+
 	/** @brief Get object attributes.
 	 *
 	 * @return Pointer to the attributes of this object.

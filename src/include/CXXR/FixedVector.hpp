@@ -60,8 +60,17 @@ namespace CXXR {
      * @tparam T The type of the elements of the vector.
      *
      * @tparam ST The required ::SEXPTYPE of the vector.
+     *
+     * @tparam Initializer (optional).  Class of function object
+     *           defining <code>operator()(RObject*)</code>. (Any
+     *           return value is discarded.)  When a FixedVector
+     *           object is constructed, a default-constructed
+     *           Initializer object is applied to it.  This can be
+     *           used, for example, to apply an R class attribute
+     *           etc.  The default is to do nothing.
      */
-    template <typename T, SEXPTYPE ST>
+    template <typename T, SEXPTYPE ST,
+	      typename Initializer /* = RObject::DoNothing */>
     class FixedVector : public VectorBase {
     public:
 	typedef T value_type;
@@ -80,8 +89,9 @@ namespace CXXR {
 	{
 	    if (sz > 1)
 		m_data = allocData(sz);
-	    if (ElementTraits::MustConstruct<T>())  // determined at compile-time
+	    if (ElementTraits::MustConstruct<T>::value)  // known at compile-time
 		constructElements(begin(), end());
+	    Initializer()(this);
 	}
 
 	/** @brief Create a vector, and fill with a specified initial
@@ -92,17 +102,17 @@ namespace CXXR {
 	 * @param sz Number of elements required.  Zero is
 	 *          permissible.
 	 *
-	 * @param initializer Initial value to be assigned to every
+	 * @param fill_value Initial value to be assigned to every
 	 *          element.
 	 */
 	template <typename U>
-	FixedVector(std::size_t sz, const U& initializer);
+	FixedVector(std::size_t sz, const U& fill_value);
 
 	/** @brief Copy constructor.
 	 *
 	 * @param pattern FixedVector to be copied.
 	 */
-	FixedVector(const FixedVector<T, ST>& pattern);
+	FixedVector(const FixedVector<T, ST, Initializer>& pattern);
 
 	/** @brief Constructor from range.
 	 * 
@@ -197,7 +207,7 @@ namespace CXXR {
 	void setSize(std::size_t new_size);
 
 	// Virtual functions of RObject:
-	FixedVector<T, ST>* clone() const;
+	FixedVector<T, ST, Initializer>* clone() const;
 	const char* typeName() const;
 
 	// Virtual function of GCNode:
@@ -209,7 +219,7 @@ namespace CXXR {
 	 */
 	~FixedVector()
 	{
-	    if (ElementTraits::MustDestruct<T>())  // determined at compile-time
+	    if (ElementTraits::MustDestruct<T>::value)  // known at compile-time
 		destructElements();
 	    if (m_data != singleton())
 		MemoryBank::deallocate(m_data, size()*sizeof(T));
@@ -261,19 +271,21 @@ namespace CXXR {
 #include "localization.h"
 #include "R_ext/Error.h"
 
-template <typename T, SEXPTYPE ST>
+template <typename T, SEXPTYPE ST, typename Initr>
 template <typename U>
-CXXR::FixedVector<T, ST>::FixedVector(std::size_t sz, const U& initializer)
+CXXR::FixedVector<T, ST, Initr>::FixedVector(std::size_t sz,
+						   const U& fill_value)
     : VectorBase(ST, sz), m_data(singleton())
 {
     if (sz > 1)
 	m_data = allocData(sz);
     for (T *p = m_data, *pend = m_data + sz; p != pend; ++p)
-	new (p) T(initializer);
+	new (p) T(fill_value);
+    Initr()(this);
 }
 
-template <typename T, SEXPTYPE ST>
-CXXR::FixedVector<T, ST>::FixedVector(const FixedVector<T, ST>& pattern)
+template <typename T, SEXPTYPE ST, typename Initr>
+CXXR::FixedVector<T, ST, Initr>::FixedVector(const FixedVector<T, ST, Initr>& pattern)
     : VectorBase(pattern), m_data(singleton())
 {
     std::size_t sz = size();
@@ -283,11 +295,12 @@ CXXR::FixedVector<T, ST>::FixedVector(const FixedVector<T, ST>& pattern)
     for (const_iterator it = pattern.begin(), end = pattern.end();
 	 it != end; ++it)
 	new (p++) T(*it);
+    Initr()(this);
 }
 
-template <typename T, SEXPTYPE ST>
+template <typename T, SEXPTYPE ST, typename Initr>
 template <typename FwdIter>
-CXXR::FixedVector<T, ST>::FixedVector(FwdIter from, FwdIter to)
+CXXR::FixedVector<T, ST, Initr>::FixedVector(FwdIter from, FwdIter to)
     : VectorBase(ST, std::distance(from, to)), m_data(singleton())
 {
     if (size() > 1)
@@ -295,10 +308,11 @@ CXXR::FixedVector<T, ST>::FixedVector(FwdIter from, FwdIter to)
     T* p = m_data;
     for (const_iterator it = from; it != to; ++it)
 	new (p++) T(*it);
+    Initr()(this);
 }
 
-template <typename T, SEXPTYPE ST>
-T* CXXR::FixedVector<T, ST>::allocData(std::size_t sz)
+template <typename T, SEXPTYPE ST, typename Initr>
+T* CXXR::FixedVector<T, ST, Initr>::allocData(std::size_t sz)
 {
     std::size_t blocksize = sz*sizeof(T);
     // Check for integer overflow:
@@ -307,44 +321,45 @@ T* CXXR::FixedVector<T, ST>::allocData(std::size_t sz)
     return static_cast<T*>(MemoryBank::allocate(blocksize));
 }
 
-template <typename T, SEXPTYPE ST>
-CXXR::FixedVector<T, ST>* CXXR::FixedVector<T, ST>::clone() const
+template <typename T, SEXPTYPE ST, typename Initr>
+CXXR::FixedVector<T, ST, Initr>* CXXR::FixedVector<T, ST, Initr>::clone() const
 {
     // Can't use CXXR_NEW because the comma confuses GNU cpp:
-    return expose(new FixedVector<T, ST>(*this));
+    return expose(new FixedVector<T, ST, Initr>(*this));
 }
 
-template <typename T, SEXPTYPE ST>
-void CXXR::FixedVector<T, ST>::constructElements(iterator from, iterator to)
+template <typename T, SEXPTYPE ST, typename Initr>
+void CXXR::FixedVector<T, ST, Initr>::constructElements(iterator from,
+							iterator to)
 {
     for (iterator p = from; p != to; ++p)
 	new (p) T;
 }
 
-template <typename T, SEXPTYPE ST>
-void CXXR::FixedVector<T, ST>::destructElements()
+template <typename T, SEXPTYPE ST, typename Initr>
+void CXXR::FixedVector<T, ST, Initr>::destructElements()
 {
     // Destroy in reverse order, following C++ convention:
     for (T* p = m_data + size() - 1; p >= m_data; --p)
 	p->~T();
 }
 
-template <typename T, SEXPTYPE ST>
-void CXXR::FixedVector<T, ST>::detachElements()
+template <typename T, SEXPTYPE ST, typename Initr>
+void CXXR::FixedVector<T, ST, Initr>::detachElements()
 {
     std::for_each(begin(), end(), ElementTraits::DetachReferents<T>());
 }
 
-template <typename T, SEXPTYPE ST>
-void CXXR::FixedVector<T, ST>::detachReferents()
+template <typename T, SEXPTYPE ST, typename Initr>
+void CXXR::FixedVector<T, ST, Initr>::detachReferents()
 {
-    if (ElementTraits::HasReferents<T>())  // determined at compile-time
+    if (ElementTraits::HasReferents<T>::value)  // known at compile-time
 	detachElements();
     VectorBase::detachReferents();
 }
 
-template <typename T, SEXPTYPE ST>
-void CXXR::FixedVector<T, ST>::setSize(std::size_t new_size)
+template <typename T, SEXPTYPE ST, typename Initr>
+void CXXR::FixedVector<T, ST, Initr>::setSize(std::size_t new_size)
 {
     std::size_t copysz = std::min(size(), new_size);
     T* newblock = singleton();  // Setting used only if new_size == 0
@@ -354,7 +369,7 @@ void CXXR::FixedVector<T, ST>::setSize(std::size_t new_size)
     T* newblockend = newblock + new_size;
     for (; p != newblockend; ++p)
 	new (p) T(NA<T>());
-    if (ElementTraits::MustDestruct<T>())  // determined at compile-time
+    if (ElementTraits::MustDestruct<T>::value)  // known at compile-time
 	destructElements();
     if (m_data != singleton())
 	MemoryBank::deallocate(m_data, size()*sizeof(T));
@@ -362,22 +377,22 @@ void CXXR::FixedVector<T, ST>::setSize(std::size_t new_size)
     adjustSize(new_size);
 }
 
-template <typename T, SEXPTYPE ST>
-const char* CXXR::FixedVector<T, ST>::typeName() const
+template <typename T, SEXPTYPE ST, typename Initr>
+const char* CXXR::FixedVector<T, ST, Initr>::typeName() const
 {
-    return FixedVector<T, ST>::staticTypeName();
+    return FixedVector<T, ST, Initr>::staticTypeName();
 }
 
-template <typename T, SEXPTYPE ST>
-void CXXR::FixedVector<T, ST>::visitElements(const_visitor* v) const
+template <typename T, SEXPTYPE ST, typename Initr>
+void CXXR::FixedVector<T, ST, Initr>::visitElements(const_visitor* v) const
 {
     std::for_each(begin(), end(), ElementTraits::VisitReferents<T>(v));
 }
 
-template <typename T, SEXPTYPE ST>
-void CXXR::FixedVector<T, ST>::visitReferents(const_visitor* v) const
+template <typename T, SEXPTYPE ST, typename Initr>
+void CXXR::FixedVector<T, ST, Initr>::visitReferents(const_visitor* v) const
 {
-    if (ElementTraits::HasReferents<T>())  // determined at compile-time
+    if (ElementTraits::HasReferents<T>::value)  // known at compile-time
 	visitElements(v);
     VectorBase::visitReferents(v);
 }
