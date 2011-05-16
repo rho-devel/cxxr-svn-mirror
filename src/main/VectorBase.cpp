@@ -42,10 +42,10 @@
 #include "R_ext/Error.h"
 #include "CXXR/IntVector.h"
 #include "CXXR/ListVector.h"
+#include "CXXR/PairList.h"
 #include "CXXR/StringVector.h"
 #include "CXXR/Symbol.h"
 
-using namespace std;
 using namespace CXXR;
 
 namespace CXXR {
@@ -79,6 +79,25 @@ const StringVector* VectorBase::names() const
     return static_cast<const StringVector*>(getAttribute(NamesSymbol));
 }
 
+PairList* VectorBase::resizeAttributes(const PairList* attributes,
+				       std::size_t new_size)
+{
+    GCStackRoot<PairList> ans(PairList::cons(0));  // dummy first link
+    PairList* op = ans;
+    for (const PairList* ip = attributes; ip; ip = ip->tail()) {
+	const RObject* tag = ip->tag();
+	if (tag == NamesSymbol) {
+	    const StringVector* names
+		= SEXP_downcast<const StringVector*>(ip->car());
+	    op->setTail(PairList::cons(VectorBase::resize(names, new_size),
+				       0, tag));
+	} else if (tag != DimSymbol && tag != DimNamesSymbol)
+	    op->setTail(PairList::cons(ip->car(), 0, tag));
+	op = op->tail();
+    }
+    return ans->tail();
+}
+	
 void VectorBase::setDimensionNames(ListVector* names)
 {
     setAttribute(DimNamesSymbol, names);

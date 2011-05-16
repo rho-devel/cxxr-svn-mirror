@@ -134,7 +134,7 @@ unsigned int RObject::packGPBits() const
 void RObject::setAttribute(const Symbol* name, RObject* value)
 {
     if (!name)
-	Rf_error(_("attempt to set an attribute on NULL"));
+	Rf_error(_("attributes must be named"));
     // Update 'has class' bit if necessary:
     if (name == R_ClassSymbol) {
 	if (value == 0)

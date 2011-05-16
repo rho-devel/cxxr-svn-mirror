@@ -332,7 +332,7 @@ void CXXR::FixedVector<T, ST>::destructElements()
 template <typename T, SEXPTYPE ST>
 void CXXR::FixedVector<T, ST>::detachElements()
 {
-    setSize(0);
+    std::for_each(begin(), end(), ElementTraits::DetachReferents<T>());
 }
 
 template <typename T, SEXPTYPE ST>
@@ -348,12 +348,12 @@ void CXXR::FixedVector<T, ST>::setSize(std::size_t new_size)
 {
     std::size_t copysz = std::min(size(), new_size);
     T* newblock = singleton();  // Setting used only if new_size == 0
-    if (new_size > 0) {
+    if (new_size > 0)
 	newblock = allocData(new_size);
-	if (ElementTraits::MustConstruct<T>())  // determined at compile-time
-	    constructElements(newblock, newblock + new_size);
-    }
-    std::copy(begin(), begin() + copysz, newblock);
+    T* p = std::copy(begin(), begin() + copysz, newblock);
+    T* newblockend = newblock + new_size;
+    for (; p != newblockend; ++p)
+	new (p) T(NA<T>());
     if (ElementTraits::MustDestruct<T>())  // determined at compile-time
 	destructElements();
     if (m_data != singleton())

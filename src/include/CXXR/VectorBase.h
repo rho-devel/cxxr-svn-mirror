@@ -50,11 +50,6 @@
 #include "CXXR/GCStackRoot.hpp"
 #include "CXXR/SEXP_downcast.hpp"
 
-// Needed in VectorBase::copyAttributesOnResize():
-extern "C" {
-    void Rf_copyMostAttrib(SEXP, SEXP);
-}
-
 namespace CXXR {
     class String;
     template <typename T, SEXPTYPE ST> class FixedVector;
@@ -82,26 +77,6 @@ namespace CXXR {
 	    : RObject(pattern), m_truelength(pattern.m_truelength),
 	      m_size(pattern.m_size)
 	{}
-
-	/** @brief Function auxiliary to resize().
-	 *
-	 * resize() uses this function to copy attributes (other than
-	 * 'names') from the vector being resized to the result of the
-	 * resizing.  Its default behaviour is to copy all attributes
-	 * other than 'names', 'dim' and 'dimnames', but this can be
-	 * overridden by template specialization if desired.
-	 *
-	 * @param source Vector from which attributes are being
-	 *          copied.
-	 *
-	 * @param destination Vector to which attributes are being
-	 *          copied.
-	 */
-	template <class V>
-	static void copyAttributesOnResize(V* destination, const V* source)
-	{
-	    Rf_copyMostAttrib(const_cast<V*>(source), destination);
-	}
 
 	/** @brief Names associated with the rows, columns or other
 	 *  dimensions of an R matrix or array.
@@ -185,6 +160,26 @@ namespace CXXR {
 	template <class V>
 	static V* resize(const V* pattern, std::size_t new_size);
 
+	/** @brief Adjust attributes for a resized vector.
+	 *
+	 * When a vector is resized (either by VectorBase::resize() or
+	 * VectorBase::setSize() ), this function is used to determine
+	 * the attributes of the resized vector.  'dim' and 'dimnames'
+	 * attributes are discarded, and any 'names' attribute is
+	 * itself resized.  Other attributes are carried across
+	 * unchanged.
+	 *
+	 * @param attributes Pointer, possibly null, to the attribute
+	 *          list of the original vector.
+	 *
+	 * @param new_size Size of the resized vector.
+	 *
+	 * @return attribute list (possibly null) for the resized
+	 * vector.
+	 */
+	static PairList* resizeAttributes(const PairList* attributes,
+					  std::size_t new_size);
+
 	/** @brief Associate names with the rows, columns or other
 	 *  dimensions of an R matrix or array.
 	 *
@@ -265,8 +260,8 @@ namespace CXXR {
 	 *
 	 * @param new_size New size required.  Zero is permissible.
 	 *          If the size is increased, the extra elements will
-	 *          be initialized with default constructor of the
-	 *          element type.
+	 *          be initialized with <tt>NA<T>()</tt>, where \a T
+	 *          is the element type.
 	 */
 	virtual void setSize(std::size_t new_size);
 
@@ -303,13 +298,14 @@ namespace CXXR {
 	/** @brief Adjust the number of elements in the vector.
 	 *
 	 * Used by derived classes to modify the recorded size of the
-	 * vector.
+	 * vector, and to adjust its attributes accordingly.
 	 *
 	 * @param new_size New size required.
 	 */
 	void adjustSize(std::size_t new_size)
 	{
 	    m_size = new_size;
+	    setAttributes(resizeAttributes(attributes(), new_size));
 	}
 
     private:
@@ -325,10 +321,8 @@ namespace CXXR {
 	typename V::iterator ansit
 	    = std::copy(patb, patb + copysz, ans->begin());
 	std::fill(ansit, ans->end(), NA<typename V::value_type>());
-	const StringVector* names = pattern->names();
-	if (names)
-	    ans->setNames(resize(names, new_size));
-	copyAttributesOnResize(ans.get(), pattern);
+	ans->setAttributes(resizeAttributes(pattern->attributes(), new_size));
+	ans->setS4Object(pattern->isS4Object());
 	return ans;
     }
 }  // namespace CXXR
