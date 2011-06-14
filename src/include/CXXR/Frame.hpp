@@ -110,6 +110,22 @@ namespace CXXR {
 		  m_origin(MISSING), m_active(false), m_locked(false)
 	    {}
 
+	    /** @brief Copy constructor
+	     */
+	    // Don't want binding value copied.  (Apart from anything
+	    // else, suppose a VectorFrame's std::vector needs to
+	    // allocate a larger data block.  It will then copy
+	    // Bindings across from the old block to the new block.
+	    // Now suppose that in the course of copying values, a
+	    // mark-sweep GC is initiated.  Then the values pointed to
+	    // by the Bindings in the new block will be not be reached
+	    // by the mark phase ...)
+	    Binding(const Binding& pattern)
+		: m_frame(pattern.m_frame), m_symbol(pattern.m_symbol),
+		  m_value(pattern.m_value.get()), m_origin(pattern.m_origin),
+		  m_active(pattern.m_active), m_locked(pattern.m_locked)
+	    {}
+
 	    /** @brief Represent this Binding as a PairList element.
 	     *
 	     * This function creates a new PairList element which
@@ -333,7 +349,7 @@ namespace CXXR {
 	private:
 	    Frame* m_frame;
 	    const Symbol* m_symbol;
-	    GCEdge<> m_value;
+	    RHandle<> m_value;
 	    unsigned char m_origin;
 	    bool m_active;
 	    bool m_locked;

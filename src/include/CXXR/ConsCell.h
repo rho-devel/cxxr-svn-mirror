@@ -331,7 +331,7 @@ namespace CXXR {
 	friend class PairList;
 
 	RHandle<> m_car;
-	GCEdge<PairList> m_tail;
+	RHandle<PairList> m_tail;
 	GCEdge<const RObject> m_tag;
 
 	// Not implemented yet.  Declared to prevent
@@ -634,7 +634,8 @@ extern "C" {
     inline SEXP TAG(SEXP e)
     {
 	using namespace CXXR;
-	if (!e) return 0;
+	if (!e)
+	    return 0;
 	ConsCell& cc = *SEXP_downcast<ConsCell*>(e);
 	return const_cast<RObject*>(cc.tag());
     }
