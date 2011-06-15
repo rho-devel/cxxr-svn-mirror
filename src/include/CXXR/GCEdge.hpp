@@ -89,15 +89,14 @@ namespace CXXR {
 	    return m_target;
 	}
     protected:
-	/** @brief Redirect the GCEdge to point at a (possibly) different node.
--        *
-        * @param newtarget Pointer to the object to which reference is now
--        *           to be made.
--        */
-	void retarget(const GCNode* newtarget)
+	/** @brief Swap target with another GCEdgeBase.
+	 *
+	 * @param that Reference to GCEdgeBase with which targets are
+	 *          to be swapped.
+	 */
+	void swap(GCEdgeBase& that)
 	{
-	    GCEdgeBase tmp(newtarget);
-	    std::swap(m_target, tmp.m_target);
+	    std::swap(m_target, that.m_target);
 	}
     private:
 	const GCNode* m_target;
@@ -151,13 +150,15 @@ namespace CXXR {
 
 	GCEdge<T>& operator=(const GCEdge<T>& source)
 	{
-	    retarget(source);
+	    GCEdge<T> tmp(source);
+	    swap(tmp);
 	    return *this;
 	}
 
 	GCEdge<T>& operator=(T* newtarget)
 	{
-	    retarget(newtarget);
+	    GCEdge<T> tmp(newtarget);
+	    swap(tmp);
 	    return *this;
 	}
 
@@ -182,6 +183,16 @@ namespace CXXR {
 	T* get() const
 	{
 	    return static_cast<T*>(const_cast<GCNode*>(target()));
+	}
+
+	/** @brief Swap target with another GCEdge<T>.
+	 *
+	 * @param that Reference to the GCEdge<T> with which targets are
+	 *          to be swapped.
+	 */
+	void swap(GCEdge<T>& that)
+	{
+	    GCEdgeBase::swap(that);
 	}
     };
 }
