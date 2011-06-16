@@ -118,10 +118,8 @@ SEXP attribute_hidden getAttrib0(SEXP vec, SEXP name)
 	    s = getAttrib(vec, R_DimSymbol);
 	    if(TYPEOF(s) == INTSXP && length(s) == 1) {
 		s = getAttrib(vec, R_DimNamesSymbol);
-		if(!isNull(s)) {
-		    SET_NAMED(VECTOR_ELT(s, 0), 2);
+		if(!isNull(s))
 		    return VECTOR_ELT(s, 0);
-		}
 	    }
 	}
 	if (isList(vec) || isLanguage(vec)) {
@@ -141,10 +139,8 @@ SEXP attribute_hidden getAttrib0(SEXP vec, SEXP name)
 			  type2char(TYPEOF(TAG(vec))));
 	    }
 	    UNPROTECT(1);
-	    if (any) {
-		if (!isNull(s)) SET_NAMED(s, 2);
+	    if (any)
 		return (s);
-	    }
 	    return R_NilValue;
 	}
     }
@@ -161,10 +157,8 @@ SEXP attribute_hidden getAttrib0(SEXP vec, SEXP name)
 	    SET_VECTOR_ELT(_new, i++, CAR(old));
 	    old = CDR(old);
 	}
-	SET_NAMED(_new, 2);
 	return _new;
     }
-    SET_NAMED(att, 2);
     return att;
 }
 
@@ -238,7 +232,6 @@ SEXP setAttrib(SEXP vec, SEXP name, SEXP val)
     PROTECT(vec);
     PROTECT(name);
     if (NAMED(val)) val = duplicate(val);
-    SET_NAMED(val, NAMED(val) | NAMED(vec));
     UNPROTECT(2);
 
     GCStackRoot<> valr(val);
@@ -1057,7 +1050,6 @@ SEXP attribute_hidden do_attributes(SEXP call, SEXP op, SEXP args, SEXP env)
 	nvalues++;
     }
     setAttrib(value, R_NamesSymbol, names);
-    SET_NAMED(value, NAMED(CAR(args)));
     UNPROTECT(3);
     return value;
 }
@@ -1536,7 +1528,6 @@ SEXP R_do_slot_assign(SEXP obj, SEXP name, SEXP value) {
 	   here we do *not* treat "names", "dimnames", "dim", .. specially : */
 	PROTECT(name);
 	if (NAMED(value)) value = duplicate(value);
-	SET_NAMED(value, NAMED(value) | NAMED(obj));
 	UNPROTECT(1);
 	obj->setAttribute(static_cast<Symbol*>(name), value);
 #endif

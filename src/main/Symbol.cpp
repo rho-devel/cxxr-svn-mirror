@@ -137,12 +137,8 @@ RObject* Symbol::evaluate(Environment* env)
 		     name()->c_str());
 	else Rf_error(_("argument is missing, with no default"));
     }
-    if (val->sexptype() == PROMSXP) {
+    if (val->sexptype() == PROMSXP)
 	val = Rf_eval(val, env);
-	SET_NAMED(val, 2);
-    }
-    else if (NAMED(val) < 1)
-	SET_NAMED(val, 1);
     return val;
 }
 

@@ -1259,7 +1259,6 @@ SEXP attribute_hidden do_subassign_dflt(SEXP call, SEXP op, SEXP argsarg,
     /* will be multiple reference problems if "[<-" is used */
     /* in a naked fashion. */
 
-    SET_NAMED(x, 0);
     if (S4)
 	SET_S4_OBJECT(x);
     return x;
@@ -1637,7 +1636,6 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
     else xtop = x;
 
     UNPROTECT(1);
-    SET_NAMED(xtop, 0);
     if(S4) SET_S4_OBJECT(xtop);
     return xtop;
 }
@@ -1721,7 +1719,6 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP nlist, SEXP val)
 	    if (val == R_NilValue) {
 		SET_ATTRIB(CDR(x), ATTRIB(x));
 		IS_S4_OBJECT(x) ?  SET_S4_OBJECT(CDR(x)) : UNSET_S4_OBJECT(CDR(x));
-		SET_NAMED(CDR(x), NAMED(x));
 		x = CDR(x);
 	    }
 	    else
@@ -1852,7 +1849,6 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP nlist, SEXP val)
     UNPROTECT(2);
     if(xS4 != R_NilValue)
 	x = xS4; /* x was an env't, the data slot of xS4 */
-    SET_NAMED(x, 0);
     if(S4) SET_S4_OBJECT(x);
     return x;
 }

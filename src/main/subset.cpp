@@ -477,7 +477,6 @@ SEXP attribute_hidden do_subset_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 		setAttrib(ans, R_DimNamesSymbol,
 			  getAttrib(ax, R_DimNamesSymbol));
 		setAttrib(ans, R_NamesSymbol, getAttrib(ax, R_NamesSymbol));
-		SET_NAMED(ans, NAMED(ax)); /* PR#7924 */
 	    }
     }
     if (ATTRIB(ans) != R_NilValue) { /* remove probably erroneous attr's */
@@ -569,8 +568,6 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    PROTECT(ans);
 	    ans = eval(ans, R_GlobalEnv);
 	    UNPROTECT(1);
-      } else {
-	    SET_NAMED(ans, 2);
       }
 
       UNPROTECT(1);
@@ -635,8 +632,6 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     if(isPairList(x)) {
 	ans = CAR(nthcdr(x, offset));
-	if (named_x > NAMED(ans))
-	    SET_NAMED(ans, named_x);
     } else if(isVectorList(x)) {
 	/* did unconditional duplication before 2.4.0 */
 	if (x->sexptype() == EXPRSXP) {
@@ -644,8 +639,6 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    ans = (*ev)[offset];
 	}
 	else ans = VECTOR_ELT(x, offset);
-	if (named_x > NAMED(ans))
-	    SET_NAMED(ans, named_x);
     } else {
 	ans = allocVector(TYPEOF(x), 1);
 	switch (TYPEOF(x)) {
@@ -785,7 +778,6 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP call)
 	    switch(pstrmatch(TAG(y), input, slen)) {
 	    case EXACT_MATCH:
 		y = CAR(y);
-		if (NAMED(x) > NAMED(y)) SET_NAMED(y, NAMED(x));
 		return y;
 	    case PARTIAL_MATCH:
 		havematch++;
@@ -813,7 +805,6 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP call)
 			    translateChar(input), st);
 	    }
 	    y = CAR(xmatch);
-	    if (NAMED(x) > NAMED(y)) SET_NAMED(y, NAMED(x));
 	    return y;
 	}
 	return R_NilValue;
@@ -828,8 +819,6 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP call)
 	    switch(pstrmatch(STRING_ELT(nlist, i), input, slen)) {
 	    case EXACT_MATCH:
 		y = VECTOR_ELT(x, i);
-		if (NAMED(x) > NAMED(y))
-		    SET_NAMED(y, NAMED(x));
 		return y;
 	    case PARTIAL_MATCH:
 		havematch++;
@@ -838,7 +827,6 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP call)
 		       This is overkill, but alternative ways to prevent
 		       the aliasing appear to be even worse */
 		    y = VECTOR_ELT(x,i);
-		    SET_NAMED(y,2);
 		    SET_VECTOR_ELT(x,i,y);
 		}
 		imatch = i;
@@ -865,7 +853,6 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP call)
 			    translateChar(input), st);
 	    }
 	    y = VECTOR_ELT(x, imatch);
-	    if (NAMED(x) > NAMED(y)) SET_NAMED(y, NAMED(x));
 	    return y;
 	}
 	return R_NilValue;
@@ -878,11 +865,8 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP call)
 	    UNPROTECT(1);
 	}
 	UNPROTECT(2);
-	if( y != R_UnboundValue ) {
-	    if (NAMED(x) > NAMED(y))
-		SET_NAMED(y, NAMED(x));
+	if( y != R_UnboundValue )
 	    return(y);
-	}
       return R_NilValue;
     }
     else if( isVectorAtomic(x) ){

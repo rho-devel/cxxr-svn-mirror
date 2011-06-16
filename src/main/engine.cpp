@@ -2833,7 +2833,7 @@ SEXP attribute_hidden do_playSnapshot(SEXP call, SEXP op, SEXP args, SEXP env)
 
 SEXP attribute_hidden do_recordGraphics(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    SEXP x, xptr, evalenv, retval;
+    SEXP x, evalenv, retval;
     pGEDevDesc dd = GEcurrentDevice();
     Rboolean record = dd->recordGraphics;
     /*
@@ -2874,8 +2874,6 @@ SEXP attribute_hidden do_recordGraphics(SEXP call, SEXP op, SEXP args, SEXP env)
      * This conversion of list to env taken from do_eval
      */
     PROTECT(x = VectorToPairList(list));
-    for (xptr = x ; xptr != R_NilValue ; xptr = CDR(xptr))
-	SET_NAMED(CAR(xptr) , 2);
     /*
      * The environment passed in as the third arg is used as
      * the parent of the new evaluation environment.

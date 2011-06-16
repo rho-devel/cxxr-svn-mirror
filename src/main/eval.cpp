@@ -482,7 +482,6 @@ static SEXP EnsureLocal(SEXP symbol, SEXP rho)
 	    PROTECT(vl = Rf_duplicate(vl));
 	    Rf_defineVar(symbol, vl, rho);
 	    UNPROTECT(1);
-	    SET_NAMED(vl, 1);
 	}
 	return vl;
     }
@@ -494,7 +493,6 @@ static SEXP EnsureLocal(SEXP symbol, SEXP rho)
     PROTECT(vl = Rf_duplicate(vl));
     Rf_defineVar(symbol, vl, rho);
     UNPROTECT(1);
-    SET_NAMED(vl, 1);
     return vl;
 }
 
@@ -674,9 +672,6 @@ SEXP attribute_hidden do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
     dbg = ENV_DEBUG(rho);
     bgn = BodyHasBraces(body);
 
-    /* bump up NAMED count of sequence to avoid modification by loop code */
-    if (NAMED(val) < 2) SET_NAMED(val, NAMED(val) + 1);
-
     Environment* env = SEXP_downcast<Environment*>(rho);
     Environment::LoopScope loopscope(env);
     for (i = 0; i < n; i++) {
@@ -685,23 +680,17 @@ SEXP attribute_hidden do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
 	switch (val_type) {
 
 	case EXPRSXP:
-	    /* make sure loop variable is not modified via other vars */
-	    SET_NAMED(XVECTOR_ELT(val, i), 2);
 	    /* defineVar is used here and below rather than setVar in
 	       case the loop code removes the variable. */
 	    Rf_defineVar(sym, XVECTOR_ELT(val, i), rho);
 	    break;
 	case VECSXP:
-	    /* make sure loop variable is not modified via other vars */
-	    SET_NAMED(VECTOR_ELT(val, i), 2);
 	    /* defineVar is used here and below rather than setVar in
 	       case the loop code removes the variable. */
 	    Rf_defineVar(sym, VECTOR_ELT(val, i), rho);
 	    break;
 
 	case LISTSXP:
-	    /* make sure loop variable is not modified via other vars */
-	    SET_NAMED(CAR(val), 2);
 	    Rf_defineVar(sym, CAR(val), rho);
 	    val = CDR(val);
 	    break;
@@ -979,10 +968,8 @@ SEXP attribute_hidden do_function(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     GCStackRoot<> rval;
 
-    if (TYPEOF(op) == PROMSXP) {
+    if (TYPEOF(op) == PROMSXP)
 	op = forcePromise(op);
-	SET_NAMED(op, 2);
-    }
     if (length(args) < 2)
 	WrongArgCount("lambda");
     SEXP formals = CAR(args);
@@ -1061,7 +1048,6 @@ static const char * const asym[] = {":=", "<-", "<<-", "="};
 	SEXP __v__ = CAR(__lhs__); \
 	if (NAMED(__v__) == 2) { \
 	    __v__ = Rf_duplicate(__v__); \
-	    SET_NAMED(__v__, 1); \
 	    SETCAR(__lhs__, __v__); \
 	} \
 	R_SetVarLocValue(loc, __v__); \
@@ -1149,9 +1135,6 @@ static SEXP applydefine(SEXP call, SEXP op, SEXP args, SEXP rho)
 #ifdef CONSERVATIVE_COPYING /* not default */
     return Rf_duplicate(saverhs);
 #else
-    /* we do not duplicate the value, so to be conservative mark the
-       value as NAMED = 2 */
-    SET_NAMED(saverhs, 2);
     return saverhs;
 #endif
 }
@@ -1161,7 +1144,6 @@ SEXP attribute_hidden do_alias(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     checkArity(op,args);
     Rprintf(".Alias is deprecated; there is no replacement \n");
-    SET_NAMED(CAR(args), 0);
     return CAR(args);
 }
 */
@@ -1199,12 +1181,7 @@ SEXP attribute_hidden do_set(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    PROTECT(s);
 	    Rf_defineVar(CAR(args), s, rho);
 	    UNPROTECT(1);
-	    SET_NAMED(s, 1);
 #else
-	    switch (NAMED(s)) {
-	    case 0: SET_NAMED(s, 1); break;
-	    case 1: SET_NAMED(s, 2); break;
-	    }
 	    Rf_defineVar(CAR(args), s, rho);
 #endif
 	    R_Visible = FALSE;
@@ -1225,7 +1202,6 @@ SEXP attribute_hidden do_set(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    PROTECT(s);
 	    Rf_setVar(CAR(args), s, ENCLOS(rho));
 	    UNPROTECT(1);
-	    SET_NAMED(s, 1);
 	    R_Visible = FALSE;
 	    return s;
 	}
@@ -1291,7 +1267,7 @@ static SEXP VectorToPairListNamed(SEXP x)
 
 SEXP attribute_hidden do_eval(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP encl, x, xptr;
+    SEXP encl, x;
     volatile SEXP expr, env, tmp;
 
     int frame;
@@ -1325,8 +1301,6 @@ SEXP attribute_hidden do_eval(SEXP call, SEXP op, SEXP args, SEXP rho)
     case VECSXP:
 	/* PR#14035 */
 	x = VectorToPairListNamed(CADR(args));
-	for (xptr = x ; xptr != R_NilValue ; xptr = CDR(xptr))
-	    SET_NAMED(CAR(xptr) , 2);
 	env = Rf_NewEnvironment(R_NilValue, x, encl);
 	PROTECT(env);
 	break;
@@ -1636,8 +1610,6 @@ int Rf_DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 	/* This and the similar test below implement the strategy
 	 for S3 methods selected for S4 objects.  See ?Methods */
         RObject* value = arg1val;
-	if (NAMED(value))
-	    SET_NAMED(value, 2);
 	value = R_getS4DataSlot(value, S4SXP); /* the .S3Class obj. or NULL*/
 	if (value) { /* use the S3Part as the inherited object */
 	    callargs->setCar(value);
@@ -1652,8 +1624,6 @@ int Rf_DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     if (r && arg2val->isS4Object() && r->locInClasses() > 0
 	&& Rf_isBasicClass(Rf_translateChar(r->className()))) {
         RObject* value = arg2val;
-	if(NAMED(value))
-	    SET_NAMED(value, 2);
 	value = R_getS4DataSlot(value, S4SXP);
 	if (value) {
 	    callargs->tail()->setCar(value);
@@ -1784,10 +1754,8 @@ void R_initialize_bcode(void)
   FakeCall2 = CONS(R_NilValue, FakeCall1);
   R_PreserveObject(FakeCall2);
   R_TrueValue = Rf_mkTrue();
-  SET_NAMED(R_TrueValue, 2);
   R_PreserveObject(R_TrueValue);
   R_FalseValue = Rf_mkFalse();
-  SET_NAMED(R_FalseValue, 2);
   R_PreserveObject(R_FalseValue);
 #ifdef THREADED_CODE
   bcEval(NULL, NULL);
@@ -1948,10 +1916,8 @@ static SEXP cmp_relop(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 		      SEXP rho)
 {
     SEXP op = SYMVALUE(opsym);
-    if (TYPEOF(op) == PROMSXP) {
+    if (TYPEOF(op) == PROMSXP)
 	op = forcePromise(op);
-	SET_NAMED(op, 2);
-    }
     if (Rf_isObject(x) || Rf_isObject(y)) {
 	SEXP args, ans;
 	args = CONS(x, CONS(y, R_NilValue));
@@ -1984,10 +1950,8 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 		       SEXP rho)
 {
     SEXP op = SYMVALUE(opsym);
-    if (TYPEOF(op) == PROMSXP) {
+    if (TYPEOF(op) == PROMSXP)
 	op = forcePromise(op);
-	SET_NAMED(op, 2);
-    }
     if (Rf_isObject(x) || Rf_isObject(y)) {
 	SEXP args, ans;
 	args = CONS(x, CONS(y, R_NilValue));
@@ -2192,10 +2156,7 @@ typedef int BCODE;
       else value = forcePromise(value); \
     } \
     else value = PRVALUE(value); \
-    SET_NAMED(value, 2); \
   } \
-  else if (!Rf_isNull(value) && NAMED(value) < 1) \
-    SET_NAMED(value, 1); \
   BCNPUSH(value); \
   NEXT(); \
 } while (0)
@@ -2221,7 +2182,6 @@ namespace {
 #define DO_LDCONST(v) do { \
   R_Visible = TRUE; \
   v = VECTOR_ELT(constants, GETOP()); \
-  if (! NAMED(v)) SET_NAMED(v, 1); \
 } while (0)
 
 static int tryDispatch(CXXRCONST char *generic, SEXP call, SEXP x, SEXP rho, SEXP *pv)
@@ -2571,9 +2531,6 @@ static SEXP bcEval(SEXP body, SEXP rho)
 	else Rf_error(_("invalid sequence argument in for loop"));
 	BCNPUSH(value);
 
-	/* bump up NAMED count of seq to avoid modification by loop code */
-	if (NAMED(seq) < 2) SET_NAMED(seq, NAMED(seq) + 1);
-
 	BCNPUSH(R_NilValue);
 
 	BC_CHECK_SIGINT();
@@ -2651,10 +2608,6 @@ static SEXP bcEval(SEXP body, SEXP rho)
       {
 	SEXP symbol = VECTOR_ELT(constants, GETOP());
 	value = R_BCNodeStackTop[-1];
-	switch (NAMED(value)) {
-	case 0: SET_NAMED(value, 1); break;
-	case 1: SET_NAMED(value, 2); break;
-	}
 	Rf_defineVar(symbol, value, rho);
 	NEXT();
       }
@@ -2703,10 +2656,8 @@ static SEXP bcEval(SEXP body, SEXP rho)
 	/* get the function */
 	SEXP symbol = VECTOR_ELT(constants, GETOP());
 	value = SYMVALUE(symbol);
-	if (TYPEOF(value) == PROMSXP) {
+	if (TYPEOF(value) == PROMSXP)
 	    value = forcePromise(value);
-	    SET_NAMED(value, 2);
-	}
 	if(RTRACE(value)) {
 	  Rprintf("trace: ");
 	  Rf_PrintValue(symbol);
@@ -2727,10 +2678,8 @@ static SEXP bcEval(SEXP body, SEXP rho)
 	/* get the function */
 	SEXP symbol = VECTOR_ELT(constants, GETOP());
 	value = SYMVALUE(symbol);
-	if (TYPEOF(value) == PROMSXP) {
+	if (TYPEOF(value) == PROMSXP)
 	    value = forcePromise(value);
-	    SET_NAMED(value, 2);
-	}
 	if (TYPEOF(value) != BUILTINSXP)
 	  Rf_error(_("not a BUILTIN function"));
 	if(RTRACE(value)) {
@@ -2890,10 +2839,8 @@ static SEXP bcEval(SEXP body, SEXP rho)
 	SEXP fun = SYMVALUE(symbol);
 	int flag;
 	const void *vmax = vmaxget();
-	if (TYPEOF(fun) == PROMSXP) {
+	if (TYPEOF(fun) == PROMSXP)
 	    fun = forcePromise(fun);
-	    SET_NAMED(fun, 2);
-	}
 	if(RTRACE(fun)) {
 	  Rprintf("trace: ");
 	  Rf_PrintValue(symbol);
@@ -2951,10 +2898,6 @@ static SEXP bcEval(SEXP body, SEXP rho)
 	SEXP symbol = VECTOR_ELT(constants, GETOP());
 	SEXP valsym = VECTOR_ELT(constants, GETOP());
 	value = BCNPOP();
-	switch (NAMED(value)) {
-	case 0: SET_NAMED(value, 1); break;
-	case 1: SET_NAMED(value, 2); break;
-	}
 	Rf_defineVar(symbol, value, rho);
 	Rf_unbindVar(valsym, rho);
 	/* original right-hand side value is now on top of stack again */

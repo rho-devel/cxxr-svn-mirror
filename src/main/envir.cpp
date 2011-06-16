@@ -954,8 +954,6 @@ SEXP attribute_hidden do_get(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if (TYPEOF(rval) == PROMSXP)
 	    rval = eval(rval, genv);
 
-	if (!ISNULL(rval) && NAMED(rval) == 0)
-	    SET_NAMED(rval, 1);
 	return rval;
     }
     else { /* exists(.) */
@@ -989,7 +987,6 @@ static SEXP gfind(const char *name, SEXP env, SEXPTYPE mode,
 
     /* We need to evaluate if it is a promise */
     if (TYPEOF(rval) == PROMSXP) rval = eval(rval, env);
-    if (!ISNULL(rval) && NAMED(rval) == 0) SET_NAMED(rval, 1);
     return rval;
 }
 

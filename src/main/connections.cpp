@@ -2553,7 +2553,6 @@ static void outtext_close(Rconnection con)
 	PROTECT(tmp = lengthgets(thisconn->data, ++thisconn->len));
 	SET_STRING_ELT(tmp, thisconn->len - 1, mkCharLocal(thisconn->lastline));
 	if(thisconn->namesymbol) defineVar(thisconn->namesymbol, tmp, env);
-	SET_NAMED(tmp, 2);
 	thisconn->data = tmp;
 	UNPROTECT(1);
     }
@@ -2651,7 +2650,6 @@ static int text_vfprintf(Rconnection con, const char *format, va_list ap)
 		R_PreserveObject(tmp);
 	    }
 	    thisconn->data = tmp;
-	    SET_NAMED(tmp, 2);
 	    UNPROTECT(1);
 	} else {
 	    /* retain the last line */
@@ -2686,7 +2684,6 @@ static void outtext_init(Rconnection con, SEXP stext, const char *mode, int idx)
 	    PROTECT(val = allocVector(STRSXP, 0));
 	    defineVar(thisconn->namesymbol, val, VECTOR_ELT(OutTextData, idx));
 	    /* Not clear if this is needed, but be conservative */
-	    SET_NAMED(val, 2);
 	    UNPROTECT(1);
 	} else {
 	    /* take over existing variable */
@@ -2696,7 +2693,6 @@ static void outtext_init(Rconnection con, SEXP stext, const char *mode, int idx)
 		warning(_("text connection: appending to a non-existent char vector"));
 		PROTECT(val = allocVector(STRSXP, 0));
 		defineVar(thisconn->namesymbol, val, VECTOR_ELT(OutTextData, idx));
-		SET_NAMED(val, 2);
 		UNPROTECT(1);
 	    }
 	    R_LockBinding(thisconn->namesymbol, VECTOR_ELT(OutTextData, idx));

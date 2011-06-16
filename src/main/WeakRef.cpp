@@ -391,7 +391,5 @@ SEXP R_WeakRefValue(SEXP w)
 	Rf_error(_("not a weak reference"));
     WeakRef* wr = static_cast<WeakRef*>(w);
     SEXP v = wr->value();
-    if (v && NAMED(v) != 2)
-	SET_NAMED(v, 2);
     return v;
 }
