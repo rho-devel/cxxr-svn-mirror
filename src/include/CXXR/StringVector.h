@@ -78,7 +78,7 @@ namespace CXXR {
     // Make the default handle for a String point to a blank string:
     template <>
     inline RHandle<String>::RHandle()
-	: GCEdge<String>(CachedString::blank())
+	: RHandleBase(CachedString::blank())
     {}
 
     template <>

@@ -174,7 +174,7 @@ namespace CXXR {
 	}
 
 	/**
-	 * @return a const pointer to the 'car' of this ConsCell
+	 * @return a pointer to the 'car' of this ConsCell
 	 * element.
 	 */
 	RObject* car() const

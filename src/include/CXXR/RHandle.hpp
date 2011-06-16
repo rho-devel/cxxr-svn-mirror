@@ -34,7 +34,7 @@
  *  http://www.r-project.org/Licenses/
  */
 
-/** @file RHandle.h
+/** @file RHandle.hpp
  *
  * @brief Class template CXXR::RHandle.
  */
@@ -48,6 +48,23 @@
 namespace CXXR {
     class RObject;
 
+    /** @brief Untemplated base class for RHandle<T>.
+     */
+    class RHandleBase : public GCEdgeBase {
+    public:
+	~RHandleBase();
+    protected:
+	RHandleBase(const RObject* target = 0);
+
+	const RObject* asset() const;
+
+	bool sharing() const;
+    private:
+	// Not implemented:
+	RHandleBase(const RHandleBase&);
+	RHandleBase& operator=(const RHandleBase&);
+    };
+	
     /** @brief Smart pointer used to control the copying of RObjects.
      *
      * This class encapsulates a T* pointer, where T is derived from
@@ -62,7 +79,7 @@ namespace CXXR {
      * @param T RObject or a class publicly derived from RObject.
      */
     template <class T = RObject>
-    class RHandle : public GCEdge<T> {
+    class RHandle : public RHandleBase {
     public:
 	RHandle()
 	{}
@@ -73,7 +90,7 @@ namespace CXXR {
 	 *          RHandle is to refer.
 	 */
 	explicit RHandle(T* target)
-	    : GCEdge<T>(target)
+	    : RHandleBase(target)
 	{}
 
 	/** @brief Copy constructor.
@@ -88,15 +105,14 @@ namespace CXXR {
 	 *          the created object.
 	 */
 	RHandle(const RHandle<T>& pattern)
-	    : GCEdge<T>(cloneOrSelf(pattern))
+	    : RHandleBase(cloneOrSelf(pattern))
 	{}
 
 	/** @brief Assignment operator.
 	 */
 	RHandle<T>& operator=(const RHandle<T>& source)
 	{
-	    GCEdge<T>::operator=(cloneOrSelf(source));
-	    return *this;
+	    return operator=(source.get());
 	}
 
 	/** @brief Assignment from pointer.
@@ -106,8 +122,44 @@ namespace CXXR {
 	 */
 	RHandle<T>& operator=(T* newtarget)
 	{
-	    GCEdge<T>::operator=(newtarget);
+	    RHandle<T> tmp(newtarget);
+	    swap(tmp);
 	    return *this;
+	}
+
+	T* operator->() const
+	{
+	    return get();
+	}
+
+	/** @brief Access the encapsulated pointer
+	 *
+	 * @return the encapsulated pointer.
+	 */
+	operator T*() const
+	{
+	    return get();
+	}
+
+	/** @brief Access the encapsulated pointer.
+	 *
+	 * This function clones the target of the pointer if it is shared.
+	 *
+	 * @return the encapsulated pointer.
+	 */
+	T* get() const
+	{
+	    return static_cast<T*>(const_cast<RObject*>(asset()));
+	}
+
+	/** @brief Swap target with another RHandle<T>.
+	 *
+	 * @param that Reference to the RHandle<T> with which targets are
+	 *          to be swapped.
+	 */
+	void swap(RHandle<T>& that)
+	{
+	    GCEdgeBase::swap(that);
 	}
     private:
 	static T* cloneOrSelf(T*);

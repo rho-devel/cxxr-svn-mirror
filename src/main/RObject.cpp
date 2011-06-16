@@ -62,7 +62,6 @@ namespace CXXR {
 	Rboolean (*IS_S4_OBJECTptr)(SEXP x) = IS_S4_OBJECT;
 	int (*NAMEDptr)(SEXP x) = NAMED;
 	Rboolean (*OBJECTptr)(SEXP e) = OBJECT;
-	void (*SET_NAMEDptr)(SEXP x, int v) = SET_NAMED;
 	void (*SET_S4_OBJECTptr)(SEXP x) = SET_S4_OBJECT;
 	SEXPTYPE (*TYPEOFptr)(SEXP e) = TYPEOF;
 	void (*UNSET_S4_OBJECTptr)(SEXP x) = UNSET_S4_OBJECT;
@@ -79,7 +78,7 @@ const unsigned char RObject::s_S4_mask;
 const unsigned char RObject::s_class_mask;
 
 RObject::RObject(const RObject& pattern)
-    : m_type(pattern.m_type), m_named(0), m_missing(pattern.m_missing),
+    : m_type(pattern.m_type), m_owners(0), m_missing(pattern.m_missing),
       m_argused(pattern.m_argused), m_active_binding(pattern.m_active_binding),
       m_binding_locked(pattern.m_binding_locked), m_attrib(pattern.m_attrib)
 {}

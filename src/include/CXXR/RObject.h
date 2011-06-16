@@ -316,6 +316,18 @@ namespace CXXR {
 	    return (m_type & s_S4_mask);
 	}
 
+	/** @brief How many RHandle objects claim ownership?
+	 *
+	 * @return The number of RHandle<T> objects currently claiming
+	 * ownership of this RObject .
+	 *
+	 * @deprecated Made public only to allow access by NAMED().
+	 */
+	unsigned int numOwners() const
+	{
+	    return m_owners;
+	}
+
 	/** @brief Reproduce the \c gp bits field used in CR.
 	 *
 	 * This function is used to reproduce the
@@ -420,7 +432,7 @@ namespace CXXR {
 	 * @param stype Required type of the RObject.
 	 */
 	explicit RObject(SEXPTYPE stype = CXXSXP)
-	    : m_type(stype & s_sexptype_mask), m_named(0), m_missing(0),
+	    : m_type(stype & s_sexptype_mask), m_owners(0), m_missing(0),
 	      m_argused(0), m_active_binding(false), m_binding_locked(false)
 	{}
 
@@ -438,10 +450,9 @@ namespace CXXR {
 	signed char m_type;  // The least-significant six bits hold
 	  // the SEXPTYPE.  The sign bit is set if the object has a
 	  // class attribute.  Bit 6 is set to denote an S4 object.
+	mutable unsigned char m_owners;  // Number of RHandles claiming
+	  // ownership of this RObject.
     public:
-	// To be private in future:
-	unsigned m_named       : 2;
-
 	// The following field is used only in connection with objects
 	// inheriting from class ConsCell (and fairly rarely then), so
 	// it would more logically be placed in that class (and
@@ -472,8 +483,48 @@ namespace CXXR {
 	bool m_active_binding : 1;
 	bool m_binding_locked : 1;
     private:
+	friend class RHandleBase;
+
 	RHandle<PairList> m_attrib;
+
+	void decOwners() const
+	{
+	    if (m_owners < 7)
+		--m_owners;
+	}
+
+	void incOwners() const
+	{
+	    if (m_owners < 7)
+		++m_owners;
+	}
     };
+
+    // ***** Inlined methods of RHandleBase:
+    inline RHandleBase::RHandleBase(const RObject* target)
+	: GCEdgeBase(target)
+    {
+	if (target)
+	    target->incOwners();
+    }
+
+    inline RHandleBase::~RHandleBase()
+    {
+	const RObject* tgt = asset();
+	if (tgt)
+	    tgt->decOwners();
+    }
+
+    inline const RObject* RHandleBase::asset() const
+    {
+	return static_cast<const RObject*>(target());
+    }
+
+    inline bool RHandleBase::sharing() const
+    {
+	const RObject* tgt = asset();
+	return (tgt && tgt->numOwners() > 1);
+    }
 }  // namespace CXXR
 
 /** @brief Pointer to an RObject.
@@ -547,7 +598,12 @@ extern "C" {
 #ifndef __cplusplus
     int NAMED(SEXP x);
 #else
-    inline int NAMED(SEXP x) {return x ? x->m_named : 0;}
+    inline int NAMED(SEXP x)
+    {
+	if (!x)
+	    return 0;
+	return std::min(x->numOwners(), 2U);
+    }
 #endif
 
     /** @brief Does an object have a class attribute?
@@ -596,24 +652,9 @@ extern "C" {
      */
     void SET_ATTRIB(SEXP x, SEXP v);
 
-    /** @brief Set object copying status.
-     *
-     * @param x Pointer to CXXR::RObject.  The function does nothing
-     *          if \a x is a null pointer.
-     *
-     * @param v Refer to 'R Internals' document.
-     *
-     * @deprecated Ought to be private.
+    /** @brief Obsolete in CXXR.
      */
-#ifndef __cplusplus
-    void SET_NAMED(SEXP x, int v);
-#else
-    inline void SET_NAMED(SEXP x, int v)
-    {
-	if (!x) return;
-	x->m_named = v;
-    }
-#endif
+#define SET_NAMED(a, b)
 
     /**
      * @deprecated Ought to be private.
