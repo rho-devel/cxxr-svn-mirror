@@ -960,6 +960,7 @@ static SEXP xxexprlist(SEXP a1, YYLTYPE *lloc, SEXP a2)
 
     EatLines = 0;
     if (GenerateCode) {
+	/* The following code converts a stretchy list into an Expression. */
 	/* SET_TYPEOF(a2, LANGSXP); -- not allowed in CXXR */
 	SETCAR(a2, a1);
 	if (ParseState.keepSrcRefs) {
@@ -968,7 +969,6 @@ static SEXP xxexprlist(SEXP a1, YYLTYPE *lloc, SEXP a2)
 	    PROTECT(anslist = attachSrcrefs(a2, ParseState.SrcFile));
 	    REPROTECT(SrcRefs = prevSrcrefs, srindex);
 	    /* SrcRefs got NAMED by being an attribute... */
-	    SET_NAMED(SrcRefs, 0);
 	    UNPROTECT_PTR(prevSrcrefs);
 	}
 	else
@@ -976,7 +976,7 @@ static SEXP xxexprlist(SEXP a1, YYLTYPE *lloc, SEXP a2)
 	/* CXXR: Transform anslist to class Expression: */
 	{
 	    PROTECT(ans = Rf_lcons(CAR(anslist), CDR(anslist)));
-	    SET_TAG(ans, TAG(anslist));
+	    // We discard the stretchy list's TAG.
 	    DUPLICATE_ATTRIB(ans, anslist);
 	    UNPROTECT_PTR(anslist);
 	}
@@ -1009,13 +1009,17 @@ static SEXP TagArg(SEXP arg, SEXP tag, YYLTYPE *lloc)
 /* the pair by taking its CDR, while the CAR gives fast access to the end */
 /* of the list. */
 
+/* Preceding comment refers to CR.  In CXXR, the TAG is used in place
+ * of the CAR, to avoid unwanted copying of the last element of the
+ * list.  (This is a kludge, because it relies on TAG() casting away
+ * the constness of the m_tag field.) */
 
 /* Create a stretchy-list dotted pair */
 
 static SEXP NewList(void)
 {
     SEXP s = CONS(R_NilValue, R_NilValue);
-    SETCAR(s, s);
+    SET_TAG(s, s);
     return s;
 }
 
@@ -1027,12 +1031,13 @@ static SEXP GrowList(SEXP l, SEXP s)
     PROTECT(s);
     tmp = CONS(s, R_NilValue);
     UNPROTECT(1);
-    SETCDR(CAR(l), tmp);
-    SETCAR(l, tmp);
+    SETCDR(TAG(l), tmp);
+    SET_TAG(l, tmp);
     return l;
 }
 
 /* Insert a new element at the head of a stretchy list */
+/* Note that this doesn't correctly handle the case where CDR(l) is empty. */
 
 static SEXP Insert(SEXP l, SEXP s)
 {
@@ -1051,7 +1056,7 @@ static SEXP FirstArg(SEXP s, SEXP tag)
     PROTECT(tag);
     PROTECT(tmp = NewList());
     tmp = GrowList(tmp, s);
-    SET_TAG(CAR(tmp), tag);
+    SET_TAG(TAG(tmp), tag);
     UNPROTECT(3);
     return tmp;
 }
@@ -1061,7 +1066,7 @@ static SEXP NextArg(SEXP l, SEXP s, SEXP tag)
     PROTECT(tag);
     PROTECT(l);
     l = GrowList(l, s);
-    SET_TAG(CAR(l), tag);
+    SET_TAG(TAG(l), tag);
     UNPROTECT(2);
     return l;
 }
