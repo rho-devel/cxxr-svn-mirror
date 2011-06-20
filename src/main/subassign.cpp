@@ -1187,14 +1187,15 @@ SEXP attribute_hidden do_subassign_dflt(SEXP call, SEXP op, SEXP argsarg,
     /* duplicate it so that only the local version is mutated. */
     /* This will duplicate more often than necessary, but saves */
     /* over always duplicating. */
-    GCStackRoot<> x;
+    GCStackRoot<> x, y;
     if (NAMED(CAR(args)) == 2)
 	x = SETCAR(args, duplicate(CAR(args)));
-    SEXP subs, y;
+    SEXP subs;
     {
-	SEXP xtmp;
-	SubAssignArgs(args, &xtmp, &subs, &y);
+	SEXP xtmp, ytmp;
+	SubAssignArgs(args, &xtmp, &subs, &ytmp);
 	x = xtmp;
+	y = ytmp;
     }
     bool S4 = IS_S4_OBJECT(x);
     int nsubs = length(subs);
@@ -1323,13 +1324,18 @@ SEXP attribute_hidden do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho)
 SEXP attribute_hidden
 do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP dims, indx, names, newname, subs, x, xtop, xup, y, thesub = R_NilValue, xOrig = R_NilValue;
+    SEXP dims, indx, names, newname, subs, xtop, xup, thesub = R_NilValue, xOrig = R_NilValue;
     int i, ndims, nsubs, offset, off = -1 /* -Wall */, stretch, which, len = 0 /* -Wall */;
     Rboolean S4, recursed=FALSE;
 
     PROTECT(args);
-
-    SubAssignArgs(args, &x, &subs, &y);
+    GCStackRoot<> x, y;
+    {
+	SEXP xtmp, ytmp;
+	SubAssignArgs(args, &xtmp, &subs, &ytmp);
+	x = xtmp;
+	y = ytmp;
+    }
     S4 = CXXRCONSTRUCT(Rboolean, IS_S4_OBJECT(x));
 
     /* Handle NULL left-hand sides.  If the right-hand side */
@@ -1433,7 +1439,13 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    UNPROTECT(1);
 	}
 
-	which = SubassignTypeFix(&x, &y, 2, call);
+	{
+	    SEXP xtmp = x;
+	    SEXP ytmp = y;
+	    which = SubassignTypeFix(&xtmp, &ytmp, 2, call);
+	    x = xtmp;
+	    y = ytmp;
+	}
 	if (stretch) {
 	    PROTECT(x);
 	    PROTECT(y);

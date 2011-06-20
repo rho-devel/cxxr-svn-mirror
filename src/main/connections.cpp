@@ -2683,7 +2683,6 @@ static void outtext_init(Rconnection con, SEXP stext, const char *mode, int idx)
 	    /* create variable pointed to by con->description */
 	    PROTECT(val = allocVector(STRSXP, 0));
 	    defineVar(thisconn->namesymbol, val, VECTOR_ELT(OutTextData, idx));
-	    /* Not clear if this is needed, but be conservative */
 	    UNPROTECT(1);
 	} else {
 	    /* take over existing variable */

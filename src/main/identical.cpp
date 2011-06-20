@@ -205,12 +205,21 @@ R_compute_identical(SEXP x, SEXP y, Rboolean num_eq,
 	return CXXRCONSTRUCT(Rboolean, Seql(x, y));
     }
     case VECSXP:
-    case EXPRSXP:
     {
 	int i, n = length(x);
 	if(n != length(y)) return FALSE;
 	for(i = 0; i < n; i++)
 	    if(!R_compute_identical(VECTOR_ELT(x, i),VECTOR_ELT(y, i),
+				    num_eq, single_NA, attr_as_set))
+		return FALSE;
+	return TRUE;
+    }
+    case EXPRSXP:
+    {
+	int i, n = length(x);
+	if(n != length(y)) return FALSE;
+	for(i = 0; i < n; i++)
+	    if(!R_compute_identical(XVECTOR_ELT(x, i),XVECTOR_ELT(y, i),
 				    num_eq, single_NA, attr_as_set))
 		return FALSE;
 	return TRUE;

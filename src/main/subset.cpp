@@ -634,10 +634,8 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	ans = CAR(nthcdr(x, offset));
     } else if(isVectorList(x)) {
 	/* did unconditional duplication before 2.4.0 */
-	if (x->sexptype() == EXPRSXP) {
-	    ExpressionVector* ev = static_cast<ExpressionVector*>(x);
-	    ans = (*ev)[offset];
-	}
+	if (x->sexptype() == EXPRSXP)
+	    ans = XVECTOR_ELT(x, offset);
 	else ans = VECTOR_ELT(x, offset);
     } else {
 	ans = allocVector(TYPEOF(x), 1);
