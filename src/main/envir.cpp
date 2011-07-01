@@ -148,7 +148,7 @@ void Frame::Binding::assign(RObject* new_value, Origin origin)
 		 symbol()->name()->c_str());
     m_origin = origin;
     if (isActive()) {
-	setActiveValue(m_value, new_value);
+	setActiveValue(m_value.get(), new_value);
 	m_frame->monitorRead(*this);
     } else {
 	m_value = new_value;
@@ -156,9 +156,20 @@ void Frame::Binding::assign(RObject* new_value, Origin origin)
     }
 }
 
-RObject* Frame::Binding::value() const
+RObject* Frame::Binding::value()
 {
-    RObject* ans = (isActive() ? getActiveValue(m_value) : m_value);
+    RObject* ans = m_value.get();
+    if (isActive())
+	ans = getActiveValue(const_cast<RObject*>(m_value.get()));
+    m_frame->monitorRead(*this);
+    return ans;
+}
+
+const RObject* Frame::Binding::value() const
+{
+    const RObject* ans = m_value;
+    if (isActive())
+	ans = getActiveValue(const_cast<RObject*>(m_value.get()));
     m_frame->monitorRead(*this);
     return ans;
 }
@@ -367,7 +378,7 @@ SEXP findVarInFrame3(SEXP rho, SEXP symbol, Rboolean /*doGet*/)
     Symbol* sym = SEXP_downcast<Symbol*>(symbol);
     Frame::Binding* bdg = env->frame()->binding(sym);
     if (bdg)
-	return bdg->value();
+	return const_cast<RObject*>(bdg->value());
     // Reproduce the CR behaviour:
     if (sym == Symbol::missingArgument())
 	return sym;
@@ -447,8 +458,11 @@ findVar1(SEXP symbol, SEXP rho, SEXPTYPE mode, int inherits)
     const Symbol* sym = SEXP_downcast<Symbol*>(symbol);
     Environment* env = SEXP_downcast<Environment*>(rho);
     TypeTester typetest(mode);
-    std::pair<bool, RObject*> pr = findTestedValue(sym, env, typetest, inherits);
-    return (pr.first ? pr.second : R_UnboundValue);
+    std::pair<bool, const RObject*> pr
+	= findTestedValue(sym, env, typetest, inherits);
+    if (!pr.first)
+	return R_UnboundValue;
+    return const_cast<RObject*>(pr.second);
 }
 
 /*
@@ -505,11 +519,14 @@ findVar1mode(SEXP symbol, SEXP rho, SEXPTYPE mode, int inherits,
 	if (!inherits)
 	    bdg = env->frame()->binding(sym);
 	else bdg = env->findBinding(sym).second;
-	return bdg ? bdg->value() : R_UnboundValue;
+	return (bdg ? bdg->value() : R_UnboundValue);
     }
     ModeTester modetest(mode);
-    std::pair<bool, RObject*> pr = findTestedValue(sym, env, modetest, inherits);
-    return (pr.first ? pr.second : R_UnboundValue);
+    std::pair<bool, const RObject*> pr
+	= findTestedValue(sym, env, modetest, inherits);
+    if (!pr.first)
+	return R_UnboundValue;
+    return const_cast<RObject*>(pr.second);
 }
 
 
@@ -609,9 +626,9 @@ SEXP findFun(SEXP symbol, SEXP rho)
 {
     const Symbol* sym = SEXP_downcast<Symbol*>(symbol);
     Environment* env = SEXP_downcast<Environment*>(rho);
-    std::pair<Environment*, FunctionBase*> pr = findFunction(sym, env);
+    std::pair<Environment*, const FunctionBase*> pr = findFunction(sym, env);
     if (pr.first)
-	return pr.second;
+	return const_cast<FunctionBase*>(pr.second);
     error(_("could not find function \"%s\""), sym->name()->c_str());
     /* NOT REACHED */
     return R_UnboundValue;

@@ -112,13 +112,13 @@ void Symbol::detachReferents()
     RObject::detachReferents();
 }
 
-RObject* Symbol::evaluate(Environment* env)
+const RObject* Symbol::evaluate(Environment* env) const
 {
     if (this == DotsSymbol)
 	Rf_error(_("'...' used in an incorrect context"));
-    GCStackRoot<> val;
+    GCStackRoot<const RObject> val;
     if (isDotDotSymbol())
-	val = Rf_ddfindVar(this, env);
+	val = Rf_ddfindVar(const_cast<Symbol*>(this), env);
     else {
 	Frame::Binding* bdg = env->findBinding(this).second;
 	if (bdg)
@@ -129,16 +129,16 @@ RObject* Symbol::evaluate(Environment* env)
     }
     if (!val)
 	return 0;
-    if (val == unboundValue())
+    if (val.get() == unboundValue())
 	Rf_error(_("object '%s' not found"), name()->c_str());
-    if (val == missingArgument() && !isDotDotSymbol()) {
+    if (val.get() == missingArgument() && !isDotDotSymbol()) {
 	if (name())
 	    Rf_error(_("argument \"%s\" is missing, with no default"),
 		     name()->c_str());
 	else Rf_error(_("argument is missing, with no default"));
     }
     if (val->sexptype() == PROMSXP)
-	val = Rf_eval(val, env);
+	val = Rf_eval(const_cast<RObject*>(val.get()), env);
     return val;
 }
 
@@ -164,13 +164,13 @@ Symbol* Symbol::make(const CachedString* name)
     return ans;
 }
 
-Symbol* Symbol::obtain(const std::string& name)
+const Symbol* Symbol::obtain(const std::string& name)
 {
     GCStackRoot<const CachedString> str(CachedString::obtain(name));
     return Symbol::obtain(str);
 }
 
-Symbol* Symbol::obtainDotDotSymbol(unsigned int n)
+const Symbol* Symbol::obtainDotDotSymbol(unsigned int n)
 {
     if (n == 0)
 	Rf_error(_("..0 is not a permitted symbol name"));
@@ -195,84 +195,84 @@ void Symbol::visitReferents(const_visitor* v) const
 
 // Predefined Symbols:
 namespace CXXR {
-    Symbol* const Bracket2Symbol = Symbol::obtain("[[");
-    Symbol* const BracketSymbol = Symbol::obtain("[");
-    Symbol* const BraceSymbol = Symbol::obtain("{");
-    Symbol* const TmpvalSymbol = Symbol::obtain("*tmp*");
-    Symbol* const ClassSymbol = Symbol::obtain("class");
-    Symbol* const DeviceSymbol = Symbol::obtain(".Device");
-    Symbol* const DimNamesSymbol = Symbol::obtain("dimnames");
-    Symbol* const DimSymbol = Symbol::obtain("dim");
-    Symbol* const DollarSymbol = Symbol::obtain("$");
-    Symbol* const DotClassSymbol = Symbol::obtain(".Class");
-    Symbol* const DotGenericSymbol = Symbol::obtain(".Generic");
-    Symbol* const DotGenericCallEnvSymbol = Symbol::obtain(".GenericCallEnv");
-    Symbol* const DotGenericDefEnvSymbol = Symbol::obtain(".GenericDefEnv");
-    Symbol* const DotGroupSymbol = Symbol::obtain(".Group");
-    Symbol* const DotMethodSymbol = Symbol::obtain(".Method");
-    Symbol* const DotMethodsSymbol = Symbol::obtain(".Methods");
-    Symbol* const DotdefinedSymbol = Symbol::obtain(".defined");
-    Symbol* const DotsSymbol = Symbol::obtain("...");
-    Symbol* const DottargetSymbol = Symbol::obtain(".target");
-    Symbol* const DropSymbol = Symbol::obtain("drop");
-    Symbol* const ExactSymbol = Symbol::obtain("exact");
-    Symbol* const LastvalueSymbol = Symbol::obtain(".Last.value");
-    Symbol* const LevelsSymbol = Symbol::obtain("levels");
-    Symbol* const ModeSymbol = Symbol::obtain("mode");
-    Symbol* const NameSymbol = Symbol::obtain("name");
-    Symbol* const NamesSymbol = Symbol::obtain("names");
-    Symbol* const NaRmSymbol = Symbol::obtain("na.rm");
-    Symbol* const PackageSymbol = Symbol::obtain("package");
-    Symbol* const PreviousSymbol = Symbol::obtain("previous");
-    Symbol* const QuoteSymbol = Symbol::obtain("quote");
-    Symbol* const RowNamesSymbol = Symbol::obtain("row.names");
-    Symbol* const S3MethodsTableSymbol = Symbol::obtain(".__S3MethodsTable__.");
-    Symbol* const SeedsSymbol = Symbol::obtain(".Random.seed");
-    Symbol* const SourceSymbol = Symbol::obtain("source");
-    Symbol* const TspSymbol = Symbol::obtain("tsp");
-    Symbol* const CommentSymbol = Symbol::obtain("comment");
-    Symbol* const DotEnvSymbol = Symbol::obtain(".Environment");
-    Symbol* const RecursiveSymbol = Symbol::obtain("recursive");
-    Symbol* const UseNamesSymbol = Symbol::obtain("use.names");
-    Symbol* const SrcfileSymbol = Symbol::obtain("srcfile");
-    Symbol* const SrcrefSymbol = Symbol::obtain("srcref");
-    Symbol* const WholeSrcrefSymbol = Symbol::obtain("wholeSrcref");
+    const Symbol* const Bracket2Symbol = Symbol::obtain("[[");
+    const Symbol* const BracketSymbol = Symbol::obtain("[");
+    const Symbol* const BraceSymbol = Symbol::obtain("{");
+    const Symbol* const TmpvalSymbol = Symbol::obtain("*tmp*");
+    const Symbol* const ClassSymbol = Symbol::obtain("class");
+    const Symbol* const DeviceSymbol = Symbol::obtain(".Device");
+    const Symbol* const DimNamesSymbol = Symbol::obtain("dimnames");
+    const Symbol* const DimSymbol = Symbol::obtain("dim");
+    const Symbol* const DollarSymbol = Symbol::obtain("$");
+    const Symbol* const DotClassSymbol = Symbol::obtain(".Class");
+    const Symbol* const DotGenericSymbol = Symbol::obtain(".Generic");
+    const Symbol* const DotGenericCallEnvSymbol = Symbol::obtain(".GenericCallEnv");
+    const Symbol* const DotGenericDefEnvSymbol = Symbol::obtain(".GenericDefEnv");
+    const Symbol* const DotGroupSymbol = Symbol::obtain(".Group");
+    const Symbol* const DotMethodSymbol = Symbol::obtain(".Method");
+    const Symbol* const DotMethodsSymbol = Symbol::obtain(".Methods");
+    const Symbol* const DotdefinedSymbol = Symbol::obtain(".defined");
+    const Symbol* const DotsSymbol = Symbol::obtain("...");
+    const Symbol* const DottargetSymbol = Symbol::obtain(".target");
+    const Symbol* const DropSymbol = Symbol::obtain("drop");
+    const Symbol* const ExactSymbol = Symbol::obtain("exact");
+    const Symbol* const LastvalueSymbol = Symbol::obtain(".Last.value");
+    const Symbol* const LevelsSymbol = Symbol::obtain("levels");
+    const Symbol* const ModeSymbol = Symbol::obtain("mode");
+    const Symbol* const NameSymbol = Symbol::obtain("name");
+    const Symbol* const NamesSymbol = Symbol::obtain("names");
+    const Symbol* const NaRmSymbol = Symbol::obtain("na.rm");
+    const Symbol* const PackageSymbol = Symbol::obtain("package");
+    const Symbol* const PreviousSymbol = Symbol::obtain("previous");
+    const Symbol* const QuoteSymbol = Symbol::obtain("quote");
+    const Symbol* const RowNamesSymbol = Symbol::obtain("row.names");
+    const Symbol* const S3MethodsTableSymbol = Symbol::obtain(".__S3MethodsTable__.");
+    const Symbol* const SeedsSymbol = Symbol::obtain(".Random.seed");
+    const Symbol* const SourceSymbol = Symbol::obtain("source");
+    const Symbol* const TspSymbol = Symbol::obtain("tsp");
+    const Symbol* const CommentSymbol = Symbol::obtain("comment");
+    const Symbol* const DotEnvSymbol = Symbol::obtain(".Environment");
+    const Symbol* const RecursiveSymbol = Symbol::obtain("recursive");
+    const Symbol* const UseNamesSymbol = Symbol::obtain("use.names");
+    const Symbol* const SrcfileSymbol = Symbol::obtain("srcfile");
+    const Symbol* const SrcrefSymbol = Symbol::obtain("srcref");
+    const Symbol* const WholeSrcrefSymbol = Symbol::obtain("wholeSrcref");
 }
 
 // ***** C interface *****
 
-SEXP R_Bracket2Symbol = CXXR::Bracket2Symbol;
-SEXP R_BracketSymbol = CXXR::BracketSymbol;
-SEXP R_BraceSymbol = CXXR::BraceSymbol;
-SEXP R_ClassSymbol = CXXR::ClassSymbol;
-SEXP R_DeviceSymbol = CXXR::DeviceSymbol;
-SEXP R_DimNamesSymbol = CXXR::DimNamesSymbol;
-SEXP R_DimSymbol = CXXR::DimSymbol;
-SEXP R_DollarSymbol = CXXR::DollarSymbol;
-SEXP R_DotsSymbol = CXXR::DotsSymbol;
-SEXP R_DropSymbol = CXXR::DropSymbol;
-SEXP R_LastvalueSymbol = CXXR::LastvalueSymbol;
-SEXP R_LevelsSymbol = CXXR::LevelsSymbol;
-SEXP R_ModeSymbol = CXXR::ModeSymbol;
-SEXP R_NameSymbol = CXXR::NameSymbol;
-SEXP R_NamesSymbol = CXXR::NamesSymbol;
-SEXP R_NaRmSymbol = CXXR::NaRmSymbol;
-SEXP R_PackageSymbol = CXXR::PackageSymbol;
-SEXP R_QuoteSymbol = CXXR::QuoteSymbol;
-SEXP R_RowNamesSymbol = CXXR::RowNamesSymbol;
-SEXP R_SeedsSymbol = CXXR::SeedsSymbol;
-SEXP R_SourceSymbol = CXXR::SourceSymbol;
-SEXP R_TspSymbol = CXXR::TspSymbol;
+SEXP R_Bracket2Symbol = const_cast<Symbol*>(CXXR::Bracket2Symbol);
+SEXP R_BracketSymbol = const_cast<Symbol*>(CXXR::BracketSymbol);
+SEXP R_BraceSymbol = const_cast<Symbol*>(CXXR::BraceSymbol);
+SEXP R_ClassSymbol = const_cast<Symbol*>(CXXR::ClassSymbol);
+SEXP R_DeviceSymbol = const_cast<Symbol*>(CXXR::DeviceSymbol);
+SEXP R_DimNamesSymbol = const_cast<Symbol*>(CXXR::DimNamesSymbol);
+SEXP R_DimSymbol = const_cast<Symbol*>(CXXR::DimSymbol);
+SEXP R_DollarSymbol = const_cast<Symbol*>(CXXR::DollarSymbol);
+SEXP R_DotsSymbol = const_cast<Symbol*>(CXXR::DotsSymbol);
+SEXP R_DropSymbol = const_cast<Symbol*>(CXXR::DropSymbol);
+SEXP R_LastvalueSymbol = const_cast<Symbol*>(CXXR::LastvalueSymbol);
+SEXP R_LevelsSymbol = const_cast<Symbol*>(CXXR::LevelsSymbol);
+SEXP R_ModeSymbol = const_cast<Symbol*>(CXXR::ModeSymbol);
+SEXP R_NameSymbol = const_cast<Symbol*>(CXXR::NameSymbol);
+SEXP R_NamesSymbol = const_cast<Symbol*>(CXXR::NamesSymbol);
+SEXP R_NaRmSymbol = const_cast<Symbol*>(CXXR::NaRmSymbol);
+SEXP R_PackageSymbol = const_cast<Symbol*>(CXXR::PackageSymbol);
+SEXP R_QuoteSymbol = const_cast<Symbol*>(CXXR::QuoteSymbol);
+SEXP R_RowNamesSymbol = const_cast<Symbol*>(CXXR::RowNamesSymbol);
+SEXP R_SeedsSymbol = const_cast<Symbol*>(CXXR::SeedsSymbol);
+SEXP R_SourceSymbol = const_cast<Symbol*>(CXXR::SourceSymbol);
+SEXP R_TspSymbol = const_cast<Symbol*>(CXXR::TspSymbol);
 
-SEXP R_CommentSymbol = CXXR::CommentSymbol;
-SEXP R_DotEnvSymbol = CXXR::DotEnvSymbol;
-SEXP R_ExactSymbol = CXXR::ExactSymbol;
-SEXP R_RecursiveSymbol = CXXR::RecursiveSymbol;
-SEXP R_SrcfileSymbol = CXXR::SrcfileSymbol;
-SEXP R_SrcrefSymbol = CXXR::SrcrefSymbol;
-SEXP R_WholeSrcrefSymbol = CXXR::WholeSrcrefSymbol;
-SEXP R_TmpvalSymbol = CXXR::TmpvalSymbol;
-SEXP R_UseNamesSymbol = CXXR::UseNamesSymbol;
+SEXP R_CommentSymbol = const_cast<Symbol*>(CXXR::CommentSymbol);
+SEXP R_DotEnvSymbol = const_cast<Symbol*>(CXXR::DotEnvSymbol);
+SEXP R_ExactSymbol = const_cast<Symbol*>(CXXR::ExactSymbol);
+SEXP R_RecursiveSymbol = const_cast<Symbol*>(CXXR::RecursiveSymbol);
+SEXP R_SrcfileSymbol = const_cast<Symbol*>(CXXR::SrcfileSymbol);
+SEXP R_SrcrefSymbol = const_cast<Symbol*>(CXXR::SrcrefSymbol);
+SEXP R_WholeSrcrefSymbol = const_cast<Symbol*>(CXXR::WholeSrcrefSymbol);
+SEXP R_TmpvalSymbol = const_cast<Symbol*>(CXXR::TmpvalSymbol);
+SEXP R_UseNamesSymbol = const_cast<Symbol*>(CXXR::UseNamesSymbol);
 
 // Rf_install() is currently defined in main.cpp
 

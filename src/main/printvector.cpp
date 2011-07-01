@@ -272,7 +272,7 @@ void printVector(SEXP x, int indx, int quote)
 	if (i) Rprintf("\n");						\
 	for (j = 0; j < nperline && (k = i * nperline + j) < n; j++)	\
 	    Rprintf("%s%*s",						\
-		    EncodeString((*names)[k], w, 0, Rprt_adj_right),	\
+		    EncodeString(const_cast<String*>((*names)[k].get()), w, 0, Rprt_adj_right), \
 		    R_print.gap, "");					\
 	Rprintf("\n");							\
 	for (j = 0; j < nperline && (k = i * nperline + j) < n; j++)	\
@@ -336,7 +336,8 @@ static void printNamedStringVector(StringVector* sv, int n, int quote,
 				   StringVector* names)
     PRINT_N_VECTOR(INI_F_STRING,
 		   Rprintf("%s%*s",
-			   EncodeString((*sv)[k], w, quote, Rprt_adj_right),
+			   EncodeString(const_cast<String*>((*sv)[k].get()), w,
+					quote, Rprt_adj_right),
 			   R_print.gap, ""))
 
 static void printNamedRawVector(Rbyte * x, int n, StringVector* names)

@@ -105,14 +105,14 @@ void RObject::copyAttributes(const RObject* source, bool copyS4)
 	setS4Object(source->isS4Object());
 }
 
-RObject* RObject::evaluate(Environment* env)
+const RObject* RObject::evaluate(Environment* env) const
 {
     return this;
 }
 
-RObject* RObject::getAttribute(const Symbol* name) const
+const RObject* RObject::getAttribute(const Symbol* name) const
 {
-    for (PairList* node = m_attrib; node; node = node->tail())
+    for (const PairList* node = m_attrib; node; node = node->tail())
 	if (node->tag() == name)
 	    return node->car();
     return 0;
@@ -128,7 +128,7 @@ unsigned int RObject::packGPBits() const
 
 // This follows CR in adding new attributes at the end of the list,
 // though it would be easier to add them at the beginning.
-void RObject::setAttribute(const Symbol* name, RObject* value)
+void RObject::setAttribute(const Symbol* name, const RObject* value)
 {
     if (!name)
 	Rf_error(_("attributes must be named"));
@@ -140,7 +140,7 @@ void RObject::setAttribute(const Symbol* name, RObject* value)
     }
     // Find attribute:
     PairList* prev = 0;
-    PairList* node = m_attrib;
+    PairList* node = m_attrib.get();
     while (node && node->tag() != name) {
 	prev = node;
 	node = node->tail();

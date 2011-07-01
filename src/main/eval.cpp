@@ -341,7 +341,7 @@ SEXP attribute_hidden do_Rprof(SEXP call, SEXP op, SEXP args, SEXP rho)
 static SEXP forcePromise(SEXP e)
 {
     Promise* prom = SEXP_downcast<Promise*>(e);
-    return prom->force();
+    return const_cast<RObject*>(prom->force());
 }
 
 attribute_hidden
@@ -463,13 +463,13 @@ SEXP R_execMethod(SEXP op, SEXP rho)
     // Set up context and perform evaluation.  Note that ans needs to
     // be protected in case the destructor of ClosureContext executes
     // an on.exit function.
-    GCStackRoot<> ans;
+    GCStackRoot<const RObject> ans;
     {
 	ClosureContext ctxt(cptr->call(), callerenv, func,
 			    newrho, cptr->promiseArgs());
 	ans = func->execute(newrho);
     }
-    return ans;
+    return RObject::cloneIfOwned(ans.get());
 }
 
 static SEXP EnsureLocal(SEXP symbol, SEXP rho)
@@ -1410,7 +1410,7 @@ SEXP attribute_hidden do_withVisible(SEXP call, SEXP op, SEXP args, SEXP rho)
 SEXP attribute_hidden do_recall(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     ClosureContext *cptr;
-    SEXP s, ans ;
+    SEXP s;
     cptr = ClosureContext::innermost();
     /* get the args supplied */
     while (cptr && cptr->workingEnvironment() != rho) {
@@ -1440,9 +1440,10 @@ SEXP attribute_hidden do_recall(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (TYPEOF(s) != CLOSXP) 
     	Rf_error(_("'Recall' called from outside a closure"));
     Closure* closure = SEXP_downcast<Closure*>(s);
-    ans = closure->invoke(cptr->callEnvironment(), &arglist, cptr->call());
+    const RObject* ans
+	= closure->invoke(cptr->callEnvironment(), &arglist, cptr->call());
     UNPROTECT(1);
-    return ans;
+    return RObject::cloneIfOwned(ans);
 }
 
 
@@ -1475,7 +1476,7 @@ int Rf_DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
     // and that there might be other arguments in the "..." as well.
     // LT
 
-    GCStackRoot<> x(arglist.firstArg(callenv).second);
+    GCStackRoot<const RObject> x(arglist.firstArg(callenv).second);
 
     // try to dispatch on the object
     if (x && x->hasClass()) {
@@ -1524,7 +1525,7 @@ int Rf_DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	    Environment* working_env = CXXR_NEW(Environment(callenv, frame));
 	    ClosureContext cntxt(callx, callenv, func,
 				 working_env, arglist.list());
-	    int um = Rf_usemethod(generic, x, call,
+	    int um = Rf_usemethod(generic, const_cast<RObject*>(x.get()), call,
 				  const_cast<PairList*>(arglist.list()),
 				  working_env, callenv, R_BaseEnv, ans);
 	    if (um)
@@ -1606,7 +1607,7 @@ int Rf_DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 	l(S3Launcher::create(arg1val, generic, group,
 			     callenv, Environment::base(), false));
     if (l && arg1val->isS4Object() && l->locInClasses() > 0
-	&& Rf_isBasicClass(Rf_translateChar(l->className()))) {
+	&& Rf_isBasicClass(Rf_translateChar(const_cast<String*>(l->className())))) {
 	/* This and the similar test below implement the strategy
 	 for S3 methods selected for S4 objects.  See ?Methods */
         RObject* value = arg1val;
@@ -1622,7 +1623,7 @@ int Rf_DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 	r = S3Launcher::create(arg2val, generic, group,
 			       callenv, Environment::base(), false);
     if (r && arg2val->isS4Object() && r->locInClasses() > 0
-	&& Rf_isBasicClass(Rf_translateChar(r->className()))) {
+	&& Rf_isBasicClass(Rf_translateChar(const_cast<String*>(r->className())))) {
         RObject* value = arg2val;
 	value = R_getS4DataSlot(value, S4SXP);
 	if (value) {
@@ -1683,8 +1684,9 @@ int Rf_DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 	// Ensure positional matching for operators:
 	if (isOps)
 	    arglist.stripTags();
-	Closure* func = SEXP_downcast<Closure*>(m->function());
-	*ans = func->invoke(callenv, &arglist, newcall, supp_frame);
+	const Closure* func = SEXP_downcast<const Closure*>(m->function());
+	*ans = RObject::cloneIfOwned(func->invoke(callenv, &arglist,
+						  newcall, supp_frame));
     }
     return 1;
 }
@@ -2804,7 +2806,8 @@ static SEXP bcEval(SEXP body, SEXP rho)
 	    Expression* callx = SEXP_downcast<Expression*>(call);
 	    ArgList arglist(SEXP_downcast<PairList*>(args), ArgList::PROMISED);
 	    Environment* callenv = SEXP_downcast<Environment*>(rho);
-	    value = closure->invoke(callenv, &arglist, callx);
+	    value = RObject::cloneIfOwned(closure->invoke(callenv,
+							  &arglist, callx));
 	    break;
 	}
 	default: Rf_error(_("bad function"));
@@ -3065,9 +3068,9 @@ static SEXP bcEval(SEXP body, SEXP rho)
   return value;
 }
 
-RObject* ByteCode::evaluate(Environment* env)
+const RObject* ByteCode::evaluate(Environment* env) const
 {
-    return bcEval(this, env);
+    return bcEval(const_cast<ByteCode*>(this), env);
 }
 
 #ifdef THREADED_CODE

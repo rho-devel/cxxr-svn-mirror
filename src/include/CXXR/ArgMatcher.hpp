@@ -74,7 +74,22 @@ namespace CXXR {
 	 *          distinct Symbol objects as their tags.  At most
 	 *          one element may have '...' as its tag.
 	 */
-	explicit ArgMatcher(const PairList* formals);
+	explicit ArgMatcher(const PairList* formals)
+	    : m_formals(formals), m_formals2(m_formals), m_has_dots(false)
+	{
+	    build();
+	}
+
+	/** @brief Copy constructor.
+	 *
+	 * @param pattern ArgMatcher to be copied.
+	 */
+	ArgMatcher(const ArgMatcher& pattern)
+	    : m_formals(pattern.m_formals), m_formals2(m_formals),
+	      m_has_dots(false)
+	{
+	    build();
+	}
 
 	/** @brief Enable/disable warning if tag partially matched.
 	 *
@@ -96,6 +111,18 @@ namespace CXXR {
 	const PairList* formalArgs() const
 	{
 	    return m_formals;
+	}
+
+	/** @brief Formal arguments (non-const variant)
+	 *
+	 * @return Pointer to the formal argument list of this
+	 * ArgMatcher object.
+	 *
+	 * @deprecated Provided only to implement CR's FORMALS().
+	 */
+	PairList* formalArgs2()
+	{
+	    return m_formals2.get();
 	}
 
 	/** @brief Do the formals include '...'?
@@ -141,9 +168,9 @@ namespace CXXR {
 	 * @return Pointer to a newly create ArgMatcher object to
 	 * match the specified formals.
 	 */
-	static ArgMatcher* make(Symbol* fml1, Symbol* fml2 = 0,
-				Symbol* fml3 = 0, Symbol* fml4 = 0,
-				Symbol* fml5 = 0, Symbol* fml6 = 0);
+	static ArgMatcher* make(const Symbol* fml1, const Symbol* fml2 = 0,
+				const Symbol* fml3 = 0, const Symbol* fml4 = 0,
+				const Symbol* fml5 = 0, const Symbol* fml6 = 0);
 
 	/** @brief Match formal and supplied arguments.
 	 *
@@ -270,12 +297,15 @@ namespace CXXR {
 	    const Symbol* symbol;
 	    bool follows_dots;  // true if ... occurs earlier in the
 				// formals list.
-	    RObject* value;
+	    const RObject* value;
 	};
 
 	enum MatchStatus {UNMATCHED = 0, EXACT_TAG, PARTIAL_TAG, POSITIONAL};
 
-	GCEdge<const PairList> m_formals;
+	RHandle<PairList> m_formals;
+	RHandle<PairList> m_formals2;  // Provided so that CR's
+	  // FORMALS() will not cause address changes within the
+	  // m_formals list, which would muck up m_formal_index.
 
 	// Data on formals (other than "...") in order of occurrence:
 	typedef std::vector<FormalData, Allocator<FormalData> > FormalVector;
@@ -298,7 +328,7 @@ namespace CXXR {
 
 	struct SuppliedData {
 	    const Symbol* tag;
-	    RObject* value;
+	    const RObject* value;
 	    FormalMap::const_iterator fm_iter;
 	    unsigned int index;
 	};
@@ -306,6 +336,9 @@ namespace CXXR {
 	// Data relating to supplied arguments that have not yet been
 	// matched.
 	typedef std::list<SuppliedData, Allocator<SuppliedData> > SuppliedList;
+
+	// Auxiliary function to constructor:
+	void build();
 
 	// Turn remaining arguments, if any, into a DottedArgs object
 	// bound to '...'.  Leave supplied_list empty.
@@ -321,7 +354,7 @@ namespace CXXR {
 	// appropriately.  Default values are wrapped in Promises
 	// keyed to target_env.
 	static void makeBinding(Environment* target_env, const FormalData& fdata,
-				RObject* supplied_value);
+				const RObject* supplied_value);
 
 	// Raise an error because there are unused supplied arguments,
 	// as indicated in supplied_list.

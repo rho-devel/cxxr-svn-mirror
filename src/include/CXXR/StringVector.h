@@ -165,7 +165,7 @@ SEXP STRING_ELT(SEXP x, int i);
 inline SEXP STRING_ELT(SEXP x, int i)
 {
     using namespace CXXR;
-    return (*SEXP_downcast<StringVector*>(x, false))[i];
+    return (*SEXP_downcast<StringVector*>(x, false))[i].get();
 }
 #endif
 

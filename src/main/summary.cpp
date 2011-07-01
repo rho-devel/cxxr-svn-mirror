@@ -760,9 +760,10 @@ SEXP attribute_hidden do_range(SEXP call, SEXP op, SEXP args, SEXP env)
     Expression* callx = SEXP_downcast<Expression*>(call);
     ArgList arglist(SEXP_downcast<PairList*>(prargs), ArgList::PROMISED);
     Environment* callenv = SEXP_downcast<Environment*>(env);
-    ans = closure->invoke(callenv, &arglist, callx);
+    SEXP deconst
+	= RObject::cloneIfOwned(closure->invoke(callenv, &arglist, callx));
     UNPROTECT(3);
-    return(ans);
+    return deconst;
 }
 
 /* which.min(x) : The index (starting at 1), of the first min(x) in x */

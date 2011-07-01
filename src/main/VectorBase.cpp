@@ -100,32 +100,31 @@ PairList* VectorBase::resizeAttributes(const PairList* attributes,
     return ans->tail();
 }
 	
-void VectorBase::setDimensionNames(ListVector* names)
+void VectorBase::setDimensionNames(const ListVector* names)
 {
     setAttribute(DimNamesSymbol, names);
 }
 
-void VectorBase::setDimensionNames(unsigned int d, StringVector* names)
+void VectorBase::setDimensionNames(unsigned int d, const StringVector* names)
 {
     unsigned int ndims = dimensions()->size();
     if (d == 0 || d > ndims)
 	Rf_error(_("Attempt to associate dimnames"
 		   " with a non-existent dimension"));
-    ListVector* lv
-	= static_cast<ListVector*>(getAttribute(DimNamesSymbol));
-    if (!lv) {
+    GCStackRoot<ListVector>
+	lv(static_cast<const ListVector*>(getAttribute(DimNamesSymbol))->clone());
+    if (!lv)
 	lv = CXXR_NEW(ListVector(ndims));
-	setAttribute(DimNamesSymbol, lv);
-    }
     (*lv)[d - 1] = names;
+    setAttribute(DimNamesSymbol, lv);
 }
 
-void VectorBase::setDimensions(IntVector* dims)
+void VectorBase::setDimensions(const IntVector* dims)
 {
     setAttribute(DimSymbol, dims);
 }
 
-void VectorBase::setNames(StringVector* names)
+void VectorBase::setNames(const StringVector* names)
 {
     setAttribute(NamesSymbol, names);
 }

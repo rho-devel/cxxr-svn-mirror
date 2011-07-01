@@ -67,22 +67,23 @@ Expression* Expression::clone() const
     return expose(new Expression(*this));
 }
 
-RObject* Expression::evaluate(Environment* env)
+const RObject* Expression::evaluate(Environment* env) const
 {
-    GCStackRoot<FunctionBase> func;
-    RObject* head = car();
+    GCStackRoot<const FunctionBase> func;
+    const RObject* head = car();
     if (head->sexptype() == SYMSXP) {
-	Symbol* symbol = static_cast<Symbol*>(head);
-	pair<Environment*, FunctionBase*> pr = findFunction(symbol, env);
+	const Symbol* symbol = static_cast<const Symbol*>(head);
+	pair<Environment*, const FunctionBase*> pr
+	    = findFunction(symbol, env);
 	if (!pr.first)
 	    error(_("could not find function \"%s\""),
 		  symbol->name()->c_str());
 	func = pr.second;
     } else {
-	RObject* val = Evaluator::evaluate(head, env);
+	const RObject* val = Evaluator::evaluate(head, env);
 	if (!FunctionBase::isA(val))
 	    error(_("attempt to apply non-function"));
-	func = static_cast<FunctionBase*>(val);
+	func = static_cast<const FunctionBase*>(val);
     }
     func->maybeTrace(this);
     ArgList arglist(tail(), ArgList::RAW);

@@ -58,25 +58,17 @@ namespace CXXR {
     class Expression : public ConsCell {
     public:
 	/**
-	 * @param cr Pointer to the 'car' of the element to be
-	 *           constructed.
+	 * @param cr The 'car' of the constructed element will be a
+	 *          lazy copy of \a cr .
 	 *
-	 * @param tl Pointer to the 'tail' (LISP cdr) of the element
-	 *           to be constructed.
+	 * @param tl The 'tail' (LISP cdr) of the constructed element
+	 *          will be a lazy copy of \a tl .
 	 *
 	 * @param tg Pointer to the 'tag' of the element to be constructed.
 	 */
-	explicit Expression(RObject* cr = 0, PairList* tl = 0,
+	explicit Expression(const RObject* cr = 0, const PairList* tl = 0,
 			    const RObject* tg = 0)
 	    : ConsCell(LANGSXP, cr, tl, tg)
-	{}
-
-	/** @brief Copy constructor.
-	 *
-	 * @param pattern Expression to be copied.
-	 */
-	Expression(const Expression& pattern)
-	    : ConsCell(pattern)
 	{}
 
 	/** @brief The name by which this type is known in R.
@@ -90,7 +82,7 @@ namespace CXXR {
 
 	// Virtual functions of RObject:
 	Expression* clone() const;
-	RObject* evaluate(Environment* env);
+	const RObject* evaluate(Environment* env) const;
 	const char* typeName() const;
     private:
 	// Declared private to ensure that Expression objects are

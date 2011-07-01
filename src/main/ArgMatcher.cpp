@@ -35,10 +35,12 @@ using namespace CXXR;
 
 bool ArgMatcher::s_warn_on_partial_match = false;
 
-ArgMatcher::ArgMatcher(const PairList* formals)
-    : m_formals(formals), m_has_dots(false)
+void ArgMatcher::build()
 {
-    for (const PairList* f = formals; f; f = f->tail()) {
+    // We deliberately iterate using a non-const pointer, so that lazy
+    // copies are forced, and consequently objects pointed to by
+    // m_formal_index will stay in place.
+    for (PairList* f = m_formals.get(); f; f = f->tail()) {
 	const Symbol* sym = dynamic_cast<const Symbol*>(f->tag());
 	if (!sym)
 	    Rf_error(_("invalid formal arguments for 'function'"));
@@ -63,6 +65,7 @@ ArgMatcher::ArgMatcher(const PairList* formals)
 void ArgMatcher::detachReferents()
 {
     m_formals.detach();
+    m_formals2.detach();
     m_formal_data.clear();
     m_formal_index.clear();
 }
@@ -93,8 +96,9 @@ bool ArgMatcher::isPrefix(const CachedString* shorter,
     return longstr.compare(0, shortstr.size(), shortstr) == 0;
 }
 
-ArgMatcher* ArgMatcher::make(Symbol* fml1, Symbol* fml2, Symbol* fml3,
-			     Symbol* fml4, Symbol* fml5, Symbol* fml6)
+ArgMatcher* ArgMatcher::make(const Symbol* fml1, const Symbol* fml2,
+			     const Symbol* fml3, const Symbol* fml4,
+			     const Symbol* fml5, const Symbol* fml6)
 {
     GCStackRoot<PairList> formals;
     if (fml6)
@@ -113,9 +117,9 @@ ArgMatcher* ArgMatcher::make(Symbol* fml1, Symbol* fml2, Symbol* fml3,
 }
 
 void ArgMatcher::makeBinding(Environment* target_env, const FormalData& fdata,
-			     RObject* supplied_value)
+			     const RObject* supplied_value)
 {
-    RObject* value = supplied_value;
+    const RObject* value = supplied_value;
     Frame::Binding::Origin origin = Frame::Binding::EXPLICIT;
     if (value == Symbol::missingArgument()
 	&& fdata.value != Symbol::missingArgument()) {
@@ -141,7 +145,7 @@ void ArgMatcher::match(Environment* target_env, const ArgList* supplied) const
 	    ++sindex;
 	    const Symbol* tag = static_cast<const Symbol*>(s->tag());
 	    const CachedString* name = (tag ? tag->name() : 0);
-	    RObject* value = s->car();
+	    const RObject* value = s->car();
 	    FormalMap::const_iterator fmit 
 		= (name ? m_formal_index.lower_bound(name)
 		   : m_formal_index.end());
@@ -212,7 +216,7 @@ void ArgMatcher::match(Environment* target_env, const ArgList* supplied) const
 	for (unsigned int findex = 0; findex < numformals; ++findex) {
 	    if (formals_status[findex] == UNMATCHED) {
 		const FormalData& fdata = m_formal_data[findex];
-		RObject* value = Symbol::missingArgument();
+		const RObject* value = Symbol::missingArgument();
 		// Skip supplied arguments with tags:
 		while (slit != supplied_list.end() && (*slit).tag)
 		    ++slit;
@@ -249,7 +253,7 @@ void ArgMatcher::propagateFormalBindings(const Environment* fromenv,
 	    Rf_error(_("could not find symbol \"%s\" "
 		       "in environment of the generic function"),
 		     symbol->name()->c_str());
-	RObject* val = frombdg->value();
+	const RObject* val = frombdg->value();
 	// Discard generic's defaults:
 	if (frombdg->origin() != Frame::Binding::EXPLICIT)
 	    val = Symbol::missingArgument();
@@ -278,4 +282,6 @@ void ArgMatcher::visitReferents(const_visitor* v) const
 {
     if (m_formals)
 	(*v)(m_formals);
+    if (m_formals2)
+	(*v)(m_formals2);
 }

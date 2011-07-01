@@ -197,8 +197,6 @@ void Rf_divset(int alg, int iv[], int liv, int lv, double v[])
     iv[QRTYP] = 1;
     iv[RDREQ] = 3;
     iv[RMAT] = 0;
-    return;
-
 }
 
 /* divset.... supply default values for elements of the iv and v arrays */
@@ -383,8 +381,11 @@ nlminb_iterate(double b[], double d[], double fx, double g[], double h[],
 
 SEXP port_ivset(SEXP kind, SEXP iv, SEXP v)
 {
+    SEXP ans = allocVector(VECSXP, 2);
     Rf_divset(asInteger(kind), INTEGER(iv), LENGTH(iv), LENGTH(v), REAL(v));
-    return R_NilValue;
+    SET_VECTOR_ELT(ans, 0, iv);
+    SET_VECTOR_ELT(ans, 1, v);
+    return ans;
 }
 
 SEXP port_nlminb(SEXP fn, SEXP gr, SEXP hs, SEXP rho,
@@ -611,5 +612,5 @@ SEXP port_nlsb(SEXP m, SEXP d, SEXP gg, SEXP iv, SEXP v,
 
     Free(rd); if (b) Free(b);
     UNPROTECT(6);
-    return R_NilValue;
+    return iv;
 }

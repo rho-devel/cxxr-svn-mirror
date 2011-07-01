@@ -295,13 +295,13 @@ namespace {
 }
 
 namespace CXXR {
-    pair<Environment*, FunctionBase*>
+    pair<Environment*, const FunctionBase*>
     findFunction(const Symbol* symbol, Environment* env, bool inherits)
     {
 	FunctionTester functest(symbol);
-	pair<Environment*, RObject*> pr
+	pair<Environment*, const RObject*> pr
 	    = findTestedValue(symbol, env, functest, inherits);
-	return make_pair(pr.first, static_cast<FunctionBase*>(pr.second));
+	return make_pair(pr.first, static_cast<const FunctionBase*>(pr.second));
     }
 }
 

@@ -173,13 +173,23 @@ namespace CXXR {
 	    return const_iterator(this);
 	}
 
-	/**
+	/** @brief Access the 'car' (const variant).
+	 *
 	 * @return a pointer to the 'car' of this ConsCell
 	 * element.
 	 */
-	RObject* car() const
+	const RObject* car() const
 	{
 	    return m_car;
+	}
+
+	/** @brief Access the 'car'.
+	 *
+	 * @return a pointer to the 'car' of this ConsCell element.
+	 */
+	RObject* car()
+	{
+	    return m_car.get();
 	}
 
 	/** @brief Convert a ConsCell to a (possibly) different
@@ -220,11 +230,18 @@ namespace CXXR {
 
 	/** @brief Set the 'car' value.
 	 *
+	 * Sets the 'car' to a lazy copy of \a cr .
+	 *
 	 * @param cr Pointer to the new car object (or a null
 	 *           pointer).
 	 */
-	void setCar(RObject* cr)
+	void setCar(const RObject* cr)
 	{
+#ifndef NDEBUG
+	    if (cr == this
+		|| (cr && cr == static_cast<const void*>(m_tail)))
+		abort();
+#endif
 	    m_car = cr;
 	}
 
@@ -240,10 +257,12 @@ namespace CXXR {
 
 	/** @brief Set the 'tail' value.
 	 *
+	 * Sets the tail to a lazy copy of \a tl .
+	 *
 	 * @param tl Pointer to the new tail list (or a null
 	 *           pointer).
 	 */
-	void setTail(PairList* tl);
+	void setTail(const PairList* tl);
 	// Implemented inline in CXXR/PairList.h
 
 	/** @brief The name by which this type is known in R.
@@ -282,42 +301,17 @@ namespace CXXR {
 	 *           be one of LISTSXP, LANGSXP, DOTSXP or BCODESXP (not
 	 *           normally checked).
 	 *
-	 * @param cr Pointer to the 'car' of the element to be
-	 *           constructed.
+	 * @param cr The 'car' of the constructed element will be a
+	 *          lazy copy of \a cr .
 	 *
-	 * @param tl Pointer to the 'tail' (LISP cdr) of the element
-	 *           to be constructed.
+	 * @param tl The 'tail' (LISP cdr) of the constructed element
+	 *          will be a lazy copy of \a tl .
 	 *
 	 * @param tg Pointer to the 'tag' of the element to be constructed.
 	 */
 	explicit ConsCell(SEXPTYPE st,
-			  RObject* cr = 0, PairList* tl = 0,
+			  const RObject* cr = 0, const PairList* tl = 0,
 			  const RObject* tg = 0);
-
-	/** @brief Copy constructor.
-	 *
-	 * @param pattern ConsCell to be copied.  Beware that if this
-	 *          ConsCell or any of its successors have unclonable
-	 *          'car' objects, they will be shared between \a
-	 *          pattern and the created object.
-	 */
-	ConsCell(const ConsCell& pattern);
-
-	/** @brief Tailless copy constructor.
-	 *
-	 * Copies the node without copying its tail.  Used in
-	 * implementing the PairList copy constructor proper.
-	 *
-	 * @param pattern ConsCell to be copied.  Beware that if this
-	 *          ConsCell or any of its successors have unclonable
-	 *          'car' objects, they will be shared between \a
-	 *          pattern and the created object.
-	 *
-	 * @param dummy This parameter is used simply to provide the
-	 *          constructor with a distinct signature.  Its value
-	 *          is ignored.
-	 */
-	ConsCell(const ConsCell& pattern, int dummy);
 
 	/**
 	 * Declared protected to ensure that ConsCell objects are
@@ -429,24 +423,18 @@ namespace CXXR {
     class PairList : public ConsCell {
     public:
 	/**
-	 * @param cr Pointer to the 'car' of the element to be
-	 *           constructed.
+	 * @param cr The 'car' of the constructed element will be a
+	 *          lazy copy of \a cr .
 	 *
-	 * @param tl Pointer to the 'tail' (LISP cdr) of the element
-	 *           to be constructed.
+	 * @param tl The 'tail' (LISP cdr) of the constructed element
+	 *          will be a lazy copy of \a tl .
 	 *
 	 * @param tg Pointer to the 'tag' of the element to be constructed.
 	 */
-	explicit PairList(RObject* cr = 0, PairList* tl = 0,
+	explicit PairList(const RObject* cr = 0, const PairList* tl = 0,
 			  const RObject* tg = 0)
 	    : ConsCell(LISTSXP, cr, tl, tg)
 	{}
-
-	/** @brief Copy constructor.
-	 *
-	 * @param pattern PairList to be copied.
-	 */
-	PairList(const PairList& pattern);
 
 	/** @brief Create a PairList element on the free store.
 	 *
@@ -454,17 +442,17 @@ namespace CXXR {
 	 * generally) this function protects its arguments from the
 	 * garbage collector.
 	 *
-	 * @param cr Pointer to the 'car' of the element to be
-	 *           constructed.
+	 * @param cr The 'car' of the constructed element will be a
+	 *          lazy copy of \a cr .
 	 *
-	 * @param tl Pointer to the 'tail' (LISP cdr) of the element
-	 *           to be constructed.
+	 * @param tl The 'tail' (LISP cdr) of the constructed element
+	 *          will be a lazy copy of \a tl .
 	 *
 	 * @param tag Pointer to the tag of the element to be constructed.
 	 *
 	 * @return Pointer to newly created PairList element.
 	 */
-	static PairList* cons(RObject* cr, PairList* tl=0,
+	static PairList* cons(const RObject* cr, const PairList* tl = 0,
 			      const RObject* tag = 0)
 	{
 	    // We call MemoryBank::allocate() directly here, rather
@@ -505,14 +493,6 @@ namespace CXXR {
 	const char* typeName() const;
 	void unpackGPBits(unsigned int gpbits);
     private:
-	// Tailless copy constructor.  Copies the node without copying
-	// its tail.  Used in implementing the copy constructor
-	// proper.  The second parameter is simply to provide a
-	// distinct signature, and its value is ignored.
-	PairList(const PairList& pattern, int)
-	    : ConsCell(pattern, 0)
-	{}
-
 	// Declared private to ensure that PairList objects are
 	// allocated only using 'new':
 #ifdef __GNUG__
@@ -535,25 +515,20 @@ namespace CXXR {
 	m_cc = m_cc->tail();
     }
 
-    inline ConsCell::ConsCell(SEXPTYPE st, RObject* cr,
-			      PairList* tl, const RObject* tg)
+    inline ConsCell::ConsCell(SEXPTYPE st, const RObject* cr,
+			      const PairList* tl, const RObject* tg)
 	: RObject(st), m_car(cr), m_tail(tl), m_tag(tg)
     {
 	// checkST(st);
     }
 
-    inline ConsCell::ConsCell(const ConsCell& pattern)
-	: RObject(pattern), m_car(pattern.m_car),
-	  m_tail(clone(pattern.tail())), m_tag(pattern.tag())
-    {}
-    
-    inline ConsCell::ConsCell(const ConsCell& pattern, int)
-	: RObject(pattern), m_car(pattern.m_car), m_tail(0),
-	  m_tag(pattern.tag())
-    {}
-    
-    inline void ConsCell::setTail(PairList* tl)
+    inline void ConsCell::setTail(const PairList* tl)
     {
+#ifndef NDEBUG
+	if (tl == this
+	    || (tl && tl == static_cast<const void*>(m_car)))
+	    abort();
+#endif
 	m_tail = tl;
     }
 
@@ -564,7 +539,7 @@ namespace CXXR {
 
     inline PairList* ConsCell::tail()
     {
-	return m_tail;
+	return m_tail.get();
     }
 } // namespace CXXR
 

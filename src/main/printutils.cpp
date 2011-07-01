@@ -654,7 +654,7 @@ const char *EncodeElement(SEXP x, int indx, int quote, char dec)
     case STRSXP:
 	{
 	    StringVector* sv = static_cast<StringVector*>(x);
-	    String* str = (*sv)[indx];
+	    String* str = (*sv)[indx].get();
 	    w = (quote ? stringWidthQuote(0, str) : stringWidth(0, str));
 	    res = EncodeString(str, w, quote, Rprt_adj_left);
 	    break;

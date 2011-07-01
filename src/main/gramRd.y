@@ -875,7 +875,7 @@ static SEXP mkString2(const char *s, int len)
 static SEXP NewList(void)
 {
     SEXP s = CONS(R_NilValue, R_NilValue);
-    SETCAR(s, s);
+    SET_TAG(s, s);
     return s;
 }
 
@@ -887,8 +887,8 @@ static SEXP GrowList(SEXP l, SEXP s)
     PROTECT(s);
     tmp = CONS(s, R_NilValue);
     UNPROTECT(1);
-    SETCDR(CAR(l), tmp);
-    SETCAR(l, tmp);
+    SETCDR(TAG(l), tmp);
+    SET_TAG(l, tmp);
     return l;
 }
 

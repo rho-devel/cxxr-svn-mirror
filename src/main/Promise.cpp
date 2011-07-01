@@ -66,7 +66,7 @@ void Promise::detachReferents()
     RObject::detachReferents();
 }
 
-RObject* Promise::evaluate(Environment* /*env*/)
+const RObject* Promise::evaluate(Environment* /*env*/) const
 {
     if (m_value == Symbol::unboundValue()) {
 	// Force promise:
@@ -81,7 +81,7 @@ RObject* Promise::evaluate(Environment* /*env*/)
 	m_under_evaluation = true;
 	try {
 	    PlainContext cntxt;
-	    RObject* val = Evaluator::evaluate(m_valgen, environment());
+	    const RObject* val = Evaluator::evaluate(m_valgen, environment());
 	    setValue(val);
 	}
 	catch (...) {
@@ -122,7 +122,7 @@ bool Promise::isMissingSymbol() const
     return ans;
 }
 
-void Promise::setValue(RObject* val)
+void Promise::setValue(const RObject* val) const
 {
     m_value = val;
     if (val != Symbol::unboundValue())

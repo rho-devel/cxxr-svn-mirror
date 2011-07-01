@@ -45,6 +45,8 @@
 #include "CXXR/ElementTraits.hpp"
 #include "CXXR/GCEdge.hpp"
 
+#define LAZYCOPY
+
 namespace CXXR {
     class RObject;
 
@@ -89,30 +91,27 @@ namespace CXXR {
 	 * @param target Pointer to the object to which this
 	 *          RHandle is to refer.
 	 */
-	explicit RHandle(T* target)
+	explicit RHandle(const T* target)
 	    : RHandleBase(target)
 	{}
 
 	/** @brief Copy constructor.
 	 *
-	 * @param pattern RHandle to be copied.  Suppose \a pattern
-	 *          points to an object \a x .  If \a x is clonable
-	 *          object, i.e. an object of a class that
-	 *          non-trivially implements RObject::clone(), then
-	 *          the newly created RHandle will point to a clone of
-	 *          \a x ; otherwise it will point to \a x itself.  If
-	 *          \a pattern encapsulates a null pointer, so will
-	 *          the created object.
+	 * @param source Reference to RHandle to be copied.
 	 */
-	RHandle(const RHandle<T>& pattern)
-	    : RHandleBase(cloneOrSelf(pattern))
+	RHandle(const RHandle& source)
+	    : RHandleBase(source.get())
 	{}
 
 	/** @brief Assignment operator.
 	 */
 	RHandle<T>& operator=(const RHandle<T>& source)
 	{
-	    return operator=(source.get());
+	    if (source.asset() != asset()) {
+		RHandle<T> tmp(source);
+		swap(tmp);
+	    }
+	    return *this;
 	}
 
 	/** @brief Assignment from pointer.
@@ -120,23 +119,30 @@ namespace CXXR {
 	 * Note that this does not attempt to clone \a newtarget: it
 	 * merely changes this RHandle to point to \a newtarget.
 	 */
-	RHandle<T>& operator=(T* newtarget)
+	RHandle<T>& operator=(const T* newtarget)
 	{
-	    RHandle<T> tmp(newtarget);
-	    swap(tmp);
+	    if (newtarget != asset()) {
+		RHandle<T> tmp(newtarget);
+		swap(tmp);
+	    }
 	    return *this;
 	}
 
-	T* operator->() const
+	const T* operator->() const
 	{
 	    return get();
 	}
 
-	/** @brief Access the encapsulated pointer
+	T* operator->()
+	{
+	    return get();
+	}
+
+	/** @brief Access the encapsulated pointer (const form).
 	 *
 	 * @return the encapsulated pointer.
 	 */
-	operator T*() const
+	operator const T*() const
 	{
 	    return get();
 	}
@@ -147,9 +153,26 @@ namespace CXXR {
 	 *
 	 * @return the encapsulated pointer.
 	 */
-	T* get() const
+	T* get()
 	{
+#ifdef LAZYCOPY
+	    if (sharing()) {
+		GCNode::GCInhibitor inh;
+		T* clone = static_cast<T*>(asset()->clone());
+		if (clone)
+		    operator=(clone);
+	    }
+#endif
 	    return static_cast<T*>(const_cast<RObject*>(asset()));
+	}
+
+	/** @brief Access the encapsulated pointer (const variant).
+	 *
+	 * @return the encapsulated pointer.
+	 */
+	const T* get() const
+	{
+	    return static_cast<const T*>(target());
 	}
 
 	/** @brief Swap target with another RHandle<T>.
@@ -157,12 +180,11 @@ namespace CXXR {
 	 * @param that Reference to the RHandle<T> with which targets are
 	 *          to be swapped.
 	 */
+
 	void swap(RHandle<T>& that)
 	{
 	    GCEdgeBase::swap(that);
 	}
-    private:
-	static T* cloneOrSelf(T*);
     };  // class template RHandle
 
     // Partial specializations of ElementTraits:
@@ -198,7 +220,7 @@ namespace CXXR {
 
 	    void operator()(const RHandle<T>& t) const
 	    {
-		if (t.get())
+		if (t)
 		    (*m_v)(t);
 	    }
 	private:
@@ -223,15 +245,5 @@ namespace CXXR {
 	};
     }  // namespace ElementTraits
 }  // namespace CXXR
-
-
-// ***** Implementations of non-inlined templated functions. *****
-
-template <class T>
-T* CXXR::RHandle<T>::cloneOrSelf(T* pattern)
-{
-    T* t = pattern ? static_cast<T*>(pattern->clone()) : 0;
-    return (t ? t : pattern);
-}
 
 #endif // RHANDLE_HPP

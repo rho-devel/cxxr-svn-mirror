@@ -233,6 +233,27 @@ namespace CXXR {
 	    return pattern ? static_cast<T*>(pattern->clone()) : 0;
 	}
 
+	/** @brief Clone an object if it has at least one owner.
+	 *
+	 * @tparam T RObject or a type derived from RObject.
+	 *
+	 * @param pattern Either a null pointer or a pointer to the
+	 *          object which may need to be cloned.
+	 *
+	 * @return If \a pattern is non-null, and points to a clonable
+	 * RObject with at least one owner, then a pointer to a clone
+	 * of \a pattern.  Otherwise the pointer \a pattern itself,
+	 * with const cast away.
+	 */
+	template <class T>
+	static T* cloneIfOwned(const T* pattern)
+	{
+	    T* cln = 0;
+	    if (pattern && pattern->numOwners() > 0)
+		cln = clone(pattern);
+	    return (cln ? cln : const_cast<T*>(pattern));
+	}
+
 	/** @brief Copy an attribute from one RObject to another.
 	 *
 	 * @param name Non-null pointer to the Symbol naming the
@@ -245,7 +266,7 @@ namespace CXXR {
 	 */
 	void copyAttribute(const Symbol* name, const RObject* source)
 	{
-	    RObject* att = source->getAttribute(name);
+	    const RObject* att = source->getAttribute(name);
 	    if (att)
 		setAttribute(name, att);
 	}
@@ -269,7 +290,7 @@ namespace CXXR {
 	 *
 	 * @return Pointer to the result of evaluation.
 	 */
-	virtual RObject* evaluate(Environment* env);
+	virtual const RObject* evaluate(Environment* env) const;
 
 	/** @brief Get the value a particular attribute.
 	 *
@@ -283,7 +304,7 @@ namespace CXXR {
 	 * any function overriding this <em>will not</em> give rise to
 	 * garbage collection.
 	 */
-	virtual RObject* getAttribute(const Symbol* name) const;
+	virtual const RObject* getAttribute(const Symbol* name) const;
 
 	/** @brief Has this object any attributes?
 	 *
@@ -347,6 +368,8 @@ namespace CXXR {
 
 	/** @brief Set or remove an attribute.
 	 *
+	 * Sets attribute \a name to a lazy copy of \a value .
+	 *
 	 * @param name Pointer to the Symbol naming the attribute to
 	 *          be set or removed.
 	 *
@@ -357,7 +380,7 @@ namespace CXXR {
 	 *          assume ownership of \a value, which should
 	 *          therefore not be subsequently altered externally.
 	 */
-	virtual void setAttribute(const Symbol* name, RObject* value);
+	virtual void setAttribute(const Symbol* name, const RObject* value);
 
 	/** @brief Replace the attributes of an object.
 	 *
@@ -484,6 +507,7 @@ namespace CXXR {
 	bool m_binding_locked : 1;
     private:
 	friend class RHandleBase;
+	friend class RPointerBase;
 
 	RHandle<PairList> m_attrib;
 
@@ -506,6 +530,16 @@ namespace CXXR {
     {
 	if (target)
 	    target->incOwners();
+#ifndef LAZYCOPY
+	if (sharing()) {
+	    GCNode::GCInhibitor inh;
+	    RObject* clone = asset()->clone();
+	    if (clone) {
+		RHandleBase tmp(clone);
+		swap(tmp);
+	    }
+	}
+#endif
     }
 
     inline RHandleBase::~RHandleBase()

@@ -296,7 +296,9 @@ nls_iter(SEXP m, SEXP control, SEXP doTraceArg)
 SEXP
 numeric_deriv(SEXP expr, SEXP theta, SEXP rho, SEXP dir)
 {
-    SEXP ans, gradient, pars;
+    SEXP ans, gradient;
+    double* pars[LENGTH(theta)];
+    size_t parlengths[LENGTH(theta)];
     double eps = sqrt(DOUBLE_EPS), *rDir;
     int start, i, j, k, lengthTheta = 0;
 
@@ -312,8 +314,6 @@ numeric_deriv(SEXP expr, SEXP theta, SEXP rho, SEXP dir)
     if(TYPEOF(dir) != REALSXP || LENGTH(dir) != LENGTH(theta))
 	error(_("'dir' is not a numeric vector of the correct length"));
     rDir = REAL(dir);
-
-    PROTECT(pars = allocVector(VECSXP, LENGTH(theta)));
 
     if (TYPEOF(expr) == SYMSXP)
 	PROTECT(ans = duplicate(eval(expr, rho)));
@@ -336,20 +336,21 @@ numeric_deriv(SEXP expr, SEXP theta, SEXP rho, SEXP dir)
 	    error(_("variable '%s' is integer, not numeric"), name);
 	if(!isReal(temp))
 	    error(_("variable '%s' is not numeric"), name);
-	SET_VECTOR_ELT(pars, i, temp);
-	lengthTheta += LENGTH(VECTOR_ELT(pars, i));
+	pars[i] = REAL(temp);
+	parlengths[i] = LENGTH(temp);
+	lengthTheta += parlengths[i];
     }
     PROTECT(gradient = allocMatrix(REALSXP, LENGTH(ans), lengthTheta));
 
     for(i = 0, start = 0; i < LENGTH(theta); i++) {
-	for(j = 0; j < LENGTH(VECTOR_ELT(pars, i)); j++, start += LENGTH(ans)) {
+	for(j = 0; j < parlengths[i]; j++, start += LENGTH(ans)) {
 	    SEXP ans_del;
 	    double origPar, xx, delta;
 
-	    origPar = REAL(VECTOR_ELT(pars, i))[j];
+	    origPar = pars[i][j];
 	    xx = fabs(origPar);
 	    delta = (xx == 0) ? eps : xx*eps;
-	    REAL(VECTOR_ELT(pars, i))[j] += rDir[i] * delta;
+	    pars[i][j] += rDir[i] * delta;
 	    PROTECT(ans_del = eval(expr, rho));
 	    if(!isReal(ans_del)) ans_del = coerceVector(ans_del, REALSXP);
 	    UNPROTECT(1);
@@ -359,10 +360,10 @@ numeric_deriv(SEXP expr, SEXP theta, SEXP rho, SEXP dir)
 		REAL(gradient)[start + k] =
 		    rDir[i] * (REAL(ans_del)[k] - REAL(ans)[k])/delta;
 	    }
-	    REAL(VECTOR_ELT(pars, i))[j] = origPar;
+	    pars[i][j] = origPar;
 	}
     }
     setAttrib(ans, install("gradient"), gradient);
-    UNPROTECT(4);
+    UNPROTECT(3);
     return ans;
 }

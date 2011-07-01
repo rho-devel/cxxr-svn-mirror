@@ -172,7 +172,7 @@ namespace CXXR {
 	 *
 	 * @return a pointer to the 'missing argument' pseudo-object.
 	 */
-	static Symbol* missingArgument()
+	static const Symbol* missingArgument()
 	{
 	    return s_missing_arg;
 	}
@@ -199,7 +199,7 @@ namespace CXXR {
 	 * @return Pointer to a Symbol (preexisting or newly
 	 * created) with the required name.
 	 */
-	static Symbol* obtain(const CachedString* name)
+	static const Symbol* obtain(const CachedString* name)
 	{
 	    return (name->m_symbol ? name->m_symbol : make(name));
 	}
@@ -217,7 +217,7 @@ namespace CXXR {
 	 * @return Pointer to a Symbol (preexisting or newly
 	 * created) with the required name.
 	 */
-	static Symbol* obtain(const std::string& name);
+	static const Symbol* obtain(const std::string& name);
 
 	/** @brief Create a double-dot symbol.
 	 *
@@ -227,7 +227,7 @@ namespace CXXR {
 	 * @return a pointer to the created symbol, whose name will be
 	 * <tt>..</tt><i>n</i>.
 	 */
-	static Symbol* obtainDotDotSymbol(unsigned int n);
+	static const Symbol* obtainDotDotSymbol(unsigned int n);
 
 	/** @brief The name by which this type is known in R.
 	 *
@@ -245,13 +245,13 @@ namespace CXXR {
 	 *
 	 * @return a pointer to the 'unbound value' pseudo-object.
 	 */
-	static Symbol* unboundValue()
+	static const Symbol* unboundValue()
 	{
 	    return s_unbound_value;
 	}
 
 	// Virtual functions of RObject:
-	RObject* evaluate(Environment* env);
+	const RObject* evaluate(Environment* env) const;
 	const char* typeName() const;
 
 	// Virtual function of GCNode:
@@ -333,49 +333,49 @@ namespace CXXR {
     }
 
     // Predefined Symbols visible in 'namespace CXXR':
-    extern Symbol* const Bracket2Symbol;   	  // "[["
-    extern Symbol* const BracketSymbol;    	  // "["
-    extern Symbol* const BraceSymbol;      	  // "{"
-    extern Symbol* const ClassSymbol;	   	  // "class"
-    extern Symbol* const DeviceSymbol;     	  // ".Device"
-    extern Symbol* const DimNamesSymbol;   	  // "dimnames"
-    extern Symbol* const DimSymbol;	   	  // "dim"
-    extern Symbol* const DollarSymbol;	   	  // "$"
-    extern Symbol* const DotClassSymbol;   	  // ".Class"
-    extern Symbol* const DotGenericSymbol; 	  // ".Generic"
-    extern Symbol* const DotGenericCallEnvSymbol; // ".GenericCallEnv"
-    extern Symbol* const DotGenericDefEnvSymbol;  // ".GenericDefEnv"
-    extern Symbol* const DotGroupSymbol;   	  // ".Group"
-    extern Symbol* const DotMethodSymbol;  	  // ".Method"
-    extern Symbol* const DotMethodsSymbol; 	  // ".Methods"
-    extern Symbol* const DotdefinedSymbol; 	  // ".defined"
-    extern Symbol* const DotsSymbol;	   	  // "..."
-    extern Symbol* const DottargetSymbol;  	  // ".target"
-    extern Symbol* const DropSymbol;	   	  // "drop"
-    extern Symbol* const ExactSymbol;      	  // "exact"
-    extern Symbol* const LastvalueSymbol;  	  // ".Last.value"
-    extern Symbol* const LevelsSymbol;	   	  // "levels"
-    extern Symbol* const ModeSymbol;	   	  // "mode"
-    extern Symbol* const NameSymbol;       	  // "name"
-    extern Symbol* const NamesSymbol;	   	  // "names"
-    extern Symbol* const NaRmSymbol;       	  // "na.rm"
-    extern Symbol* const PackageSymbol;    	  // "package"
-    extern Symbol* const PreviousSymbol;   	  // "previous"
-    extern Symbol* const QuoteSymbol;      	  // "quote"
-    extern Symbol* const RowNamesSymbol;   	  // "row.names"
-    extern Symbol* const S3MethodsTableSymbol;    // ".__S3MethodsTable__."
-    extern Symbol* const SeedsSymbol;	   	  // ".Random.seed"
-    extern Symbol* const LastvalueSymbol;  	  // ".Last.value"
-    extern Symbol* const TspSymbol;	   	  // "tsp"
-    extern Symbol* const CommentSymbol;    	  // "comment"
-    extern Symbol* const SourceSymbol;     	  // "source"
-    extern Symbol* const DotEnvSymbol;     	  // ".Environment"
-    extern Symbol* const RecursiveSymbol;  	  // "recursive"
-    extern Symbol* const SrcfileSymbol;    	  // "srcfile"
-    extern Symbol* const SrcrefSymbol;     	  // "srcref"
-    extern Symbol* const WholeSrcrefSymbol;       // "wholeSrcref"
-    extern Symbol* const TmpvalSymbol;     	  // "*tmp*"
-    extern Symbol* const UseNamesSymbol;   	  // "use.names"
+    extern const Symbol* const Bracket2Symbol;   	  // "[["
+    extern const Symbol* const BracketSymbol;    	  // "["
+    extern const Symbol* const BraceSymbol;      	  // "{"
+    extern const Symbol* const ClassSymbol;	   	  // "class"
+    extern const Symbol* const DeviceSymbol;     	  // ".Device"
+    extern const Symbol* const DimNamesSymbol;   	  // "dimnames"
+    extern const Symbol* const DimSymbol;	   	  // "dim"
+    extern const Symbol* const DollarSymbol;	   	  // "$"
+    extern const Symbol* const DotClassSymbol;   	  // ".Class"
+    extern const Symbol* const DotGenericSymbol; 	  // ".Generic"
+    extern const Symbol* const DotGenericCallEnvSymbol; // ".GenericCallEnv"
+    extern const Symbol* const DotGenericDefEnvSymbol;  // ".GenericDefEnv"
+    extern const Symbol* const DotGroupSymbol;   	  // ".Group"
+    extern const Symbol* const DotMethodSymbol;  	  // ".Method"
+    extern const Symbol* const DotMethodsSymbol; 	  // ".Methods"
+    extern const Symbol* const DotdefinedSymbol; 	  // ".defined"
+    extern const Symbol* const DotsSymbol;	   	  // "..."
+    extern const Symbol* const DottargetSymbol;  	  // ".target"
+    extern const Symbol* const DropSymbol;	   	  // "drop"
+    extern const Symbol* const ExactSymbol;      	  // "exact"
+    extern const Symbol* const LastvalueSymbol;  	  // ".Last.value"
+    extern const Symbol* const LevelsSymbol;	   	  // "levels"
+    extern const Symbol* const ModeSymbol;	   	  // "mode"
+    extern const Symbol* const NameSymbol;       	  // "name"
+    extern const Symbol* const NamesSymbol;	   	  // "names"
+    extern const Symbol* const NaRmSymbol;       	  // "na.rm"
+    extern const Symbol* const PackageSymbol;    	  // "package"
+    extern const Symbol* const PreviousSymbol;   	  // "previous"
+    extern const Symbol* const QuoteSymbol;      	  // "quote"
+    extern const Symbol* const RowNamesSymbol;   	  // "row.names"
+    extern const Symbol* const S3MethodsTableSymbol;    // ".__S3MethodsTable__."
+    extern const Symbol* const SeedsSymbol;	   	  // ".Random.seed"
+    extern const Symbol* const LastvalueSymbol;  	  // ".Last.value"
+    extern const Symbol* const TspSymbol;	   	  // "tsp"
+    extern const Symbol* const CommentSymbol;    	  // "comment"
+    extern const Symbol* const SourceSymbol;     	  // "source"
+    extern const Symbol* const DotEnvSymbol;     	  // ".Environment"
+    extern const Symbol* const RecursiveSymbol;  	  // "recursive"
+    extern const Symbol* const SrcfileSymbol;    	  // "srcfile"
+    extern const Symbol* const SrcrefSymbol;     	  // "srcref"
+    extern const Symbol* const WholeSrcrefSymbol;       // "wholeSrcref"
+    extern const Symbol* const TmpvalSymbol;     	  // "*tmp*"
+    extern const Symbol* const UseNamesSymbol;   	  // "use.names"
 }  // namespace CXXR
 
 namespace {
@@ -464,7 +464,7 @@ extern "C" {
 #else
     inline SEXP Rf_install(const char *name)
     {
-	return CXXR::Symbol::obtain(name);
+	return const_cast<CXXR::Symbol*>(CXXR::Symbol::obtain(name));
     }
 #endif
 

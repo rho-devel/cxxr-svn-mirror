@@ -56,7 +56,7 @@ namespace CXXR {
 }
 
 GCRoot<String> String::s_na(expose(new UncachedString("NA", CE_NATIVE)));
-SEXP R_NaString = String::NA();
+SEXP R_NaString = const_cast<String*>(String::NA());
 
 // String::s_blank and R_BlankString are defined in Symbol.cpp to
 // enforce initialization order.

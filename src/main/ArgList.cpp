@@ -45,17 +45,17 @@ void ArgList::evaluate(Environment* env, bool allow_missing)
     PairList* lastout = m_list;
     unsigned int arg_number = 1;
     for (const PairList* inp = oldargs; inp; inp = inp->tail()) {
-	RObject* incar = inp->car();
+	const RObject* incar = inp->car();
 	if (incar == DotsSymbol) {
 	    Frame::Binding* bdg = env->findBinding(CXXR::DotsSymbol).second;
 	    if (!bdg)
 		Rf_error(_("'...' used but not bound"));
-	    RObject* h = bdg->value();
+	    const RObject* h = bdg->value();
 	    if (!h || h->sexptype() == DOTSXP) {
-		ConsCell* dotlist = static_cast<DottedArgs*>(h);
+		const ConsCell* dotlist = static_cast<const DottedArgs*>(h);
 		while (dotlist) {
-		    RObject* dotcar = dotlist->car();
-		    RObject* outcar = Symbol::missingArgument();
+		    const RObject* dotcar = dotlist->car();
+		    const RObject* outcar = Symbol::missingArgument();
 		    if (m_first_arg_env) {
 			outcar = m_first_arg;
 			m_first_arg = 0;
@@ -77,7 +77,7 @@ void ArgList::evaluate(Environment* env, bool allow_missing)
 		m_first_arg = 0;
 		m_first_arg_env = 0;
 	    } else if (incar && incar->sexptype() == SYMSXP) {
-		Symbol* sym = static_cast<Symbol*>(incar);
+		const Symbol* sym = static_cast<const Symbol*>(incar);
 		if (sym == Symbol::missingArgument()) {
 		    if (allow_missing)
 			cell = PairList::cons(Symbol::missingArgument(), 0, tag);
@@ -89,7 +89,7 @@ void ArgList::evaluate(Environment* env, bool allow_missing)
 		}
 	    }
 	    if (!cell) {
-		RObject* outcar = Evaluator::evaluate(incar, env);
+		const RObject* outcar = Evaluator::evaluate(incar, env);
 		cell = PairList::cons(outcar, 0, inp->tag());
 	    }
 	    lastout->setTail(cell);
@@ -105,7 +105,7 @@ void ArgList::merge(const ConsCell* extraargs)
     if (m_status != PROMISED)
 	Rf_error("Internal error: ArgList::merge() requires PROMISED ArgList");
     // Convert extraargs into a doubly linked list:
-    typedef std::list<pair<const RObject*, RObject*> > Xargs;
+    typedef std::list<pair<const RObject*, const RObject*> > Xargs;
     Xargs xargs;
     for (const ConsCell* cc = extraargs; cc; cc = cc->tail())
 	xargs.push_back(make_pair(cc->tag(), cc->car()));
@@ -134,7 +134,7 @@ void ArgList::merge(const ConsCell* extraargs)
     }
 }
 
-pair<bool, RObject*> ArgList::firstArg(Environment* env)
+pair<bool, const RObject*> ArgList::firstArg(Environment* env)
 {
     const PairList* elt = list();
     if (!elt)
@@ -142,7 +142,7 @@ pair<bool, RObject*> ArgList::firstArg(Environment* env)
     if (m_status == EVALUATED)
 	return make_pair(true, elt->car());
     while (elt) {
-	RObject* arg1 = elt->car();
+	const RObject* arg1 = elt->car();
 	if (!arg1)
 	    return pair<bool, RObject*>(true, 0);
 	if (arg1 != DotsSymbol) {
@@ -153,11 +153,12 @@ pair<bool, RObject*> ArgList::firstArg(Environment* env)
 	// If we get here it must be DotSymbol.
 	Frame::Binding* bdg = env->findBinding(DotsSymbol).second;
 	if (bdg && bdg->origin() != Frame::Binding::MISSING) {
-	    RObject* val = bdg->value();
+	    const RObject* val = bdg->value();
 	    if (val) {
 		if (val->sexptype() != DOTSXP)
 		    Rf_error(_("'...' used in an incorrect context"));
-		RObject* dots1 = static_cast<DottedArgs*>(val)->car();
+		const RObject* dots1
+		    = static_cast<const DottedArgs*>(val)->car();
 		if (dots1->sexptype() != PROMSXP)
 		    Rf_error(_("value in '...' is not a promise"));
 		m_first_arg = dots1->evaluate(env);
@@ -201,14 +202,14 @@ void ArgList::wrapInPromises(Environment* env)
     m_list->setTail(0);
     PairList* lastout = m_list;
     for (const PairList* inp = oldargs; inp; inp = inp->tail()) {
-	RObject* rawvalue = inp->car();
+	const RObject* rawvalue = inp->car();
 	if (rawvalue == DotsSymbol) {
 	    pair<Environment*, Frame::Binding*> pr
 		= env->findBinding(DotsSymbol);
 	    if (pr.first) {
-		RObject* dval = pr.second->value();
+		const RObject* dval = pr.second->value();
 		if (!dval || dval->sexptype() == DOTSXP) {
-		    ConsCell* dotlist = static_cast<ConsCell*>(dval);
+		    const ConsCell* dotlist = static_cast<const ConsCell*>(dval);
 		    while (dotlist) {
 			Promise* prom;
 			if (!m_first_arg_env)
@@ -229,7 +230,7 @@ void ArgList::wrapInPromises(Environment* env)
 	    }
 	} else {
 	    const Symbol* tag = tag2Symbol(inp->tag());
-	    RObject* value = Symbol::missingArgument();
+	    const RObject* value = Symbol::missingArgument();
 	    if (m_first_arg_env) {
 		value = CXXR_NEW(Promise(m_first_arg, 0));
 		m_first_arg = 0;

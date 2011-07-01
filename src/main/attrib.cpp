@@ -145,7 +145,8 @@ SEXP attribute_hidden getAttrib0(SEXP vec, SEXP name)
 	}
     }
     /* This is where the old/new list adjustment happens. */
-    RObject* att = vec->getAttribute(SEXP_downcast<Symbol*>(name));
+    RObject* att
+	= const_cast<RObject*>(vec->getAttribute(SEXP_downcast<Symbol*>(name)));
     if (!att) return 0;
     if (name == R_DimNamesSymbol && TYPEOF(att) == LISTSXP) {
 	SEXP _new, old;
@@ -1064,6 +1065,7 @@ SEXP attribute_hidden do_levelsgets(SEXP call, SEXP op, SEXP args, SEXP env)
     if (DispatchOrEval(call, op, "levels<-", args, env, &ans, 0, 1))
 	/* calls, e.g., levels<-.factor() */
 	return(ans);
+    GCStackRoot<> ansrt(ans);
     if(!isNull(CADR(args)) && any_duplicated(CADR(args), FALSE))
 	warningcall(call, _("duplicated levels will not be allowed in factors anymore"));
 /* TODO errorcall(call, _("duplicated levels are not allowed in factors anymore")); */

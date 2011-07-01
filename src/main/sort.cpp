@@ -89,13 +89,13 @@ static int ccmp(Rcomplex x, Rcomplex y, Rboolean nalast)
     return 0;		/* equal */
 }
 
-static int scmp(SEXP x, SEXP y, Rboolean nalast)
+static int scmp(const RObject* x, const RObject* y, Rboolean nalast)
 {
     if (x == NA_STRING && y == NA_STRING) return 0;
     if (x == NA_STRING) return nalast?1:-1;
     if (y == NA_STRING) return nalast?-1:1;
     if (x == y) return 0;  /* same string in cache */
-    return Scollate(x, y);
+    return Scollate(const_cast<RObject*>(x), const_cast<RObject*>(y));
 }
 
 bool CXXR::String::Comparator::operator()(const String* l,
@@ -249,7 +249,7 @@ void R_csort(Rcomplex *x, int n)
 void attribute_hidden ssort(StringVector* sv, int n)
 {
     StringVector& x(*sv);
-    String* v;
+    const String* v;
 #define TYPE_CMP scmp
     sort_body
 #undef TYPE_CMP
@@ -420,7 +420,7 @@ static void R_csort2(Rcomplex *x, int n, Rboolean decreasing)
 
 static void ssort2(StringVector* sv, int n, Rboolean decreasing)
 {
-    String* v;
+    const String* v;
     int i, j, h, t;
 
     for (t = 0; incs[t] > n; t++);
@@ -518,7 +518,7 @@ static void cPsort2(Rcomplex *x, int lo, int hi, int k)
 static void sPsort2(StringVector* sv, int lo, int hi, int k)
 {
     StringVector& x(*sv);
-    String *v, *w;
+    const String *v, *w;
 #define TYPE_CMP scmp
     psort_body
 #undef TYPE_CMP
@@ -804,7 +804,7 @@ orderVector1(int *indx, int n, SEXP key, Rboolean nalast, Rboolean decreasing,
 	    for (i = 0; i < n; i++) isna[i] = ISNAN(x[i]);
 	    break;
 	case STRSXP:
-	    for (i = 0; i < n; i++) isna[i] = ((*sv)[i] == NA_STRING);
+	    for (i = 0; i < n; i++) isna[i] = ((*sv)[i] == String::NA());
 	    break;
 	case CPLXSXP:
 	    for (i = 0; i < n; i++) isna[i] = ISNAN(cx[i].r) || ISNAN(cx[i].i);
@@ -879,11 +879,15 @@ orderVector1(int *indx, int n, SEXP key, Rboolean nalast, Rboolean decreasing,
 	    break;
 	case STRSXP:
 	    if (decreasing)
-#define less(a, b) (c=Scollate((*sv)[a], (*sv)[b]), c < 0 || (c == 0 && a > b))
+#define less(a, b) (c=Scollate(const_cast<String*>((*sv)[a].get()), \
+			       const_cast<String*>((*sv)[b].get())), \
+                    c < 0 || (c == 0 && a > b))
 		sort2_with_index
 #undef less
 	    else
-#define less(a, b) (c=Scollate((*sv)[a], (*sv)[b]), c > 0 || (c == 0 && a > b))
+#define less(a, b) (c=Scollate(const_cast<String*>((*sv)[a].get()), \
+			       const_cast<String*>((*sv)[b].get())), \
+                    c > 0 || (c == 0 && a > b))
 		sort2_with_index
 #undef less
 	    break;
@@ -1070,8 +1074,9 @@ SEXP attribute_hidden do_xtfrm(SEXP call, SEXP op, SEXP args, SEXP rho)
     Expression* callx = SEXP_downcast<Expression*>(call);
     ArgList arglist(SEXP_downcast<PairList*>(prargs), ArgList::PROMISED);
     Environment* callenv = SEXP_downcast<Environment*>(rho);
-    ans = closure->invoke(callenv, &arglist, callx);
+    SEXP deconst
+	= RObject::cloneIfOwned(closure->invoke(callenv, &arglist, callx));
     UNPROTECT(2);
-    return ans;
+    return deconst;
     
 }

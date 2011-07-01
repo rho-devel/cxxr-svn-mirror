@@ -106,8 +106,8 @@ BuiltInFunction::BuiltInFunction(unsigned int offset)
 		     || m_function == do_while);
 }
 
-RObject* BuiltInFunction::apply(ArgList* arglist, Environment* env,
-				const Expression* call) const
+const RObject* BuiltInFunction::apply(ArgList* arglist, Environment* env,
+				      const Expression* call) const
 {
     RAllocStack::Scope ras_scope;
     ProtectStack::Scope ps_scope;
@@ -117,7 +117,7 @@ RObject* BuiltInFunction::apply(ArgList* arglist, Environment* env,
     Evaluator::enableResultPrinting(m_result_printing_mode != FORCE_OFF);
     if (sexptype() == BUILTINSXP)
 	arglist->evaluate(env);
-    GCStackRoot<> ans;
+    GCStackRoot<const RObject> ans;
     if (m_transparent) {
 	PlainContext cntxt;
 	ans = invoke(env, arglist, call);

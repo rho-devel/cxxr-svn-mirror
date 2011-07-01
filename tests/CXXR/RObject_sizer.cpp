@@ -18,10 +18,12 @@
  */
 
 #include <iostream>
+#include "CXXR/Closure.h"
 #include "CXXR/Environment.h"
 #include "CXXR/IntVector.h"
 #include "CXXR/PairList.h"
 #include "CXXR/RealVector.h"
+#include "CXXR/StdFrame.hpp"
 
 using namespace std;
 using namespace CXXR;
@@ -40,6 +42,7 @@ int main() {
 	 << "\nsizeof(Frame::Binding): " << sizeof(Frame::Binding)
 	 << "\nsizeof(Frame): " << sizeof(Frame)
 	 << "\nsizeof(StdFrame): " << sizeof(StdFrame)
+	 << "\nsizeof(Closure): " << sizeof(Closure)
 	 << "\nsizeof(Environment): " << sizeof(Environment) << '\n';
     return 0;
 }

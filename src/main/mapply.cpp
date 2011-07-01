@@ -81,7 +81,7 @@ do_mapply(SEXP f, SEXP varyingArgs, SEXP constantArgs, SEXP rho)
     else
 	error(_("argument 'MoreArgs' of 'mapply' is not a list"));
 
-    Symbol* nindexsym = Symbol::obtain("nindex");
+    Symbol* nindexsym = const_cast<Symbol*>(Symbol::obtain("nindex"));
     for(int j = m-1; j >= 0; j--) {
 	SET_VECTOR_ELT(mindex, j, ScalarInteger(j+1));
 

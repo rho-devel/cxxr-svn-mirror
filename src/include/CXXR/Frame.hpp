@@ -159,6 +159,8 @@ namespace CXXR {
 	     *          value.  See function description.
 	     *
 	     * @param origin Origin of the newly-assigned value.
+	     *
+	     * @todo Should \a new_value be const?
 	     */
 	    void assign(RObject* new_value, Origin origin = EXPLICIT);
 
@@ -185,7 +187,7 @@ namespace CXXR {
 	     * @note It is conceivable that forcing a Promise will
 	     * result in the destruction of this Binding object.
 	     */
-	    std::pair<RObject*, bool> forcedValue();
+	    std::pair<const RObject*, bool> forcedValue() const;
 
 	    /** @brief Get pointer to Frame.
 	     *
@@ -268,7 +270,7 @@ namespace CXXR {
 	     *
 	     * @return The value bound to a Symbol by this Binding.
 	     */
-	    RObject* rawValue() const
+	    const RObject* rawValue() const
 	    {
 		m_frame->monitorRead(*this);
 		return m_value;
@@ -292,7 +294,7 @@ namespace CXXR {
 	     *
 	     * @param origin Origin now to be associated with this Binding.
 	     */
-	    void setFunction(FunctionBase* function,
+	    void setFunction(const FunctionBase* function,
 			     Origin origin = EXPLICIT);
 
 	    /** @brief Lock/unlock this Binding.
@@ -315,7 +317,7 @@ namespace CXXR {
 	     *
 	     * @param origin Origin of the newly assigned value.
 	     */
-	    void setValue(RObject* new_value, Origin origin = EXPLICIT);
+	    void setValue(const RObject* new_value, Origin origin = EXPLICIT);
 
 	    /** @brief Bound symbol.
 	     *
@@ -334,7 +336,17 @@ namespace CXXR {
 	     *
 	     * @return The value bound to a Symbol by this Binding.
 	     */
-	    RObject* value() const;
+	    RObject* value();
+
+	    /** @brief Get value bound to the Symbol (const variant).
+	     *
+	     * For an active binding, this evaluates the encapsulated
+	     * function and returns the result rather than returning a
+	     * pointer to the encapsulated function itself.
+	     *
+	     * @return The value bound to a Symbol by this Binding.
+	     */
+	    const RObject* value() const;
 
 	    /** @brief Auxiliary function to Frame::visitReferents().
 	     *
@@ -406,7 +418,7 @@ namespace CXXR {
 	 *
 	 * @return Pointer to the resulting Binding.
 	 */
-	Binding* bind(const Symbol* symbol, RObject* value,
+	Binding* bind(const Symbol* symbol, const RObject* value,
 		      Frame::Binding::Origin origin = Frame::Binding::EXPLICIT)
 	{
 	    Binding* bdg = obtainBinding(symbol);

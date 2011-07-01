@@ -245,7 +245,7 @@ namespace CXXR {
 #ifdef __GNUC__
 	__attribute__((hot,fastcall))
 #endif
-	static RObject* evaluate(RObject* object, Environment* env);
+	static const RObject* evaluate(const RObject* object, Environment* env);
 
 	/** @brief Innermost Context belonging to this Evaluator.
 	 *
@@ -337,7 +337,7 @@ namespace CXXR {
      *
      * @return Pointer to the result of evaluation.
      */
-    inline RObject* evaluate(RObject* object, Environment* env)
+    inline const RObject* evaluate(const RObject* object, Environment* env)
     {
 	return Evaluator::evaluate(object, env);
     }
@@ -364,7 +364,8 @@ extern "C" {
 	Environment* env = 0;
 	if (e)
 	    env = SEXP_downcast<Environment*>(rho);	
-	return evaluate(e, env);
+	RHandle<> deconst(evaluate(e, env));
+	return deconst.get();
     }
 #endif
  

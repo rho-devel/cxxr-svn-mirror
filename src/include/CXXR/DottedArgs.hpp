@@ -53,25 +53,18 @@ namespace CXXR {
     class DottedArgs : public ConsCell {
     public:
 	/**
-	 * @param cr Pointer to the 'car' of the element to be
-	 *           constructed.
+	 * @param cr The 'car' of the constructed element will be a
+	 *          lazy copy of \a cr .
 	 *
-	 * @param tl Pointer to the 'tail' (LISP cdr) of the element
-	 *           to be constructed.
+	 * @param tl The 'tail' (LISP cdr) of the constructed element
+	 *          will be a lazy copy of \a tl .
+	 *
 	 *
 	 * @param tg Pointer to the 'tag' of the element to be constructed.
 	 */
-	explicit DottedArgs(RObject* cr = 0, PairList* tl = 0,
+	explicit DottedArgs(const RObject* cr = 0, const PairList* tl = 0,
 			    const RObject* tg = 0)
 	    : ConsCell(DOTSXP, cr, tl, tg)
-	{}
-
-	/** @brief Copy constructor.
-	 *
-	 * @param pattern DottedArgs to be copied.
-	 */
-	DottedArgs(const DottedArgs& pattern)
-	    : ConsCell(pattern)
 	{}
 
 	/** @brief The name by which this type is known in R.
@@ -85,7 +78,7 @@ namespace CXXR {
 
 	// Virtual functions of RObject:
 	DottedArgs* clone() const;
-	RObject* evaluate(Environment* env);
+	const RObject* evaluate(Environment* env) const;
 	const char* typeName() const;
     private:
 	// Declared private to ensure that DottedArgs objects are

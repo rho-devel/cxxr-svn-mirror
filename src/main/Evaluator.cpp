@@ -59,7 +59,7 @@ namespace {
     int R_MAX_EXPRESSIONS_OPT = 500000;
 }
 
-RObject* Evaluator::evaluate(RObject* object, Environment* env)
+const RObject* Evaluator::evaluate(const RObject* object, Environment* env)
 {
     // The use of depthsave below is necessary because of the
     // possibility of non-local returns from evaluation.  Without this
@@ -81,7 +81,7 @@ RObject* Evaluator::evaluate(RObject* object, Environment* env)
     __asm__ ( "fninit" );
 #endif
     enableResultPrinting(true);
-    RObject* ans = 0;
+    const RObject* ans = 0;
     if (object)
 	ans = object->evaluate(env);
     s_depth = depthsave;

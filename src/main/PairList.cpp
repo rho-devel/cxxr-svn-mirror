@@ -71,19 +71,6 @@ namespace {
     const unsigned int ACTIVE_BINDING_MASK = 1<<15;
 }
 
-PairList::PairList(const PairList& pattern)
-    : ConsCell(pattern, 0)
-{
-    // Clone the tail:
-    PairList* c = this;
-    const PairList* pl = pattern.m_tail;
-    while (pl) {
-	c->m_tail = expose(new PairList(*pl, 0));
-	c = c->m_tail;
-	pl = pl->m_tail;
-    }
-}
-
 // Non-inlined so it can get put in .text.hot :
 PairList::~PairList()
 {}

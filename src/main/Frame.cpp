@@ -65,15 +65,15 @@ PairList* Frame::Binding::asPairList(PairList* tail) const
 
 // Frame::Binding::assign() is defined in envir.cpp (for the time being).
 	
-pair<RObject*, bool>
-Frame::Binding::forcedValue()
+pair<const RObject*, bool>
+Frame::Binding::forcedValue() const
 {
     bool promise_forced = false;
-    RObject* val = m_value;
+    const RObject* val = m_value;
     if (val && val->sexptype() == PROMSXP) {
-	Promise* prom = static_cast<Promise*>(val);
+	const Promise* prom = static_cast<const Promise*>(val);
 	if (prom->environment()) {
-	    GCStackRoot<Promise> promrt(prom);
+	    GCStackRoot<const Promise> promrt(prom);
 	    frame()->monitorRead(*this);
 	    val = evaluate(val, 0);
 	    promise_forced = true;
@@ -108,7 +108,7 @@ void Frame::Binding::initialize(Frame* frame, const Symbol* sym)
     m_symbol = sym;
 }
 
-void Frame::Binding::setFunction(FunctionBase* function, Origin origin)
+void Frame::Binding::setFunction(const FunctionBase* function, Origin origin)
 {
     // See if binding already has a non-default value:
     if (m_value != Symbol::missingArgument()) {
@@ -122,7 +122,7 @@ void Frame::Binding::setFunction(FunctionBase* function, Origin origin)
     m_frame->monitorWrite(*this);
 }
 
-void Frame::Binding::setValue(RObject* new_value, Origin origin)
+void Frame::Binding::setValue(const RObject* new_value, Origin origin)
 {
     if (isLocked())
 	Rf_error(_("cannot change value of locked binding for '%s'"),
@@ -165,13 +165,13 @@ namespace CXXR {
 
     bool isMissingArgument(const Symbol* sym, Frame* frame)
     {
-	RObject* rawval;
+	const RObject* rawval;
 	if (sym->isDotDotSymbol()) {
 	    unsigned int ddv = sym->dotDotIndex();
 	    Frame::Binding* bdg = frame->binding(CXXR::DotsSymbol);
 	    if (!bdg)
 		return false;  // This is what CR does.  Is it really right?
-	    ConsCell* cc = SEXP_downcast<ConsCell*>(bdg->rawValue());
+	    const ConsCell* cc = SEXP_downcast<const ConsCell*>(bdg->rawValue());
 	    while (cc && ddv > 1) {
 		cc = cc->tail();
 		--ddv;
@@ -194,7 +194,7 @@ namespace CXXR {
 		return false;
 	}
 	if (rawval && rawval->sexptype() == PROMSXP) {
-	    Promise* prom = static_cast<Promise*>(rawval);
+	    const Promise* prom = static_cast<const Promise*>(rawval);
 	    return prom->isMissingSymbol();
 	}
 	return false;

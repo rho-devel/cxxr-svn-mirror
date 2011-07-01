@@ -180,7 +180,7 @@ namespace CXXR {
 	 * @return <tt>const</tt> pointer to the string representing
 	 *         'not available'.
 	 */
-	static String* NA()
+	static const String* NA()
 	{
 	    return s_na;
 	}

@@ -77,8 +77,8 @@ Closure::Closure(const PairList* formal_args, RObject* body, Environment* env)
 {
 }
 
-RObject* Closure::apply(ArgList* arglist, Environment* env,
-			const Expression* call) const
+const RObject* Closure::apply(ArgList* arglist, Environment* env,
+			      const Expression* call) const
 {
     arglist->wrapInPromises(env);
     return invoke(env, arglist, call);
@@ -100,9 +100,9 @@ void Closure::detachReferents()
     RObject::detachReferents();
 }
 
-RObject* Closure::execute(Environment* env) const
+const RObject* Closure::execute(Environment* env) const
 {
-    RObject* ans;
+    const RObject* ans;
     Environment::ReturnScope returnscope(env);
     Closure::DebugScope debugscope(this); 
     try {
@@ -111,7 +111,7 @@ RObject* Closure::execute(Environment* env) const
 	    ans = Evaluator::evaluate(m_body, env);
 	}
 	if (ans && ans->sexptype() == BAILSXP) {
-	    ReturnBailout* rbo = dynamic_cast<ReturnBailout*>(ans);
+	    const ReturnBailout* rbo = dynamic_cast<const ReturnBailout*>(ans);
 	    if (!rbo || rbo->environment() != env)
 		abort();
 	    R_Visible = Rboolean(rbo->printResult());
@@ -128,9 +128,9 @@ RObject* Closure::execute(Environment* env) const
     return ans;
 }
 
-RObject* Closure::invoke(Environment* env, const ArgList* arglist,
-			 const Expression* call,
-			 const Frame* method_bindings) const
+const RObject* Closure::invoke(Environment* env, const ArgList* arglist,
+			       const Expression* call,
+			       const Frame* method_bindings) const
 {
 #ifndef NDEBUG
     if (arglist->status() != ArgList::PROMISED)
@@ -149,7 +149,7 @@ RObject* Closure::invoke(Environment* env, const ArgList* arglist,
     // Set up context and perform evaluation.  Note that ans needs to
     // be protected in case the destructor of ClosureContext executes
     // an on.exit function.
-    GCStackRoot<> ans;
+    GCStackRoot<const RObject> ans;
     {
 	Environment* syspar = env;
 	// If this is a method call, change syspar and merge in

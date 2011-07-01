@@ -50,7 +50,7 @@ DottedArgs* DottedArgs::clone() const
     return expose(new DottedArgs(*this));
 }
 
-RObject* DottedArgs::evaluate(Environment* env)
+const RObject* DottedArgs::evaluate(Environment* env) const
 {
     Rf_error(_("'...' used in an incorrect context"));
     return 0;

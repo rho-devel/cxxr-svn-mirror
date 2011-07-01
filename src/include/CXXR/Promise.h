@@ -85,7 +85,7 @@ namespace CXXR {
 	 *          value of the Promise is immediately set to be \a
 	 *          valgen itself.
 	 */
-	Promise(RObject* valgen, Environment* env)
+	Promise(const RObject* valgen, Environment* env)
 	    : RObject(PROMSXP), m_value(env ? Symbol::unboundValue() : valgen),
 	      m_valgen(valgen), m_environment(env), m_under_evaluation(false),
 	      m_interrupted(false)
@@ -115,7 +115,7 @@ namespace CXXR {
 	 * @return The value of the Promise, i.e. the result of
 	 * evaluating the value generator.
 	 */
-	RObject* force()
+	const RObject* force() const
 	{
 	    return evaluate(0);
 	}
@@ -141,7 +141,7 @@ namespace CXXR {
 	 * @todo Should be private (or removed entirely), but currently
 	 * still used in saveload.cpp.
 	 */
-	void setValue(RObject* val);
+	void setValue(const RObject* val) const;
 
 	/** @brief The name by which this type is known in R.
 	 *
@@ -157,7 +157,7 @@ namespace CXXR {
 	 * @return pointer to the value of the Promise, or to
 	 * Symbol::unboundValue() if it has not yet been evaluated.
 	 */
-	RObject* value()
+	const RObject* value() const
 	{
 	    return m_value;
 	}
@@ -172,7 +172,7 @@ namespace CXXR {
 	    return m_valgen;
 	}
 
-	RObject* evaluate(Environment* env);
+	const RObject* evaluate(Environment* env) const;
 	const char* typeName() const;
 
 	// Virtual function of GCNode:
@@ -181,9 +181,9 @@ namespace CXXR {
 	// Virtual function of GCNode:
 	void detachReferents();
     private:
-	GCEdge<> m_value;
-	GCEdge<RObject> m_valgen;
-	GCEdge<Environment> m_environment;
+	mutable RHandle<> m_value;
+	RHandle<> m_valgen;
+	mutable GCEdge<Environment> m_environment;
 	mutable bool m_under_evaluation;
 	mutable bool m_interrupted;
 
@@ -205,10 +205,10 @@ namespace CXXR {
      * and the value of the Promise returned.  Otherwise \a object
      * itself is returned.
      */
-    inline RObject* forceIfPromise(RObject* object)
+    inline const RObject* forceIfPromise(const RObject* object)
     {
 	if (object && object->sexptype() == PROMSXP)
-	    object = static_cast<Promise*>(object)->force();
+	    object = static_cast<const Promise*>(object)->force();
 	return object;
     }
 }  // namespace CXXR
@@ -276,7 +276,7 @@ extern "C" {
     {
 	using namespace CXXR;
 	Promise& prom = *SEXP_downcast<Promise*>(x);
-	return prom.value();
+	return const_cast<RObject*>(prom.value());
     }
 #endif
 

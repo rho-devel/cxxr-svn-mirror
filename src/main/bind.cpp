@@ -1113,9 +1113,10 @@ SEXP attribute_hidden do_bind(SEXP call, SEXP op, SEXP args, SEXP env)
 	Expression* callx = SEXP_downcast<Expression*>(call);
 	ArgList arglist(SEXP_downcast<PairList*>(args), ArgList::PROMISED);
 	Environment* callenv = SEXP_downcast<Environment*>(env);
-	args = closure->invoke(callenv, &arglist, callx);
+	SEXP deconst
+	    = RObject::cloneIfOwned(closure->invoke(callenv, &arglist, callx));
 	UNPROTECT(2);
-	return args;
+	return deconst;
     }
 
     /* Dispatch based on class membership has failed. */

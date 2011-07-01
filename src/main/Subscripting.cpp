@@ -150,23 +150,24 @@ Subscripting::canonicalize(const StringVector* raw_indices, std::size_t range_si
 			   const StringVector* range_names)
 {
     const std::size_t rawsize = raw_indices->size();
-    typedef std::tr1::unordered_map<GCRoot<CachedString>, unsigned int> Nmap;
+    typedef std::tr1::unordered_map<GCRoot<const CachedString>, unsigned int> Nmap;
     Nmap names_map;
     unsigned int max_index = (range_names ? 0 : range_size);
     GCStackRoot<IntVector> ans(CXXR_NEW(IntVector(rawsize)));
     GCStackRoot<ListVector> use_names;  // For the use.names attribute
     // Process the supplied subscripts in order:
     for (unsigned int iraw = 0; iraw < rawsize; ++iraw) {
-	String* subscript = (*raw_indices)[iraw];
+	const String* subscript = (*raw_indices)[iraw];
 	if (subscript == String::NA())
 	    (*ans)[iraw] = NA<int>();
 	else {
-	    GCRoot<CachedString>
-		csubscript(SEXP_downcast<CachedString*>(subscript));
+	    GCRoot<const CachedString>
+		csubscript(SEXP_downcast<const CachedString*>(subscript));
 	    // Coerce to UTF8 if necessary:
 	    if (csubscript->encoding() != CE_UTF8) {
 		RAllocStack::Scope scope;
-		const char* utf8s = Rf_translateCharUTF8(csubscript);
+		const char* utf8s
+		    = Rf_translateCharUTF8(const_cast<CachedString*>(csubscript.get()));
 		csubscript = CachedString::obtain(utf8s, CE_UTF8);
 	    }
 	    // Have we met this name already?
@@ -180,15 +181,16 @@ Subscripting::canonicalize(const StringVector* raw_indices, std::size_t range_si
 		// from names to indices:
 		bool found = false;
 		while (max_index < range_size && !found) {
-		    String* name = (*range_names)[max_index++];
+		    const String* name = (*range_names)[max_index++];
 		    if (name != String::NA()) {
-			GCRoot<CachedString>
-			    cname(SEXP_downcast<CachedString*>(name));
+			GCRoot<const CachedString>
+			    cname(SEXP_downcast<const CachedString*>(name));
 			if (cname != CachedString::blank()) {
 			    // Coerce to UTF8 if necessary:
 			    if (cname->encoding() != CE_UTF8) {
 				RAllocStack::Scope scope;
-				const char* utf8s = Rf_translateCharUTF8(cname);
+				const char* utf8s
+				    = Rf_translateCharUTF8(const_cast<CachedString*>(cname.get()));
 				cname = CachedString::obtain(utf8s, CE_UTF8);
 			    }
 			    // Insert this name into names_map
@@ -235,7 +237,9 @@ Subscripting::canonicalizeArraySubscripts(const VectorBase* v,
 	    Rf_error(_("too few subscripts"));
 	std::size_t dimsize = (*dims)[d];
 	const StringVector* names
-	    = (dimnames ? static_cast<StringVector*>((*dimnames)[d].get()) : 0);
+	    = (dimnames
+	       ? static_cast<const StringVector*>((*dimnames)[d].get())
+	       : 0);
 	std::pair<const IntVector*, std::size_t> pr
 	    = canonicalize(pl->car(), dimsize, names);
 	if (pr.second > dimsize)
@@ -258,7 +262,8 @@ std::size_t Subscripting::createDimIndexers(DimIndexerVector* dimindexers,
     std::size_t resultsize = 1;
     for (unsigned int d = 0; d < ndims; ++d) {
 	DimIndexer& di = (*dimindexers)[d];
-	const IntVector* iv = static_cast<IntVector*>((*indices)[d].get());
+	const IntVector* iv
+	    = static_cast<const IntVector*>((*indices)[d].get());
 	di.nindices = iv->size();
 	resultsize *= di.nindices;
 	di.indices = iv;
@@ -338,12 +343,12 @@ bool Subscripting::dropDimensions(VectorBase* v)
 	// for the sole remaining element, so we set up a name only if
 	// just one dimension has names.
 	if (dimnames) {
-	    StringVector* newnames;
+	    const StringVector* newnames;
 	    unsigned int count = 0;
 	    for (unsigned int d = 0; d < ndims; ++d) {
-		RObject* dnd = (*dimnames)[d];
+		const RObject* dnd = (*dimnames)[d];
 		if (dnd) {
-		    newnames = static_cast<StringVector*>(dnd);
+		    newnames = static_cast<const StringVector*>(dnd);
 		    ++count;
 		}
 	    }
@@ -358,24 +363,24 @@ void Subscripting::processUseNames(VectorBase* v, const IntVector* indices)
 {
     const ListVector* usenames;
     {
-	RObject* unmattr = indices->getAttribute(UseNamesSymbol);
+	const RObject* unmattr = indices->getAttribute(UseNamesSymbol);
 	usenames = SEXP_downcast<const ListVector*>(unmattr);
     }
     if (!usenames)
 	return;
     GCStackRoot<StringVector> newnames;
     {
-	RObject* nmattr = v->getAttribute(NamesSymbol);
+	const RObject* nmattr = v->getAttribute(NamesSymbol);
 	if (nmattr)
-	    newnames = SEXP_downcast<StringVector*>(nmattr);
+	    newnames = SEXP_downcast<const StringVector*>(nmattr)->clone();
 	else newnames = CXXR_NEW(StringVector(v->size()));
     }
     for (unsigned int i = 0; i < usenames->size(); ++i) {
-	RObject* newname = (*usenames)[i];
+	const RObject* newname = (*usenames)[i];
 	if (newname) {
 	    int index = (*indices)[i];
 	    if (!isNA(index))
-		(*newnames)[index - 1] = SEXP_downcast<String*>(newname);
+		(*newnames)[index - 1] = SEXP_downcast<const String*>(newname);
 	}
     }
     v->setAttribute(NamesSymbol, newnames);
@@ -437,7 +442,7 @@ void Subscripting::setVectorAttributes(VectorBase* subset,
     }
     // R_SrcrefSymbol:
     {
-	RObject* attrib = source->getAttribute(SrcrefSymbol);
+	const RObject* attrib = source->getAttribute(SrcrefSymbol);
 	if (attrib && attrib->sexptype() == VECSXP) {
 	    const ListVector* srcrefs = static_cast<const ListVector*>(attrib);
 	    subset->setAttribute(SrcrefSymbol, vectorSubset(srcrefs, indices));

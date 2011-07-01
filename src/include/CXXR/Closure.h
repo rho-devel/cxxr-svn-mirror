@@ -132,7 +132,7 @@ namespace CXXR {
 	 * ClosureContext: both these operations must be handled by
 	 * the calling code.
 	 */
-	RObject* execute(Environment* env) const;
+	const RObject* execute(Environment* env) const;
 
 	/** @brief Invoke the function.
 	 *
@@ -159,9 +159,9 @@ namespace CXXR {
 	 *
 	 * @return The result of applying the function.
 	 */
-	RObject* invoke(Environment* env, const ArgList* arglist,
-			const Expression* call,
-			const Frame* method_bindings = 0) const;
+	const RObject* invoke(Environment* env, const ArgList* arglist,
+			      const Expression* call,
+			      const Frame* method_bindings = 0) const;
 
 	/** @brief Access the ArgMatcher of this Closure.
 	 *
@@ -218,8 +218,8 @@ namespace CXXR {
 	}
 
 	// Virtual function of FunctionBase:
-	RObject* apply(ArgList* arglist, Environment* env,
-		       const Expression* call) const;
+	const RObject* apply(ArgList* arglist, Environment* env,
+			     const Expression* call) const;
 
 	// Virtual functions of RObject:
         Closure* clone() const;
@@ -356,7 +356,7 @@ extern "C" {
     {
 	using namespace CXXR;
 	const Closure* clos = SEXP_downcast<Closure*>(x);
-	return const_cast<PairList*>(clos->matcher()->formalArgs());
+	return const_cast<ArgMatcher*>(clos->matcher())->formalArgs2();
     }
 #endif
 

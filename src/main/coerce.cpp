@@ -1018,7 +1018,7 @@ static SEXP Rf_coerceVectorList(SEXP v, SEXPTYPE type)
 	    SEXP elt;
 	    if (v->sexptype() == EXPRSXP) {
 		ExpressionVector* ev = static_cast<ExpressionVector*>(v);
-		elt = (*ev)[i];
+		elt = (*ev)[i].get();
 	    }
 	    else elt = VECTOR_ELT(v, i);
 	    if (Rf_isString(elt) && length(elt) == 1)

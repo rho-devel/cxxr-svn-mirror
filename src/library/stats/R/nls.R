@@ -389,7 +389,9 @@ nls_port_fit <- function(m, start, lower, upper, control, trace)
     p <- length(par <- as.double(unlist(start)))
     iv <- integer(4L*p + 82L)
     v <- double(105L + (p * (2L * p + 20L)))
-    .Call(R_port_ivset, 1, iv, v)
+    pivset <- .Call(R_port_ivset, 1, iv, v)
+    iv <- pivset[[1]]
+    v <- pivset[[2]]
     if (length(control)) {
 	if (!is.list(control) || is.null(nms <- names(control)))
 	    stop("control argument must be a named list")
@@ -428,9 +430,9 @@ nls_port_fit <- function(m, start, lower, upper, control, trace)
     }
     if(p > 0) {
         ## driver routine port_nlsb() in ../src/port.c -- modifies m & iv
-        .Call(R_port_nlsb, m,
-              d = rep(as.double(scale), length.out = length(par)),
-              df = m$gradient(), iv, v, low, upp)
+        iv <- .Call(R_port_nlsb, m,
+                    d = rep(as.double(scale), length.out = length(par)),
+                    df = m$gradient(), iv, v, low, upp)
     } else iv[1L] <- 6
     iv
 }

@@ -92,7 +92,7 @@ namespace {
 		 rit != keyvals.rend(); ++rit) {
 		const string& namestr = (*rit).first;
 		const string& valstr = (*rit).second;
-		RObject* value;
+		const RObject* value;
 		if (valstr.empty())
 		    value = Symbol::missingArgument();
 		else value
@@ -122,9 +122,9 @@ namespace {
 	return origstr[origin];
     }
 
-    void showValue(RObject* value);
+    void showValue(const RObject* value);
 
-    void showConsCell(ConsCell* cell)
+    void showConsCell(const ConsCell* cell)
     {
 	const Symbol* tag = SEXP_downcast<const Symbol*>(cell->tag());
 	if (tag)
@@ -133,7 +133,7 @@ namespace {
 	showValue(cell->car());
     }
 
-    void showValue(RObject* value)
+    void showValue(const RObject* value)
     {
 	if (!value)
 	    cout << "NULL";
@@ -146,7 +146,7 @@ namespace {
 		break;
 	    case DOTSXP:
 		{
-		    ConsCell* cell = static_cast<ConsCell*>(value);
+		    const ConsCell* cell = static_cast<const ConsCell*>(value);
 		    cout << "DottedArgs(";
 		    showConsCell(cell);
 		    cell = cell->tail();
@@ -160,7 +160,7 @@ namespace {
 		break;
 	    case PROMSXP:
 		{
-		    Promise* prom = static_cast<Promise*>(value);
+		    const Promise* prom = static_cast<const Promise*>(value);
 		    cout << "Promise("
 			 << getString(prom->valueGenerator())
 			 << ", ";
@@ -178,7 +178,7 @@ namespace {
 		    if (value == Symbol::missingArgument())
 			cout << "Symbol::missingArgument()";
 		    else {
-			Symbol* sym = static_cast<Symbol*>(value);
+			const Symbol* sym = static_cast<const Symbol*>(value);
 			cout << "Symbol(" << getString(sym->name()) << ')';
 		    }
 		}
@@ -213,7 +213,7 @@ namespace {
 	     it != fmap.end(); ++it) {
 	    const Frame::Binding* bdg = (*it).second;
 	    string tag = bdg->symbol()->name()->stdstring();
-	    RObject* value = bdg->value();
+	    const RObject* value = bdg->value();
 	    cout << originString(bdg->origin()) << tag << " : ";
 	    showValue(value);
 	    cout << endl;

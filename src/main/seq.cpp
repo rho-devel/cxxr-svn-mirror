@@ -670,7 +670,7 @@ SEXP attribute_hidden do_seq_along(SEXP call, SEXP op, SEXP args, SEXP rho)
     len = length(CAR(args));
 #else
     static RObject* length_func
-	= Environment::base()->frame()->binding(Symbol::obtain("length"))->forcedValue().first;
+	= const_cast<RObject*>(Environment::base()->frame()->binding(Symbol::obtain("length"))->forcedValue().first);
     if(isObject(CAR(args)) &&
        DispatchOrEval(call, length_func,
 		      "length", args, rho, &ans, 0, 1)) {

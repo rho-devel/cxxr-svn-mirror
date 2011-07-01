@@ -1095,7 +1095,7 @@ static SEXP subDots(SEXP rho)
 	while (TYPEOF(t) == PROMSXP)
 	    t = PREXPR(t);
 	if( isSymbol(t) || isLanguage(t) )
-	    SETCAR(b, Symbol::obtainDotDotSymbol(i));
+	    SETCAR(b, const_cast<Symbol*>(Symbol::obtainDotDotSymbol(i)));
 	else
 	    SETCAR(b, t);
     }

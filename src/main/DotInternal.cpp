@@ -98,5 +98,6 @@ SEXP do_internal(SEXP call, SEXP op, SEXP args, SEXP env)
 	Rf_errorcall(call, _("no internal function \"%s\""),
 		     funsym->name()->c_str());
     ArgList al(innercall->tail(), ArgList::RAW);
-    return func->apply(&al, envir, innercall);
+    GCStackRoot<const RObject> ans(func->apply(&al, envir, innercall));
+    return RObject::cloneIfOwned(ans.get());
 }

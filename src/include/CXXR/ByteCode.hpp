@@ -55,7 +55,8 @@ namespace CXXR {
 	 *           to be constructed.
 	 * @param tg Pointer to the 'tag' of the element to be constructed.
 	 */
-	explicit ByteCode(RObject* cr = 0, PairList* tl = 0, RObject* tg = 0)
+	explicit ByteCode(const RObject* cr = 0, const PairList* tl = 0,
+			  RObject* tg = 0)
 	    : ConsCell(BCODESXP, cr, tl, tg)
 	{}
 
@@ -69,7 +70,7 @@ namespace CXXR {
 	}
 
 	// Virtual functions of RObject:
-	RObject* evaluate(Environment* env);
+	const RObject* evaluate(Environment* env) const;
 	const char* typeName() const;
     private:
 	// Declared private to ensure that ByteCode objects are

@@ -89,7 +89,7 @@ namespace CXXR {
 	 * method corresponds, or a null pointer if no class-specific
 	 * method was found.
 	 */
-	String* className() const
+	const String* className() const
 	{
 	    if (!usingClass())
 		return 0;
@@ -206,7 +206,7 @@ namespace CXXR {
 	 * proceed to enclosing Environments.  This follows CR, but it
 	 * perhaps unduly restrictive.
 	 */
-	static std::pair<FunctionBase*, bool>
+	static std::pair<const FunctionBase*, bool>
 	findMethod(const Symbol* symbol, Environment* call_env,
 		   Environment* table_env);
 
@@ -215,7 +215,7 @@ namespace CXXR {
 	 * @return Pointer to the function implementing the method
 	 * found.
 	 */
-	FunctionBase* function() const
+	const FunctionBase* function() const
 	{
 	    return m_function;
 	}
@@ -235,7 +235,7 @@ namespace CXXR {
 	 * @return pointer to the Symbol containing the name of the
 	 * method found.
 	 */
-	Symbol* symbol() const
+	const Symbol* symbol() const
 	{
 	    return m_symbol;
 	}
@@ -264,10 +264,11 @@ namespace CXXR {
 	GCEdge<StringVector> m_classes;  // Pointer to a vector of
 	  // class names, or a null pointer.  If null, subsequent
 	  // fields are not meaningful.
-	GCEdge<FunctionBase> m_function;  // Pointer to the method found, or
-	  // null if no method was found.  If null, subsequent fields
+	GCEdge<const FunctionBase> m_function;  // Pointer to the method found,
+	  // or null if no method was found.  If null, subsequent fields
 	  // are not meaningful.
-	Symbol* m_symbol;  // Pointer to the Symbol naming the method found.  
+	const Symbol* m_symbol;  // Pointer to the Symbol naming the method
+	  // found.  
 	std::size_t m_index;  // Location within the classes vector to which
 	  // 'function' corresponds, or one past the end if using a
 	  // default method.

@@ -189,6 +189,8 @@ namespace CXXR {
 	/** @brief Associate names with the rows, columns or other
 	 *  dimensions of an R matrix or array.
 	 *
+	 * Sets the dimension names to a lazy copy of \a names .
+	 *
 	 * @param names If this is a null pointer, any names currently
 	 *          associated with the dimensions of \a *this will be
 	 *          removed.  Otherwise \a names must be a pointer to
@@ -207,10 +209,13 @@ namespace CXXR {
 	 *          (rather than duplicating it), so the calling code
 	 *          must not subsequently modify it.
 	 */
-	void setDimensionNames(ListVector* names);
+	void setDimensionNames(const ListVector* names);
 
 	/** @brief Associate names with a particular dimension of an
 	 *  R matrix or array.
+	 *
+	 * Sets the names associated with a particular dimension to a
+	 * lazy copy of \a names .
 	 *
 	 * @param d Dimension number (counting from 1) with which
 	 *          dimension names are to be associated.  Must not be
@@ -227,11 +232,13 @@ namespace CXXR {
 	 *          this StringVector (rather than duplicating it), so
 	 *          the calling code must not subsequently modify it.
 	 */
-	void setDimensionNames(unsigned int d, StringVector* names);
+	void setDimensionNames(unsigned int d, const StringVector* names);
 
 	/** @brief Define the dimensions of R matrix or array.
 	 *
-	 * As a side-effect, this function will remove any dimension names.
+	 * Sets the dimensions attribute to a lazy copy of \a dims .
+	 * As a side-effect, this function will remove any dimension
+	 * names.
 	 *
 	 * @param dims If this is a null pointer, any existing dimensions
 	 *          associated will be removed, and \a *this will
@@ -247,9 +254,11 @@ namespace CXXR {
 	 *          than duplicating it), so the calling code must not
 	 *          subsequently modify it.
 	 */
-	void setDimensions(IntVector* dims);
+	void setDimensions(const IntVector* dims);
 
 	/** @brief Associate names with the elements of a VectorBase.
+	 *
+	 * Sets the names to a lazy copy of \a names .
 	 *
 	 * @param names Either a null pointer, in which case any
 	 * existing names will be removed, or a pointer to a
@@ -258,7 +267,7 @@ namespace CXXR {
 	 * than duplicating it), so the calling code must not
 	 * subsequently modify it.
 	 */
-	void setNames(StringVector* names);
+	void setNames(const StringVector* names);
 
 	/** @brief Adjust the number of elements in the vector.
 	 *

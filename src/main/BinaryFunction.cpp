@@ -53,8 +53,8 @@ void GeneralBinaryAttributeCopier::apply(VectorBase* vout,
 {
     // Handle layout attributes:
     {
-	RObject* dims = vl->getAttribute(DimSymbol);
-	RObject* dimnames = 0;
+	const RObject* dims = vl->getAttribute(DimSymbol);
+	const RObject* dimnames = 0;
 	if (dims)
 	    dimnames = vl->getAttribute(DimNamesSymbol);
 	else
@@ -74,8 +74,8 @@ void GeneralBinaryAttributeCopier::apply(VectorBase* vout,
     }
     // Handle attributes related to time series:
     {
-	RObject* tsp = vl->getAttribute(TspSymbol);
-	RObject* klass = 0;
+	const RObject* tsp = vl->getAttribute(TspSymbol);
+	const RObject* klass = 0;
 	if (tsp)
 	    klass = vl->getAttribute(ClassSymbol);
 	if (!tsp) {

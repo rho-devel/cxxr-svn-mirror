@@ -180,7 +180,7 @@ namespace CXXR {
 	 * first element is true and the second element is a pointer
 	 * to the value of the first argument.
 	 */
-	std::pair<bool, RObject*> firstArg(Environment* env);
+	std::pair<bool, const RObject*> firstArg(Environment* env);
 
 	/** @brief Access the argument list as a PairList.
 	 *
@@ -318,13 +318,13 @@ namespace CXXR {
 	  // an argument to the constructor, even though the
 	  // constructor casts const away when it initialises this
 	  // data member.
-	GCStackRoot<> m_first_arg;  // If the first argument needed to
-	  // be evaluated in a call to firstArg(), this is a pointer
-	  // to the resulting value, and m_first_arg_env points to the
-	  // Environment in which evaluation took place.  Both
-	  // pointers are reset to null once the first argument has
-	  // been processed in a subsequent call to evaluate() or
-	  // wrapInPromises(). 
+	GCStackRoot<const RObject> m_first_arg;  // If the first
+	  // argument needed to be evaluated in a call to firstArg(),
+	  // this is a pointer to the resulting value, and
+	  // m_first_arg_env points to the Environment in which
+	  // evaluation took place.  Both pointers are reset to null
+	  // once the first argument has been processed in a
+	  // subsequent call to evaluate() or wrapInPromises().
 	GCStackRoot<Environment> m_first_arg_env;
 	Status m_status;
 

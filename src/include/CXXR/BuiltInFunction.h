@@ -287,8 +287,8 @@ namespace CXXR {
 	const char* typeName() const;
 
 	// Virtual function of FunctionBase:
-	RObject* apply(ArgList* arglist, Environment* env,
-		       const Expression* call) const;
+	const RObject* apply(ArgList* arglist, Environment* env,
+			     const Expression* call) const;
     private:
 	// 'Pretty-print' information:
 	struct PPinfo {
@@ -331,8 +331,8 @@ namespace CXXR {
 	static void initialize();
 
 	// Invoke the encapsulated function:
-	RObject* invoke(Environment* env, const ArgList* arglist, 
-			const Expression* call) const
+	const RObject* invoke(Environment* env, const ArgList* arglist, 
+			      const Expression* call) const
 	{
 	    return m_function(const_cast<Expression*>(call),
 			      const_cast<BuiltInFunction*>(this),

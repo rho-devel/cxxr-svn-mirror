@@ -1040,7 +1040,7 @@ void BuiltInFunction::initialize()
     DotInternalTable::initialize();
     for (int i = 0; s_function_table[i].name; ++i) {
 	const char* symname = s_function_table[i].name;
-	Symbol* sym = Symbol::obtain(symname);
+	const Symbol* sym = Symbol::obtain(symname);
 	BuiltInFunction* bif = expose(new BuiltInFunction(i));
 	if ((s_function_table[i].flags%100)/10)
 	    DotInternalTable::set(sym, bif);

@@ -548,7 +548,7 @@ namespace CXXR {
      * FunctionBase was found, both elements of the pair are null
      * pointers.
      */
-    std::pair<Environment*, FunctionBase*>
+    std::pair<Environment*, const FunctionBase*>
     findFunction(const Symbol* symbol, Environment* env, bool inherits = true);
 
     /** @brief Search for a Binding whose value satisfies a predicate.
@@ -597,12 +597,12 @@ namespace CXXR {
      * are null pointers.
      */
     template <typename UnaryPredicate>
-    std::pair<Environment*, RObject*>
+    std::pair<Environment*, const RObject*>
     findTestedValue(const Symbol* symbol, Environment* env,
 		    UnaryPredicate pred, bool inherits)
     {
 	using namespace std;
-	pair<Environment*, RObject*> ans(0, 0);
+	pair<Environment*, const RObject*> ans(0, 0);
 	bool found = false;
 	do {
 	    Frame::Binding* bdg;
@@ -616,8 +616,8 @@ namespace CXXR {
 		bdg = pr.second;
 	    }
 	    if (bdg) {
-		pair<RObject*, bool> fpr = bdg->forcedValue();
-		RObject* val = fpr.first;
+		pair<const RObject*, bool> fpr = bdg->forcedValue();
+		const RObject* val = fpr.first;
 		found = pred(val);
 		if (found) {
 		    // Invoke read monitor (if any) only if
@@ -782,7 +782,8 @@ extern "C" {
 	using namespace CXXR;
 	const Symbol* sym = SEXP_downcast<Symbol*>(x);
 	Frame::Binding* bdg = Environment::base()->frame()->binding(sym);
-	return bdg ? bdg->value() : Symbol::unboundValue();
+	return (bdg ? bdg->value()
+		: const_cast<Symbol*>(Symbol::unboundValue()));
     }
 #endif
 
