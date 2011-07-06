@@ -437,7 +437,7 @@ SEXP port_nlminb(SEXP fn, SEXP gr, SEXP hs, SEXP rho,
 
     if (b) Free(b); if (g) Free(g); if (h) Free(h);
     UNPROTECT(1);
-    return R_NilValue;
+    return iv;
 }
 
 void
