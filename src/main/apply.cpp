@@ -82,8 +82,12 @@ SEXP attribute_hidden do_lapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 				CONS(X, CONS(ind, R_NilValue))));
 	PROTECT(R_fcall = LCONS(FUN,
 				CONS(tmp, CONS(R_DotsSymbol, R_NilValue))));
-
 	for(i = 0; i < n; i++) {
+	    // CXXR change: lazycopy duplication may have resulted in
+	    // the index vector within the R_fcall expression now
+	    // being at a different location, so we recompute its
+	    // location:
+	    ind = CADDR(CADR(R_fcall));
 	    INTEGER(ind)[0] = i + 1;
 	    SET_VECTOR_ELT(ans, i, eval(R_fcall, rho));
 	}
