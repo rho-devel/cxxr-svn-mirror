@@ -40,7 +40,7 @@ void ArgList::evaluate(Environment* env, bool allow_missing)
     if (m_first_arg_env && env != m_first_arg_env)
 	Rf_error("Internal error: first arg of ArgList"
 		 " previously evaluated in different environment");
-    GCStackRoot<const PairList> oldargs(m_list->tail());
+    GCStackRoot<const PairList> oldargs(list());
     m_list->setTail(0);
     PairList* lastout = m_list;
     unsigned int arg_number = 1;
