@@ -363,9 +363,8 @@ extern "C" {
 	using namespace CXXR;
 	Environment* env = 0;
 	if (e)
-	    env = SEXP_downcast<Environment*>(rho);	
-	RHandle<> deconst(evaluate(e, env));
-	return deconst.get();
+	    env = SEXP_downcast<Environment*>(rho);
+	return const_cast<RObject*>(evaluate(e, env));
     }
 #endif
  

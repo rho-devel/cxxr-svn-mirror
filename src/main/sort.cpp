@@ -1074,9 +1074,9 @@ SEXP attribute_hidden do_xtfrm(SEXP call, SEXP op, SEXP args, SEXP rho)
     Expression* callx = SEXP_downcast<Expression*>(call);
     ArgList arglist(SEXP_downcast<PairList*>(prargs), ArgList::PROMISED);
     Environment* callenv = SEXP_downcast<Environment*>(rho);
-    SEXP deconst
-	= RObject::cloneIfOwned(closure->invoke(callenv, &arglist, callx));
+    GCStackRoot<const RObject>
+	deconst(closure->invoke(callenv, &arglist, callx));
     UNPROTECT(2);
-    return deconst;
+    return RObject::cloneIfOwned(deconst.get());
     
 }

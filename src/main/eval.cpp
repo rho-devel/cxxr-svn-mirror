@@ -1440,10 +1440,10 @@ SEXP attribute_hidden do_recall(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (TYPEOF(s) != CLOSXP) 
     	Rf_error(_("'Recall' called from outside a closure"));
     Closure* closure = SEXP_downcast<Closure*>(s);
-    const RObject* ans
-	= closure->invoke(cptr->callEnvironment(), &arglist, cptr->call());
+    GCStackRoot<const RObject>
+	ans(closure->invoke(cptr->callEnvironment(), &arglist, cptr->call()));
     UNPROTECT(1);
-    return RObject::cloneIfOwned(ans);
+    return RObject::cloneIfOwned(ans.get());
 }
 
 
@@ -1685,8 +1685,9 @@ int Rf_DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 	if (isOps)
 	    arglist.stripTags();
 	const Closure* func = SEXP_downcast<const Closure*>(m->function());
-	*ans = RObject::cloneIfOwned(func->invoke(callenv, &arglist,
-						  newcall, supp_frame));
+	GCStackRoot<const RObject> fresult(func->invoke(callenv, &arglist,
+							newcall, supp_frame));
+	*ans = RObject::cloneIfOwned(fresult.get());
     }
     return 1;
 }
@@ -2806,8 +2807,9 @@ static SEXP bcEval(SEXP body, SEXP rho)
 	    Expression* callx = SEXP_downcast<Expression*>(call);
 	    ArgList arglist(SEXP_downcast<PairList*>(args), ArgList::PROMISED);
 	    Environment* callenv = SEXP_downcast<Environment*>(rho);
-	    value = RObject::cloneIfOwned(closure->invoke(callenv,
-							  &arglist, callx));
+	    GCStackRoot<const RObject>
+		vv(closure->invoke(callenv, &arglist, callx));
+	    value = RObject::cloneIfOwned(vv.get());
 	    break;
 	}
 	default: Rf_error(_("bad function"));

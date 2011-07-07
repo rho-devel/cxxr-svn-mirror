@@ -189,7 +189,8 @@ namespace CXXR {
 	 */
 	const PairList* list() const
 	{
-	    return m_list->tail();
+	    const PairList* ml = m_list;
+	    return ml->tail();
 	}
 
 	/** @brief Merge in new argument values..
