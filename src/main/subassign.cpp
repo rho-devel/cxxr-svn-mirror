@@ -1251,13 +1251,6 @@ SEXP attribute_hidden do_subassign_dflt(SEXP call, SEXP op, SEXP argsarg,
 	    error(_("result is zero-length and so cannot be a language object"));
     }
 
-    /* Note the setting of NAMED(x) to zero here.  This means */
-    /* that the following assignment will not duplicate the value. */
-    /* This works because at this point, x is guaranteed to have */
-    /* at most one symbol bound to it.  It does mean that there */
-    /* will be multiple reference problems if "[<-" is used */
-    /* in a naked fashion. */
-
     if (S4)
 	SET_S4_OBJECT(x);
     return x;
@@ -1353,9 +1346,6 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     /* Ensure that the LHS is a local variable. */
     /* If it is not, then make a local copy. */
-
-    if (NAMED(x) == 2)
-	SETCAR(args, x = duplicate(x));
 
     xtop = xup = x; /* x will be the element which is assigned to */
 
@@ -1551,7 +1541,6 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	case 1925:  /* vector     <- S4 */
 	case 1903: case 1907: case 1908: case 1999: /* functions */
 
-	    if( NAMED(y) ) y = duplicate(y);
 	    SET_VECTOR_ELT(x, offset, y);
 	    break;
 
@@ -1566,7 +1555,6 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	case 2025:  /* expression     <- S4 */
 	case 2020:	/* expression <- expression */
 
-	    if( NAMED(y) ) y = duplicate(y);
 	    SET_XVECTOR_ELT(x, offset, y);
 	    break;
 
@@ -1597,7 +1585,6 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	UNPROTECT(1);
     }
     else if (isPairList(x)) {
-	/* if (NAMED(y)) */
 	y = duplicate(y);
 	PROTECT(y);
 	if (nsubs == 1) {
@@ -1701,18 +1688,6 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP nlist, SEXP val)
     PROTECT_WITH_INDEX(val, &pvalidx);
     S4 = CXXRCONSTRUCT(Rboolean, IS_S4_OBJECT(x));
 
-    if (NAMED(x) == 2)
-	REPROTECT(x = duplicate(x), pxidx);
-
-    /* If we aren't creating a new entry and NAMED>0
-       we need to duplicate to prevent cycles.
-       If we are creating a new entry we could duplicate
-       or increase NAMED. We duplicate if NAMED==1, but
-       not if NAMED==2 */
-    if (NAMED(val) == 2)
-	maybe_duplicate=TRUE;
-    else if (NAMED(val)==1)
-	REPROTECT(val = duplicate(val), pvalidx);
     /* code to allow classes to extend ENVSXP */
     if(TYPEOF(x) == S4SXP) {
 	xS4 = x;

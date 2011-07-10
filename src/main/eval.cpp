@@ -478,11 +478,6 @@ static SEXP EnsureLocal(SEXP symbol, SEXP rho)
 
     if ((vl = Rf_findVarInFrame3(rho, symbol, TRUE)) != R_UnboundValue) {
 	vl = Rf_eval(symbol, rho);	/* for promises */
-	if(NAMED(vl) == 2) {
-	    PROTECT(vl = Rf_duplicate(vl));
-	    Rf_defineVar(symbol, vl, rho);
-	    UNPROTECT(1);
-	}
 	return vl;
     }
 
@@ -624,13 +619,12 @@ namespace {
 	}
     }
 
-    /* Allocate space for the loop variable value the first time through
-       (when v == R_NilValue) and when the value has been assigned to
-       another variable (NAMED(v) == 2). This should be safe and avoid
+    /* Allocate space for the loop variable value the first time
+       through (when v == R_NilValue). This should be safe and avoid
        allocation in many cases. */
     inline RObject* ALLOC_LOOP_VAR(RObject* v, SEXPTYPE val_type)
     {
-	if (!v || NAMED(v) == 2)
+	if (!v)
 	    v = Rf_allocVector(val_type, 1);
 	return v;
     }
@@ -1038,18 +1032,10 @@ static SEXP evalseq(SEXP expr, SEXP rho, int forcelocal,  R_varloc_t tmploc)
 static const char * const asym[] = {":=", "<-", "<<-", "="};
 
 /* This macro stores the current assignment target in the saved
-   binding location. It duplicates if necessary to make sure
-   assignment functions are always called with a target with NAMED ==
-   1. The SET_CAR is intended to protect against possible GC in
-   R_SetVarLocValue; this might occur it the binding is an active
-   binding. */
+   binding location. */
 #define SET_TEMPVARLOC_FROM_CAR(loc, lhs) do { \
 	SEXP __lhs__ = (lhs); \
 	SEXP __v__ = CAR(__lhs__); \
-	if (NAMED(__v__) == 2) { \
-	    __v__ = Rf_duplicate(__v__); \
-	    SETCAR(__lhs__, __v__); \
-	} \
 	R_SetVarLocValue(loc, __v__); \
     } while(0)
 
@@ -1170,14 +1156,6 @@ SEXP attribute_hidden do_set(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if (Rf_isSymbol(CAR(args))) {
 	    s = Rf_eval(CADR(args), rho);
 #ifdef CONSERVATIVE_COPYING /* not default */
-	    if (NAMED(s))
-	    {
-		SEXP t;
-		PROTECT(s);
-		t = Rf_duplicate(s);
-		UNPROTECT(1);
-		s = t;
-	    }
 	    PROTECT(s);
 	    Rf_defineVar(CAR(args), s, rho);
 	    UNPROTECT(1);
@@ -1197,8 +1175,6 @@ SEXP attribute_hidden do_set(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if (Rf_isSymbol(CAR(args))) {
 	    s = Rf_eval(CADR(args), rho);
 	    Environment::monitorLeaks(s);
-	    if (NAMED(s))
-		s = Rf_duplicate(s);
 	    PROTECT(s);
 	    Rf_setVar(CAR(args), s, ENCLOS(rho));
 	    UNPROTECT(1);
@@ -2178,10 +2154,6 @@ namespace {
     }
 }
 
-/* making sure the constant is NAMED can be done at assembly time
-   once duplicate is set up to not copy the constant portion of code
-   and once load is set to make the constants NAMED--basically once
-   there is a proper code data type with appropriate support. */
 #define DO_LDCONST(v) do { \
   R_Visible = TRUE; \
   v = VECTOR_ELT(constants, GETOP()); \
@@ -2372,8 +2344,6 @@ static SEXP setNumVecElt(SEXP vec, SEXP idx, SEXP value)
     if (OBJECT(vec))
 	Rf_error(_("can only handle simple real vectors"));
     checkVectorSubscript(vec, i);
-    if (NAMED(vec) > 1)
-	vec = Rf_duplicate(vec);
     PROTECT(vec);
     switch (TYPEOF(vec)) {
     case REALSXP: REAL(vec)[i] = Rf_asReal(value); break;
@@ -2402,9 +2372,6 @@ static SEXP setNumMatElt(SEXP mat, SEXP idx, SEXP jdx, SEXP value)
     nrow = INTEGER(dim)[0];
     k = i - 1 + nrow * (j - 1);
     checkVectorSubscript(mat, k);
-
-    if (NAMED(mat) > 1)
-	mat = Rf_duplicate(mat);
 
     PROTECT(mat);
     switch (TYPEOF(mat)) {
@@ -2894,7 +2861,7 @@ static SEXP bcEval(SEXP body, SEXP rho)
 	SEXP valsym = VECTOR_ELT(constants, GETOP());
 	EnsureLocal(symbol, rho);
 	value = R_BCNodeStackTop[-1];
-	Rf_defineVar(valsym, value, rho); /**** not adjusting NAMED OK? */
+	Rf_defineVar(valsym, value, rho);
 	/* right-hand side value is now on top of stack */
 	NEXT();
       }
