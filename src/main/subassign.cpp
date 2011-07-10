@@ -1188,8 +1188,6 @@ SEXP attribute_hidden do_subassign_dflt(SEXP call, SEXP op, SEXP argsarg,
     /* This will duplicate more often than necessary, but saves */
     /* over always duplicating. */
     GCStackRoot<> x, y;
-    if (NAMED(CAR(args)) == 2)
-	x = SETCAR(args, duplicate(CAR(args)));
     SEXP subs;
     {
 	SEXP xtmp, ytmp;

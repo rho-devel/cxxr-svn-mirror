@@ -434,7 +434,6 @@ static SEXP commentgets(SEXP vec, SEXP comment)
 SEXP attribute_hidden do_commentgets(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
-    if (NAMED(CAR(args)) == 2) SETCAR(args, duplicate(CAR(args)));
     if (length(CADR(args)) == 0) SETCADR(args, R_NilValue);
     setAttrib(CAR(args), R_CommentSymbol, CADR(args));
     return CAR(args);
@@ -489,7 +488,6 @@ SEXP attribute_hidden do_classgets(SEXP call, SEXP op, SEXP args, SEXP env)
     checkArity(op, args);
     check1arg(args, call, "x");
 
-    if (NAMED(CAR(args)) == 2) SETCAR(args, duplicate(CAR(args)));
     if (length(CADR(args)) == 0) SETCADR(args, R_NilValue);
     if(IS_S4_OBJECT(CAR(args)))
       UNSET_S4_OBJECT(CAR(args));
@@ -726,8 +724,6 @@ SEXP attribute_hidden do_namesgets(SEXP call, SEXP op, SEXP args, SEXP env)
 	getAttrib(CAR(args), R_NamesSymbol) == R_NilValue)
 	return CAR(args);
     PROTECT(args = ans);
-    if (NAMED(CAR(args)) == 2)
-	SETCAR(args, duplicate(CAR(args)));
     if (CADR(args) != R_NilValue) {
 	GCStackRoot<PairList> tl(CXXR_NEW(PairList));
         PROTECT(call = CXXR_NEW(Expression(0, tl)));
@@ -841,7 +837,6 @@ SEXP attribute_hidden do_dimnamesgets(SEXP call, SEXP op, SEXP args, SEXP env)
     if (DispatchOrEval(call, op, "dimnames<-", args, env, &ans, 0, 1))
 	return(ans);
     PROTECT(args = ans);
-    if (NAMED(CAR(args)) > 1) SETCAR(args, duplicate(CAR(args)));
     setAttrib(CAR(args), R_DimNamesSymbol, CADR(args));
     UNPROTECT(1);
     return CAR(args);
@@ -966,7 +961,6 @@ SEXP attribute_hidden do_dimgets(SEXP call, SEXP op, SEXP args, SEXP env)
     if (DispatchOrEval(call, op, "dim<-", args, env, &ans, 0, 1))
 	return(ans);
     PROTECT(args = ans);
-    if (NAMED(CAR(args)) > 1) SETCAR(args, duplicate(CAR(args)));
     setAttrib(CAR(args), R_DimSymbol, CADR(args));
     setAttrib(CAR(args), R_NamesSymbol, R_NilValue);
     UNPROTECT(1);
@@ -1070,7 +1064,6 @@ SEXP attribute_hidden do_levelsgets(SEXP call, SEXP op, SEXP args, SEXP env)
 	warningcall(call, _("duplicated levels will not be allowed in factors anymore"));
 /* TODO errorcall(call, _("duplicated levels are not allowed in factors anymore")); */
     PROTECT(args = ans);
-    if (NAMED(CAR(args)) > 1) SETCAR(args, duplicate(CAR(args)));
     setAttrib(CAR(args), R_LevelsSymbol, CADR(args));
     UNPROTECT(1);
     return CAR(args);
