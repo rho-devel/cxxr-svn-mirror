@@ -404,10 +404,6 @@ SEXP attribute_hidden R_binary(SEXP call, SEXP op, SEXP xarg, SEXP yarg)
        Do we want to?  We don't do it!  BDR 2004-03-06
     */
 
-    /* FIXME: Danger Will Robinson.
-     * -----  We might be trashing arguments here.
-     * If we have NAMED(x) or NAMED(y) we should duplicate!
-     */
     if (xarray != yarray) {
 	if (xarray && nx==1 && ny!=1) {
 	    x = x->clone();

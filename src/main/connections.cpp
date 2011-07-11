@@ -2210,7 +2210,7 @@ static void raw_init(Rconnection con, SEXP raw)
 {
     Rrawconn thisconn = CXXRSCAST(Rrawconn, con->connprivate);
 
-    thisconn->data = NAMED(raw) ? duplicate(raw) : raw;
+    thisconn->data = raw;
     R_PreserveObject(thisconn->data);
     thisconn->nbytes = LENGTH(thisconn->data);
     thisconn->pos = 0;

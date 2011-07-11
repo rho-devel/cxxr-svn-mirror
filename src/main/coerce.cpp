@@ -1238,8 +1238,7 @@ static SEXP asFunction(SEXP x)
     SEXP f;
     int n;
     if (Rf_isFunction(x)) return x;
-    if (NAMED(x)) PROTECT(x = Rf_duplicate(x));
-    else PROTECT(x);
+    PROTECT(x);
 
     if (Rf_isNull(x) || !Rf_isList(x)) {
 	f = Rf_mkCLOSXP(0, x, R_GlobalEnv);
@@ -1277,7 +1276,7 @@ static SEXP ascommon(SEXP call, SEXP u, SEXPTYPE type)
 	     || (Rf_isSymbol(u) && type == EXPRSXP)) {
 	/* this duplication appears not to be needed in all cases,
 	   but beware that other code relies on it */
-	v = NAMED(u) ? Rf_duplicate(u) : u;
+	v = u;
 	if (type != ANYSXP) {
 	    PROTECT(v);
 	    v = Rf_coerceVector(v, type);
