@@ -979,7 +979,6 @@ SEXP attribute_hidden do_setencoding(SEXP call, SEXP op, SEXP args, SEXP rho)
     m = LENGTH(enc);
     if(m == 0)
 	error(_("'value' must be of positive length"));
-    if(NAMED(x)) x = duplicate(x);
     PROTECT(x);
     n = LENGTH(x);
     for(i = 0; i < n; i++) {

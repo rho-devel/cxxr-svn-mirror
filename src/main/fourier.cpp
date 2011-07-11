@@ -64,7 +64,6 @@ SEXP attribute_hidden do_fft(SEXP call, SEXP op, SEXP args, SEXP env)
 	z = coerceVector(z, CPLXSXP);
 	break;
     case CPLXSXP:
-	if (NAMED(z)) z = duplicate(z);
 	break;
     default:
 	error(_("non-numeric argument"));
@@ -155,7 +154,6 @@ SEXP attribute_hidden do_mvfft(SEXP call, SEXP op, SEXP args, SEXP env)
 	z = coerceVector(z, CPLXSXP);
 	break;
     case CPLXSXP:
-	if (NAMED(z)) z = duplicate(z);
 	break;
     default:
 	error(_("non-numeric argument"));

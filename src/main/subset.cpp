@@ -518,7 +518,6 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
     SEXP ans, dims, dimnames, indx, subs, x;
     int i, ndims, nsubs, offset = 0;
     int drop = 1, pok, exact = -1;
-    int named_x;
 
     PROTECT(args);
     ExtractDropArg(args, &drop);
@@ -579,8 +578,6 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
     /* back to the regular program */
     if (!(isVector(x) || isList(x) || isLanguage(x)))
 	errorcall(call, R_MSG_ob_nonsub, type2char(TYPEOF(x)));
-
-    named_x = NAMED(x);  /* x may change below; save this now.  See PR#13411 */
 
     if(nsubs == 1) { /* vector indexing */
 	SEXP thesub = CAR(subs);
