@@ -230,11 +230,6 @@ SEXP setAttrib(SEXP vec, SEXP name, SEXP val)
     if (vec == R_NilValue)
 	error(_("attempt to set an attribute on NULL"));
 
-    PROTECT(vec);
-    PROTECT(name);
-    if (NAMED(val)) val = duplicate(val);
-    UNPROTECT(2);
-
     GCStackRoot<> valr(val);
     if (name == R_NamesSymbol)
 	return namesgets(vec, val);
@@ -1110,12 +1105,6 @@ SEXP attribute_hidden do_attributesgets(SEXP call, SEXP op, SEXP args, SEXP env)
 	else
 	    PROTECT(object = allocVector(VECSXP, 0));
     } else {
-	/* Unlikely to have NAMED == 0 here.
-	   As from R 2.7.0 we don't optimize NAMED == 1 _if_ we are
-	   setting any attributes as an error later on would leave
-	   'obj' changed */
-	if (NAMED(object) > 1 || (NAMED(object) == 1 && nattrs))
-	    object = duplicate(object);
 	PROTECT(object);
     }
 
@@ -1296,10 +1285,7 @@ SEXP attribute_hidden do_attrgets(SEXP call, SEXP op, SEXP args, SEXP env)
     checkArity(op, args);
 
     obj = CAR(args);
-    if (NAMED(obj) == 2)
-	PROTECT(obj = duplicate(obj));
-    else
-	PROTECT(obj);
+    PROTECT(obj);
 
     /* argument matching */
     PROTECT(ap = list3(R_NilValue, R_NilValue, R_NilValue));
@@ -1522,7 +1508,6 @@ SEXP R_do_slot_assign(SEXP obj, SEXP name, SEXP value) {
 	/* simplified version of setAttrib(obj, name, value);
 	   here we do *not* treat "names", "dimnames", "dim", .. specially : */
 	PROTECT(name);
-	if (NAMED(value)) value = duplicate(value);
 	UNPROTECT(1);
 	obj->setAttribute(static_cast<Symbol*>(name), value);
 #endif
@@ -1589,7 +1574,6 @@ R_getS4DataSlot(SEXP obj, SEXPTYPE type)
     if(s3class == R_NilValue && type == S4SXP)
       return R_NilValue;
     PROTECT(s3class);
-    if(NAMED(obj)) obj = duplicate(obj);
     UNPROTECT(1);
     if(s3class != R_NilValue) {/* replace class with S3 class */
       setAttrib(obj, R_ClassSymbol, s3class);
