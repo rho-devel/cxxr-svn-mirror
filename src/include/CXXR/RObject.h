@@ -249,7 +249,7 @@ namespace CXXR {
 	static T* cloneIfOwned(const T* pattern)
 	{
 	    T* cln = 0;
-	    if (pattern && pattern->numOwners() > 0)
+	    if (pattern && pattern->m_owners > 0)
 		cln = clone(pattern);
 	    return (cln ? cln : const_cast<T*>(pattern));
 	}
@@ -335,18 +335,6 @@ namespace CXXR {
 	bool isS4Object() const
 	{
 	    return (m_type & s_S4_mask);
-	}
-
-	/** @brief How many RHandle objects claim ownership?
-	 *
-	 * @return The number of RHandle<T> objects currently claiming
-	 * ownership of this RObject .
-	 *
-	 * @deprecated Made public only to allow access by NAMED().
-	 */
-	unsigned int numOwners() const
-	{
-	    return m_owners;
 	}
 
 	/** @brief Reproduce the \c gp bits field used in CR.
@@ -522,6 +510,11 @@ namespace CXXR {
 	    if (m_owners < 7)
 		++m_owners;
 	}
+
+	bool shared() const
+	{
+	    return m_owners >= 2;
+	}
     };
 
     // ***** Inlined methods of RHandleBase:
@@ -557,7 +550,7 @@ namespace CXXR {
     inline bool RHandleBase::sharing() const
     {
 	const RObject* tgt = asset();
-	return (tgt && tgt->numOwners() > 1);
+	return (tgt && tgt->shared());
     }
 }  // namespace CXXR
 
@@ -622,23 +615,9 @@ extern "C" {
     inline int LEVELS(SEXP x) {return x->packGPBits();}
 #endif
 
-    /** @brief Get object copying status.
-     *
-     * @param x Pointer to CXXR::RObject.
-     *
-     * @return Refer to 'R Internals' document.  Returns 0 if \a x is a
-     * null pointer.
+    /** @brief Obsolete in CXXR.
      */
-#ifndef __cplusplus
-    int NAMED(SEXP x);
-#else
-    inline int NAMED(SEXP x)
-    {
-	if (!x)
-	    return 0;
-	return std::min(x->numOwners(), 2U);
-    }
-#endif
+#define NAMED(x) 0
 
     /** @brief Does an object have a class attribute?
      *
