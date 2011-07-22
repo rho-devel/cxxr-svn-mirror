@@ -249,7 +249,7 @@ namespace CXXR {
 	static T* cloneIfOwned(const T* pattern)
 	{
 	    T* cln = 0;
-	    if (pattern && pattern->m_owners > 0)
+	    if (pattern && pattern->owned())
 		cln = clone(pattern);
 	    return (cln ? cln : const_cast<T*>(pattern));
 	}
@@ -443,7 +443,7 @@ namespace CXXR {
 	 * @param stype Required type of the RObject.
 	 */
 	explicit RObject(SEXPTYPE stype = CXXSXP)
-	    : m_type(stype & s_sexptype_mask), m_owners(0), m_missing(0),
+	    : m_type(stype & s_sexptype_mask), m_owners1(1), m_missing(0),
 	      m_argused(0), m_active_binding(false), m_binding_locked(false)
 	{}
 
@@ -458,11 +458,20 @@ namespace CXXR {
 	static const unsigned char s_sexptype_mask = 0x3f;
 	static const unsigned char s_S4_mask = 0x40;
 	static const unsigned char s_class_mask = 0x80;
+	static const unsigned char s_inc_owners[8];  // Look-up table
+	  // for incrementing m_owners1.
+	static const unsigned char s_dec_owners[8];  // Look-up table
+	  // for decrementing m_owners1.
+
 	signed char m_type;  // The least-significant six bits hold
 	  // the SEXPTYPE.  The sign bit is set if the object has a
 	  // class attribute.  Bit 6 is set to denote an S4 object.
-	mutable unsigned char m_owners;  // Number of RHandles claiming
-	  // ownership of this RObject.
+	mutable unsigned char m_owners1;  // Number of RHandles claiming
+	  // ownership of this RObject, plus 1.  A value of zero
+	  // signifies that this object is to be regarded as its own
+	  // clone, so duplication that would otherwise take place can
+	  // be skipped: this applies in particular to Environments,
+	  // Symbols and CachedStrings.
     public:
 	// The following field is used only in connection with objects
 	// inheriting from class ConsCell (and fairly rarely then), so
@@ -501,19 +510,22 @@ namespace CXXR {
 
 	void decOwners() const
 	{
-	    if (m_owners < 7)
-		--m_owners;
+	    m_owners1 = s_dec_owners[m_owners1];
 	}
 
 	void incOwners() const
 	{
-	    if (m_owners < 7)
-		++m_owners;
+	    m_owners1 = s_inc_owners[m_owners1];
+	}
+
+	bool owned() const
+	{
+	    return m_owners1 >= 2;
 	}
 
 	bool shared() const
 	{
-	    return m_owners >= 2;
+	    return m_owners1 >= 3;
 	}
     };
 

@@ -76,8 +76,11 @@ const unsigned char RObject::s_sexptype_mask;
 const unsigned char RObject::s_S4_mask;
 const unsigned char RObject::s_class_mask;
 
+const unsigned char RObject::s_inc_owners[] = {0, 2, 3, 4, 5, 6, 7, 7};
+const unsigned char RObject::s_dec_owners[] = {0, 1, 1, 2, 3, 4, 5, 7};
+
 RObject::RObject(const RObject& pattern)
-    : m_type(pattern.m_type), m_owners(0), m_missing(pattern.m_missing),
+    : m_type(pattern.m_type), m_owners1(1), m_missing(pattern.m_missing),
       m_argused(pattern.m_argused), m_active_binding(pattern.m_active_binding),
       m_binding_locked(pattern.m_binding_locked), m_attrib(pattern.m_attrib)
 {}
