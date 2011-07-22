@@ -454,6 +454,19 @@ namespace CXXR {
 	RObject(const RObject& pattern);
 
 	virtual ~RObject() {}
+
+	/** @brief Treat this object as its own clone.
+	 *
+	 * Calling this function signifies that this object is to be
+	 * regarded as its own clone, so duplication that would
+	 * otherwise take place can be skipped: this applies in
+	 * particular to Environments, Symbols and CachedStrings.  The
+	 * function will normally be called in a constructor.
+	 */
+	void setSelfClone()
+	{
+	    m_owners1 = 0;
+	}
     private:
 	static const unsigned char s_sexptype_mask = 0x3f;
 	static const unsigned char s_S4_mask = 0x40;

@@ -175,7 +175,9 @@ namespace CXXR {
 	    : RObject(ENVSXP), m_enclosing(enclosing), m_frame(frame),
 	      m_single_stepping(false), m_locked(false), m_cached(false),
 	      m_leaked(false), m_in_loop(false), m_can_return(false)
-	{}
+	{
+	    setSelfClone();
+	}
 
 	/** @brief Base environment.
 	 *

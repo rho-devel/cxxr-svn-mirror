@@ -147,6 +147,7 @@ namespace CXXR {
 	    m_key_val_pr(key_val_pr), m_symbol(0)
 	{
 	    setCString(key_val_pr->first.first.c_str());
+	    setSelfClone();
 	}
 
 	// Not implemented.  Declared to prevent

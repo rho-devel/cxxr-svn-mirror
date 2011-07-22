@@ -87,6 +87,7 @@ Symbol::Symbol(const CachedString* the_name)
 	if (m_name->size() > maxLength())
 	    Rf_error(_("variable names are limited to %d bytes"), maxLength());
     }
+    setSelfClone();
     // If this is a ..n symbol, extract the value of n.
     // boost::regex_match (libboost_regex1_36_0-1.36.0-9.5) doesn't
     // seem comfortable with empty strings, hence the size check.
