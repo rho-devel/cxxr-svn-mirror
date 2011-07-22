@@ -62,6 +62,12 @@ using namespace CXXR;
 /* We might get a call with R_NilValue from subassignment code */
 #define ECALL(call, yy) if(call == R_NilValue) error(yy); else errorcall(call, yy);
 
+// Note by arr after analysing code: If x is a vector of length 2,
+// then x[[-1]] and x[[-2]] are legal, and mean the same as x[[2]] and
+// x[[1]] respectively.  Otherwise a negative index is illegal for [[,
+// as is a zero index.  The following function looks after this, as
+// well as rebasing indices off 0 rather than 1.
+
 static int integerOneIndex(int i, int len, SEXP call)
 {
     int indx = -1;
@@ -161,21 +167,24 @@ OneIndex(SEXP x, SEXP s, int len, int partial, SEXP *newname, int pos, SEXP call
     return indx;
 }
 
+// Note by arr after analysing code: if the 'pos' argument is set to
+// -1, this signifies that this is not 'recursive' indexing, i.e. the index
+// is a vector of length 1. A non-negative value signifies that this
+// is recursive indexing, and gives the position (counting from 0)
+// within the index vector which should be used for this call.
+
 int attribute_hidden
 get1index(SEXP s, SEXP names, int len, int pok, int pos, SEXP call)
 {
-/* Get a single index for the [[ operator.
-   Check that only one index is being selected.
-   pok : is "partial ok" ?
-	 if pok is -1, warn if partial matching occurs
-*/
-    int indx, i, warn_pok = 0;
-    double dblind;
-    const char *ss, *cur_name;
-
+    /* Get a single index for the [[ operator.
+       Check that only one index is being selected.
+       pok : is "partial ok" ?
+       if pok is -1, warn if partial matching occurs
+    */
+    bool warn_pok = false;
     if (pok == -1) {
 	pok = 1;
-	warn_pok = 1;
+	warn_pok = true;
     }
 
     if (pos < 0 && length(s) != 1) {
@@ -185,64 +194,73 @@ get1index(SEXP s, SEXP names, int len, int pok, int pos, SEXP call)
 	    ECALL(call, _("attempt to select less than one element"));
 	}
     } else
-	if(pos >= length(s)) {
+	if (pos >= length(s)) {
 	    ECALL(call, _("internal error in use of recursive indexing"));
 	}
-    if(pos < 0) pos = 0;
-    indx = -1;
+    if (pos < 0)
+	pos = 0;
+    int indx = -1;
     switch (TYPEOF(s)) {
     case LGLSXP:
     case INTSXP:
-	i = INTEGER(s)[pos];
-	if(i != NA_INTEGER)
-	    indx = integerOneIndex(i, len, call);
+	{
+	    int i = INTEGER(s)[pos];
+	    if (i != NA_INTEGER)
+		indx = integerOneIndex(i, len, call);
+	}
 	break;
     case REALSXP:
-	dblind = REAL(s)[pos];
-	if(!ISNAN(dblind))
-	    indx = integerOneIndex(int(dblind), len, call);
+	{
+	    double dblind = REAL(s)[pos];
+	    if (!ISNAN(dblind))
+		indx = integerOneIndex(int(dblind), len, call);
+	}
 	break;
     case STRSXP:
-	/* NA matches nothing */
-	if(STRING_ELT(s, pos) == NA_STRING) break;
-	/* "" matches nothing: see names.Rd */
-	if(!CHAR(STRING_ELT(s, pos))[0]) break;
+	{
+	    /* NA matches nothing */
+	    if (STRING_ELT(s, pos) == NA_STRING)
+		break;
+	    /* "" matches nothing: see names.Rd */
+	    if (!CHAR(STRING_ELT(s, pos))[0])
+		break;
 
-	/* Try for exact match */
-	ss = translateChar(STRING_ELT(s, pos));
-	for (i = 0; i < length(names); i++)
-	    if (STRING_ELT(names, i) != NA_STRING) {
-		if (streql(translateChar(STRING_ELT(names, i)), ss)) {
-		    indx = i;
-		    break;
-		}
-	    }
-	/* Try for partial match */
-	if (pok && indx < 0) {
-	    len = strlen(ss);
-	    for(i = 0; i < length(names); i++) {
+	    /* Try for exact match */
+	    const char* ss = translateChar(STRING_ELT(s, pos));
+	    for (int i = 0; i < length(names); i++)
 		if (STRING_ELT(names, i) != NA_STRING) {
-		    cur_name = translateChar(STRING_ELT(names, i));
-		    if(!strncmp(cur_name, ss, len)) {
-			if(indx == -1) {/* first one */
-			    indx = i;
-			    if (warn_pok) {
-				if (call == R_NilValue)
-				    warning(_("partial match of '%s' to '%s'"),
-					    ss, cur_name);
-				else
-				    warningcall(call,
-						_("partial match of '%s' to '%s'"),
+		    if (streql(translateChar(STRING_ELT(names, i)), ss)) {
+			indx = i;
+			break;
+		    }
+		}
+	    /* Try for partial match */
+	    if (pok && indx < 0) {
+		len = strlen(ss);
+		for(int i = 0; i < length(names); i++) {
+		    if (STRING_ELT(names, i) != NA_STRING) {
+			const char* cur_name = translateChar(STRING_ELT(names, i));
+			if (!strncmp(cur_name, ss, len)) {
+			    if (indx == -1) {/* first one */
+				indx = i;
+				if (warn_pok) {
+				    if (call == R_NilValue)
+					warning(_("partial match of '%s' to '%s'"),
 						ss, cur_name);
+				    else
+					warningcall(call,
+						    _("partial match of '%s' to '%s'"),
+						    ss, cur_name);
+				}
 			    }
-			}
-			else {
-			    indx = -2;/* more than one partial match */
-			    if (warn_pok) /* already given context */
-				warningcall(R_NilValue,
-					    _("further partial match of '%s' to '%s'"),
-					    ss, cur_name);
-			    break;
+			    else {
+				indx = -2;/* more than one partial match */
+				if (warn_pok) /* already given context */
+				    warningcall(R_NilValue,
+						_("further partial match of '%s' to '%s'"),
+						ss, cur_name);
+				break;
+			    }
 			}
 		    }
 		}
@@ -250,7 +268,7 @@ get1index(SEXP s, SEXP names, int len, int pok, int pos, SEXP call)
 	}
 	break;
     case SYMSXP:
-	for (i = 0; i < length(names); i++)
+	for (int i = 0; i < length(names); i++)
 	    if (STRING_ELT(names, i) != NA_STRING &&
 		streql(translateChar(STRING_ELT(names, i)),
 		       CHAR(PRINTNAME(s)))) {
