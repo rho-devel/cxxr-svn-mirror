@@ -49,8 +49,10 @@
 using namespace std;
 using namespace CXXR;
 
+bool Frame::s_frame_monitoring = false;
 Frame::monitor Frame::s_read_monitor = 0;
 Frame::monitor Frame::s_write_monitor = 0;
+Frame::Set* Frame::s_set = 0;
 
 // ***** Class Frame::Binding *****
 
@@ -150,6 +152,29 @@ void Frame::Binding::visitReferents(const_visitor* v) const
 #endif
 }
 
+void Frame::cleanup()
+{
+    s_set->clear();
+}
+
+void Frame::enableFrameMonitoring(bool on)
+{
+    if (on) {
+    	s_set->clear();
+    } else {
+	gclite();
+	for (Frame::Set::iterator it = Frame::s_set->begin();
+	     it != Frame::s_set->end();
+	     ++it) {
+	    const Frame* frame = *it;
+	    Frame::monitor t;
+	    frame->enableReadMonitoring(true);
+	    frame->enableWriteMonitoring(true);
+	}
+    }
+    s_frame_monitoring = on;
+}
+
 void Frame::enableReadMonitoring(bool on) const
 {
     if (on && !s_read_monitor)
@@ -167,6 +192,14 @@ void Frame::enableWriteMonitoring(bool on) const
 void Frame::flush(const Symbol* sym)
 {
     Environment::flushFromCache(sym);
+}
+
+void Frame::initialize()
+{
+    static Set set;
+    s_set = &set;
+
+    s_frame_monitoring=false;
 }
 
 namespace CXXR {

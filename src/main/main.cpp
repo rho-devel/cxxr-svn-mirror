@@ -391,6 +391,7 @@ Rf_ReplIteration(SEXP rho, CXXRUNSIGNED int savestack, R_ReplState *state)
 	    R_CurrentExpr = R_Parse1Buffer(&R_ConsoleIob, 1, &state->status);
 #ifdef PROVENANCE_TRACKING
 	    ProvenanceTracker::CommandScope scope(R_CurrentExpr);
+	    Frame::enableFrameMonitoring(true);
 #endif
 	    if (browselevel) {
 		browsevalue = ParseBrowser(R_CurrentExpr, rho);
@@ -417,6 +418,9 @@ Rf_ReplIteration(SEXP rho, CXXRUNSIGNED int savestack, R_ReplState *state)
 	    UNPROTECT(1);
 	    R_IoBufferWriteReset(&R_ConsoleIob);
 	    state->prompt_type = 1;
+#ifdef PROVENANCE_TRACKING
+	    Frame::enableFrameMonitoring(false);
+#endif
 	    return(1);
 	}
     case PARSE_ERROR:

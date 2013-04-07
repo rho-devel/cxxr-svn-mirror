@@ -64,6 +64,24 @@ namespace CXXR {
      * should be used.
      */
     class Frame : public GCNode {
+    private:
+	/** @brief For sorting Frames
+	 *
+	 * This is a function object class for comparing two Frame pointers
+	 * according to their address.
+	 *
+	 * Essentially just for use in std::set
+	 */
+	class Comparator {
+	public:
+	    bool operator() (const Frame* lhs, const Frame* rhs) const {
+		return (lhs < rhs);
+	    }
+	};
+
+	/** @brief Set of <tt>const Frame*</tt> sorted by address
+	 */
+	typedef std::set<const Frame*, Comparator> Set;
     public:
 	/** @brief Representation of a binding of a Symbol to an
 	 *  RObject.
@@ -395,7 +413,10 @@ namespace CXXR {
 	Frame()
 	    : m_cache_count(0), m_locked(false),
 	      m_read_monitored(false), m_write_monitored(false)
-	{}
+	{
+	    if (s_frame_monitoring)
+		registerFrame();
+	}
 
 	/** @brief Copy constructor.
 	 *
@@ -504,6 +525,24 @@ namespace CXXR {
 	 * being cloned.
 	 */
 	virtual Frame* clone() const = 0;
+
+	/** @brief Enable monitoring of newly created frames
+	 *
+	 * This function enables and disables the monitoring
+	 * of new Frame objects
+	 *
+	 * When switched 'on', this method simply resets to empty
+	 * the set used to collect new Frames; when swithced 'off',
+	 * it performs a light-weight garbage collection, and then
+	 * enables the surviving Frames for read and write
+	 * monitoring.
+	 *
+	 * @param on True if monitoring is to be enabled, false
+	 *           otherwise.
+	 *
+	 * @note This is a static method, unlike others in this class.
+	 */
+	static void enableFrameMonitoring(bool on);
 
 	/** @brief Enable monitored reading of Symbol values.
 	 *
@@ -713,6 +752,8 @@ namespace CXXR {
 	// only using 'new':
 	~Frame()
 	{
+	    if (s_frame_monitoring)
+		deregisterFrame();
 	    statusChanged(0);
 	}
 
@@ -734,6 +775,11 @@ namespace CXXR {
 	}
     private:
 	friend class Environment;
+	friend class SchwarzCounter<Frame>;
+
+	static bool s_frame_monitoring;
+
+	static Set* s_set;
 
 	static monitor s_read_monitor, s_write_monitor;
 
@@ -751,9 +797,18 @@ namespace CXXR {
 	// Monitoring functions:
 	friend class Binding;
 
+	// Cleanup the static members
+	static void cleanup();
+
 	void decCacheCount()
 	{
 	    --m_cache_count;
+	}
+	
+	/** @brief Remove this Frame from the set of all Frames
+	 */
+	void deregisterFrame() {
+	    s_set->erase(this);
 	}
 
 	// Flush symbol(s) from search list cache:
@@ -764,10 +819,19 @@ namespace CXXR {
 	    ++m_cache_count;
 	}
 
+	// Initialize the static members
+	static void initialize();
+
 	void monitorRead(const Binding& bdg) const
 	{
 	    if (m_read_monitored)
 		s_read_monitor(bdg);
+	}
+
+	/** @brief Register this Frame in the set of all Frames
+	 */
+	void registerFrame() {
+	    s_set->insert(this);
 	}
     private:
 	friend class boost::serialization::access;
@@ -834,6 +898,10 @@ namespace CXXR {
      */
     bool isMissingArgument(const Symbol* sym, Frame* frame);
 }  // namespace CXXR
+
+namespace {
+    CXXR::SchwarzCounter<CXXR::Frame> frame_schwarz_ctr;
+}
 
 // This definition is visible only in C++; C code sees instead a
 // definition (in Environment.h) as an opaque pointer.
