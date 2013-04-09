@@ -757,9 +757,6 @@ namespace CXXR {
 	    statusChanged(0);
 	}
 
-	template<class Archive>
-	void serialize (Archive & ar, const unsigned int version);
-
 	/** @brief Report change in the bound/unbound status of Symbol
 	 *         objects.
 	 *
@@ -776,6 +773,7 @@ namespace CXXR {
     private:
 	friend class Environment;
 	friend class SchwarzCounter<Frame>;
+	friend class boost::serialization::access;
 
 	static bool s_frame_monitoring;
 
@@ -828,19 +826,20 @@ namespace CXXR {
 		s_read_monitor(bdg);
 	}
 
-	/** @brief Register this Frame in the set of all Frames
-	 */
-	void registerFrame() {
-	    s_set->insert(this);
-	}
-    private:
-	friend class boost::serialization::access;
-
 	void monitorWrite(const Binding& bdg) const
 	{
 	    if (m_write_monitored)
 		s_write_monitor(bdg);
 	}
+
+	/** @brief Register this Frame in the set of all Frames
+	 */
+	void registerFrame() {
+	    s_set->insert(this);
+	}
+
+	template<class Archive>
+	void serialize (Archive & ar, const unsigned int version);
     };
 
     /** @brief Incorporate bindings defined by a PairList into a Frame.
