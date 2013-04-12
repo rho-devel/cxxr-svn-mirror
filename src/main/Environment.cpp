@@ -157,6 +157,10 @@ Environment::findBinding(const Symbol* symbol)
     return EBPair(0, 0);
 }
 
+// Environment::findNamespace() is in envir.cpp
+
+// Environment::findPackage() is in envir.cpp
+
 void Environment::flushFromCache(const Symbol* sym)
 {
     if (sym)
@@ -204,6 +208,15 @@ void Environment::makeCached()
     m_cached = true;
 }
 
+// Environment::namespaceSpec() is in envir.cpp
+
+const char* Environment::package_s11n_aux(const StringVector* pkg_name)
+{
+    const char* name = (*pkg_name)[0]->c_str();
+    Rf_warning(_("'%s' may not be available when loading"), name);
+    return name;
+}
+
 unsigned int Environment::packGPBits() const
 {
     unsigned int ans = RObject::packGPBits();
@@ -211,6 +224,8 @@ unsigned int Environment::packGPBits() const
     // if (m_globally_cached) ans |= GLOBAL_FRAME_MASK;
     return ans;
 }
+
+// Environment::packageName() in in envir.cpp
 
 Environment* Environment::s11n_relocate() const
 {
