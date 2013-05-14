@@ -49,6 +49,7 @@
 #include <boost/archive/codecvt_null.hpp>
 #include <boost/math/special_functions/nonfinite_num_facets.hpp>
 
+#include "CXXR/DB.hpp"
 #include "CXXR/Provenance.hpp"
 
 // So that BOOST_CLASS_EXPORT is visible:
@@ -288,6 +289,7 @@ SEXP attribute_hidden do_pedigree (SEXP call, SEXP op, SEXP args, SEXP rho)
 
 SEXP attribute_hidden do_bserialize (SEXP call, SEXP op, SEXP args, SEXP rho)
 {
+    DB db(".CXXR.db");
     const int n = length(args);
     if (n > 0)
 	Rf_errorcall(call,_("%d arguments passed to 'bserialize'"

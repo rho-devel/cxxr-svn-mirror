@@ -35,7 +35,7 @@ SOURCES_CXX = \
 	CConverters.cpp CellPool.cpp Closure.cpp \
 	ClosureContext.cpp CommandChronicle.cpp CommandLineArgs.cpp \
 	ComplexVector.cpp ConsCell.cpp \
-	DotInternal.cpp DottedArgs.cpp \
+	DB.cpp DotInternal.cpp DottedArgs.cpp \
 	Environment.cpp Evaluator.cpp Evaluator_Context.cpp Expression.cpp \
 	ExpressionVector.cpp ExternalPointer.cpp \
         Frame.cpp FunctionBase.cpp FunctionContext.cpp \
