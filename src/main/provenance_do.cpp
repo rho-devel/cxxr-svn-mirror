@@ -51,6 +51,7 @@
 
 #include "CXXR/DB.hpp"
 #include "CXXR/Provenance.hpp"
+#include "CXXR/S11nTextStream.hpp"
 
 // So that BOOST_CLASS_EXPORT is visible:
 #include "CXXR/ListFrame.hpp"
@@ -290,20 +291,22 @@ SEXP attribute_hidden do_pedigree (SEXP call, SEXP op, SEXP args, SEXP rho)
 SEXP attribute_hidden do_bserialize (SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     DB db(".CXXR.db");
+    {
+	ostringstream osm;
+	S11nTextStream::prepare(osm);
+	boost::archive::xml_oarchive ar(osm);
+	S11nScope scope(DB::theDB());
+	Frame* globf = Environment::global()->frame();
+	GCNPTR_SERIALIZE(ar, globf);
+	//cout << osm.str() << endl;
+    }
     const int n = length(args);
     if (n > 0)
 	Rf_errorcall(call,_("%d arguments passed to 'bserialize'"
 			    " which requires 0"), n);
 
     ofstream ofs("bserialize.xml");
-    
-    // Refer to the Boost::Math documentation of 'Facets for
-    // Floating-Point Infinities and NaNs' for the following runes:
-    locale default_locale(locale::classic(),
-			  new boost::archive::codecvt_null<char>);
-    locale nfnum_locale(default_locale,
-			new boost::math::nonfinite_num_put<char>);
-    ofs.imbue(nfnum_locale);
+    S11nTextStream::prepare(ofs);
     boost::archive::xml_oarchive oa(ofs, boost::archive::no_codecvt);
 
     GCStackRoot<Frame> frame(CXXR_NEW(StdFrame));
@@ -319,14 +322,7 @@ SEXP attribute_hidden do_bdeserialize (SEXP call, SEXP op, SEXP args, SEXP rho)
     ifstream ifs("bserialize.xml");
     if (!ifs)
 	Rf_error("file bserialize.xml not found");
-    
-    // Refer to the Boost::Math documentation of 'Facets for
-    // Floating-Point Infinities and NaNs' for the following runes:
-    locale default_locale(locale::classic(),
-			  new boost::archive::codecvt_null<char>);
-    locale nfnum_locale(default_locale,
-			new boost::math::nonfinite_num_get<char>);
-    ifs.imbue(nfnum_locale);
+    S11nTextStream::prepare(ifs);
     boost::archive::xml_iarchive ia(ifs, boost::archive::no_codecvt);
     GCStackRoot<Environment> env;
     GCNPTR_SERIALIZE(ia, env);

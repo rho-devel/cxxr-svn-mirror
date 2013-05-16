@@ -45,9 +45,11 @@
 #include <boost/serialization/base_object.hpp>
 #include <boost/serialization/nvp.hpp>
 
+#include "CXXR/DB.hpp"
 #include "CXXR/GCNode.hpp"
 #include "CXXR/PairList.h"
 #include "CXXR/Provenance.hpp"
+#include "CXXR/S11nScope.hpp"
 #include "CXXR/Symbol.h"
 
 namespace CXXR {
@@ -393,7 +395,7 @@ namespace CXXR {
 	typedef void (*monitor)(const Binding&);
 
 	Frame()
-	    : m_cache_count(0), m_locked(false),
+	    : m_id(0), m_cache_count(0), m_locked(false),
 	      m_read_monitored(false), m_write_monitored(false)
 	{}
 
@@ -407,7 +409,7 @@ namespace CXXR {
 	 * the copy will not have a read or write monitor.
 	 */
 	Frame(const Frame& source)
-	    : m_cache_count(0), m_locked(source.m_locked),
+	    : m_id(0), m_cache_count(0), m_locked(source.m_locked),
 	      m_read_monitored(false), m_write_monitored(false)
 	{}
 
@@ -735,6 +737,10 @@ namespace CXXR {
 
 	static monitor s_read_monitor, s_write_monitor;
 
+	mutable unsigned int m_id;  // Non-zero only for frames that are
+			// mirrored in the database, in which case it
+			// contains a unique ID for the Frame.
+
 	unsigned char m_cache_count;  // Number of cached Environments
 			// of which this is the Frame.  Normally
 			// either 0 or 1.
@@ -762,6 +768,9 @@ namespace CXXR {
 	    ++m_cache_count;
 	}
 
+	template <class Archive>
+	void load(Archive& ar, const unsigned int version);
+
 	void monitorRead(const Binding& bdg) const
 	{
 	    if (m_read_monitored)
@@ -774,8 +783,14 @@ namespace CXXR {
 		s_write_monitor(bdg);
 	}
 
+	template <class Archive>
+	void save(Archive& ar, const unsigned int version) const;
+
 	template<class Archive>
-	void serialize (Archive & ar, const unsigned int version);
+	void serialize(Archive & ar, const unsigned int version)
+	{
+	    boost::serialization::split_member(ar, *this, version);
+	}
     };
 
     /** @brief Incorporate bindings defined by a PairList into a Frame.
@@ -832,37 +847,58 @@ namespace CXXR {
      * @return true iff \a sym is missing with respect to \a frame.
      */
     bool isMissingArgument(const Symbol* sym, Frame* frame);
+
+    // ***** Implementation of non-inlined templated members *****
+
+    template<class Archive>
+    void Frame::Binding::serialize(Archive & ar, const unsigned int version)
+    {
+	GCNPTR_SERIALIZE(ar, m_value);
+	const Provenance* prov = 0;
+#ifdef PROVENANCE_TRACKING
+	prov = m_provenance;
+#endif
+	GCNode::PtrS11n::invoke(ar, prov, "m_provenance");
+#ifdef PROVENANCE_TRACKING
+	m_provenance = prov;
+#endif
+	ar & BOOST_SERIALIZATION_NVP(m_origin);
+	ar & BOOST_SERIALIZATION_NVP(m_active);
+	ar & BOOST_SERIALIZATION_NVP(m_locked);
+    }
+
+    template<class Archive>
+    void Frame::load(Archive & ar, const unsigned int version)
+    {
+	ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(GCNode);
+	bool locked;
+	ar & BOOST_SERIALIZATION_NVP(locked);
+	m_locked = locked;
+	S11nScope* inner_scope = S11nScope::innermost();
+	if (inner_scope && inner_scope->db()) 
+	    ar >> boost::serialization::make_nvp("id", m_id);
+    }
+
+    template<class Archive>
+    void Frame::save(Archive & ar, const unsigned int version) const
+    {
+	ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(GCNode);
+	bool locked = m_locked;
+	ar & BOOST_SERIALIZATION_NVP(locked);
+	S11nScope* inner_scope = S11nScope::innermost();
+	if (inner_scope) {
+	    DB* db = inner_scope->db();
+	    if (db) {
+		if (m_id == 0)
+		    m_id = db->registerFrame();
+		ar << boost::serialization::make_nvp("id", m_id);
+	    }
+	}
+    }
 }  // namespace CXXR
 
 // This definition is visible only in C++; C code sees instead a
 // definition (in Environment.h) as an opaque pointer.
 typedef CXXR::Frame::Binding* R_varloc_t;
-
-// ***** Implementation of non-inlined templated members *****
-
-template<class Archive>
-void CXXR::Frame::Binding::serialize(Archive & ar, const unsigned int version)
-{
-    GCNPTR_SERIALIZE(ar, m_value);
-    const Provenance* prov = 0;
-#ifdef PROVENANCE_TRACKING
-    prov = m_provenance;
-#endif
-    GCNode::PtrS11n::invoke(ar, prov, "m_provenance");
-#ifdef PROVENANCE_TRACKING
-    m_provenance = prov;
-#endif
-    ar & BOOST_SERIALIZATION_NVP(m_origin);
-    ar & BOOST_SERIALIZATION_NVP(m_active);
-    ar & BOOST_SERIALIZATION_NVP(m_locked);
-}
-
-template<class Archive>
-void CXXR::Frame::serialize (Archive & ar, const unsigned int version) {
-    ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(GCNode);
-    bool locked = m_locked;
-    ar & BOOST_SERIALIZATION_NVP(locked);
-    m_locked = locked;
-}
 
 #endif // RFRAME_HPP

@@ -46,6 +46,13 @@ namespace CXXR {
 
 	~DB();
 
+	/** @brief Register a new persistent Frame.
+	 *
+	 * @return The (strictly positive) id number to be used to
+	 * identify the Frame.
+	 */
+	unsigned int registerFrame();
+
 	/** @brief Pointer to the current database.
 	 *
 	 * @return a null pointer if no DB object currently exists,

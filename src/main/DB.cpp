@@ -105,6 +105,14 @@ void DB::initialize()
 	"  frame_id integer not null references cxxr_frames,\n"
 	"  unique( bdg_id, frame_id)\n"
 	");\n";
-    if (sqlite3_exec(m_db, sql, 0, 0, 0) != SQLITE_OK)
+    if (SQLITE_OK != sqlite3_exec(m_db, sql, 0, 0, 0))
 	db_error("cannot initialize database");
+}
+
+unsigned int DB::registerFrame()
+{
+    const char* sql = "INSERT INTO cxxr_frames DEFAULT VALUES;";
+    if (SQLITE_OK != sqlite3_exec(m_db, sql, 0, 0, 0))
+	db_error("cannot register frame");
+    return sqlite3_last_insert_rowid(m_db);
 }
