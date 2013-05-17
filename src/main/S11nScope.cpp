@@ -28,6 +28,8 @@ using namespace CXXR;
 
 S11nScope* S11nScope::s_innermost = 0;
 
+S11nScope S11nScope::s_backstop;
+
 void S11nScope::seqError()
 {
     using namespace std;

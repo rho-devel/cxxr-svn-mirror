@@ -874,8 +874,7 @@ namespace CXXR {
 	bool locked;
 	ar & BOOST_SERIALIZATION_NVP(locked);
 	m_locked = locked;
-	S11nScope* inner_scope = S11nScope::innermost();
-	if (inner_scope && inner_scope->db()) 
+	if (S11nScope::innermost()->db()) 
 	    ar >> boost::serialization::make_nvp("id", m_id);
     }
 
@@ -885,14 +884,11 @@ namespace CXXR {
 	ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(GCNode);
 	bool locked = m_locked;
 	ar & BOOST_SERIALIZATION_NVP(locked);
-	S11nScope* inner_scope = S11nScope::innermost();
-	if (inner_scope) {
-	    DB* db = inner_scope->db();
-	    if (db) {
-		if (m_id == 0)
-		    m_id = db->registerFrame();
-		ar << boost::serialization::make_nvp("id", m_id);
-	    }
+	DB* db = S11nScope::innermost()->db();
+	if (db) {
+	    if (m_id == 0)
+		m_id = db->registerFrame();
+	    ar << boost::serialization::make_nvp("id", m_id);
 	}
     }
 }  // namespace CXXR

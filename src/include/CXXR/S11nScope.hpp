@@ -97,8 +97,10 @@ namespace CXXR {
 	/** @brief Innermost S11nScope.
 	 *
 	 * @return pointer to the innermost S11nScope object currently
-	 * in existence, or a null pointer if no S11nScope objects
-	 * currently exist.
+	 * in existence.  If no other S11nScope objects have been
+	 * declared, this will return a pointer to a 'backstop'
+	 * S11nScope object internal to the S11nScope class: this
+	 * backstop scope has a null DB pointer.
 	 */
 	static S11nScope* innermost()
 	{
@@ -106,6 +108,8 @@ namespace CXXR {
 	}
     private:
 	static S11nScope* s_innermost;
+	static S11nScope s_backstop;  // Defined so that innermost()
+			   // never returns a null pointer.
 
 	S11nScope* m_next;
 	DB* m_db;
