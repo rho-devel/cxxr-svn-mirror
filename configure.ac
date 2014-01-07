@@ -31,7 +31,6 @@ m4_define([R_VERSION],
                        [\([0-9.]*\)\(\w\|\W\)*],
                        [\1]))
 AC_INIT([R],[R_VERSION],[http://bugs.r-project.org],[R],[http://www.r-project.org])
-AC_USE_SYSTEM_EXTENSIONS
 AC_CONFIG_SRCDIR([src/include/Defn.h])
 AC_CONFIG_AUX_DIR([tools])
 
@@ -352,21 +351,12 @@ AC_SUBST(LTO)
 AC_SUBST(LTOALL)
 AM_CONDITIONAL(BUILD_LTO, [test "x${want_lto}" != xno])
 
-### CXXR Requires Boost of at least a given version,
-### including the boost::regex and boost::serialization libraries
-
-AX_BOOST_BASE([1.53.0],
-	      [],
-              [AC_MSG_ERROR([CXXR requires boost, which was not found.])]
-             )
-AX_BOOST_REGEX
-AX_BOOST_SERIALIZATION
-if test -n "$BOOST_LDFLAGS"; then
-    BOOST_LD_LIBRARY_PATH=`echo $BOOST_LDFLAGS | sed -e 's/^-L//'`
-fi
-AC_SUBST(BOOST_LD_LIBRARY_PATH)
-
 ### ** Optional packages.
+
+## BOOST. Headers and libraries.
+AX_BOOST_BASE_ARG
+AX_BOOST_REGEX_ARG
+AX_BOOST_SERIALIZATION_ARG
 
 ## BLAS.
 AC_ARG_WITH([blas],
@@ -751,6 +741,19 @@ case "${host_os}" in
     AC_CHECK_LIB(dl, dlopen)
     ;;
 esac
+
+## Boost.
+AX_BOOST_BASE([1.53.0],
+	      [],
+              [AC_MSG_ERROR([CXXR requires boost, which was not found.])]
+             )
+AX_BOOST_REGEX
+AX_BOOST_SERIALIZATION
+if test -n "$BOOST_LDFLAGS"; then
+    BOOST_LD_LIBRARY_PATH=`echo $BOOST_LDFLAGS | sed -e 's/^-L//'`
+fi
+AC_SUBST(BOOST_LD_LIBRARY_PATH)
+
 
 ## Readline.
 if test "${use_readline}" = yes; then

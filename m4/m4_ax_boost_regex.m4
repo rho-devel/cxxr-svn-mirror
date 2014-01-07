@@ -32,7 +32,7 @@
 
 #serial 22
 
-AC_DEFUN([AX_BOOST_REGEX],
+AC_DEFUN([AX_BOOST_REGEX_ARG],
 [
 	AC_ARG_WITH([boost-regex],
 	AS_HELP_STRING([--with-boost-regex@<:@=special-lib@:>@],
@@ -51,7 +51,10 @@ AC_DEFUN([AX_BOOST_REGEX],
         ],
         [want_boost="yes"]
 	)
+]) # AX_BOOST_REGEX_ARG
 
+AC_DEFUN([AX_BOOST_REGEX],
+[
 	if test "x$want_boost" = "xyes"; then
         AC_REQUIRE([AC_PROG_CC])
 		CPPFLAGS_SAVED="$CPPFLAGS"

@@ -31,7 +31,7 @@
 
 #serial 21
 
-AC_DEFUN([AX_BOOST_SERIALIZATION],
+AC_DEFUN([AX_BOOST_SERIALIZATION_ARG],
 [
 	AC_ARG_WITH([boost-serialization],
 	AS_HELP_STRING([--with-boost-serialization@<:@=special-lib@:>@],
@@ -50,7 +50,10 @@ AC_DEFUN([AX_BOOST_SERIALIZATION],
         ],
         [want_boost="yes"]
 	)
+]) # AX_BOOST_SERIALIZATION_ARG 
 
+AC_DEFUN([AX_BOOST_SERIALIZATION],
+[
 	if test "x$want_boost" = "xyes"; then
         AC_REQUIRE([AC_PROG_CC])
 		CPPFLAGS_SAVED="$CPPFLAGS"

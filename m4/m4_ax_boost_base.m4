@@ -35,7 +35,7 @@
 
 #serial 21
 
-AC_DEFUN([AX_BOOST_BASE],
+AC_DEFUN([AX_BOOST_BASE_ARG],
 [
 AC_ARG_WITH([boost],
   [AS_HELP_STRING([--with-boost@<:@=ARG@:>@],
@@ -70,7 +70,10 @@ AC_ARG_WITH([boost-libdir],
         ],
         [ac_boost_lib_path=""]
 )
+]) # AX_BOOST_BASE_ARG 
 
+AC_DEFUN([AX_BOOST_BASE],
+[
 if test "x$want_boost" = "xyes"; then
     boost_lib_version_req=ifelse([$1], ,1.20.0,$1)
     boost_lib_version_req_shorten=`expr $boost_lib_version_req : '\([[0-9]]*\.[[0-9]]*\)'`
