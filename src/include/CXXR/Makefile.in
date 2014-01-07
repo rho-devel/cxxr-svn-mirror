@@ -55,7 +55,7 @@ DISTFILES = Makefile.in $(CXXR_HS) $(CXXR_HPPS)
 TIMESTAMPS = $(CXXR_HS:.h=.ts) $(CXXR_HPPS:.hpp=.ts)
 
 CLEANFILES = stamp-R $(TIMESTAMPS)
-DISTCLEANFILES = Makefile config.hpp
+DISTCLEANFILES = Makefile
 
 .SUFFIXES:
 .SUFFIXES: .h .hpp .ts
