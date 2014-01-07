@@ -353,15 +353,18 @@ AC_SUBST(LTOALL)
 AM_CONDITIONAL(BUILD_LTO, [test "x${want_lto}" != xno])
 
 ### CXXR Requires Boost of at least a given version,
-### as well as Regex and Serialization linked libraries
+### including the boost::regex and boost::serialization libraries
 
-AX_BOOST_BASE([1.49.0],
+AX_BOOST_BASE([1.53.0],
 	      [],
-              [AC_MSG_ERROR([CXXR requires boost, which was not found. Consider using --with-boost-dir= to specify path to boost headers and libraries])]
+              [AC_MSG_ERROR([CXXR requires boost, which was not found.])]
              )
 AX_BOOST_REGEX
 AX_BOOST_SERIALIZATION
-CXXR_BOOST
+if test -n "$BOOST_LDFLAGS"; then
+    BOOST_LD_LIBRARY_PATH=`echo $BOOST_LDFLAGS | sed -e 's/^-L//'`
+fi
+AC_SUBST(BOOST_LD_LIBRARY_PATH)
 
 ### ** Optional packages.
 
@@ -626,6 +629,7 @@ R_PROG_BROWSER
 R_PROG_PDFVIEWER
 ## Noweb
 AC_PATH_PROG(NOTANGLE, notangle, false)
+AM_CONDITIONAL(HAVE_NOTANGLE, "${NOTANGLE}" != "false")
 
 ## cairographics needs pkg-config
 AC_PATH_PROG(PKGCONF, pkg-config , [], 

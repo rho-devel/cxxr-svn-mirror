@@ -2,46 +2,49 @@
 
 uname = $(shell uname)
 
-top_builddir = ../..
+VPATH = @srcdir@
+srcdir = @srcdir@
+top_srcdir = @top_srcdir@
 
-top_srcdir = ../..
+top_builddir = ../..
+subdir = tests/CXXR2
 
 R = $(top_builddir)/bin/R --vanilla --quiet
 RDIFF = $(top_builddir)/bin/R CMD Rdiff
 REXEC= $(top_builddir)/bin/exec/R
-FIND = \[1\] \"/home/arr/NOTBACKEDUP/sandboxes/CXXR1/trunk/library/stats\"
-REPLACE = `echo 'attr(as.environment(\"package:stats\"), \"path\")' | $(R) | sed -n 2p`
 
 include $(top_builddir)/Makeconf
 
-tests = miscR xml_s11n xml_s11n_2
+# xml_s11n_2 is currently not applied when packages are byte compiled,
+# because serialisation of ByteCode is not yet implemented.
+tests = miscR xml_s11n @BYTE_COMPILE_PACKAGES_FALSE@ xml_s11n_2
 
 check : $(tests:=.ts)
 
 miscR.ts : $(REXEC) misc.R misc.save
-	$(R) < misc.R > misc.Rout 2>&1
-	diff misc.save misc.Rout
+	$(R) < $(srcdir)/misc.R > misc.Rout 2>&1
+	diff $(srcdir)/misc.save misc.Rout
 	rm misc.Rout
 	touch $@
 
 xml_s11n.ts : $(REXEC) xml_serialize.R xml_deserialize.R xml_s11n.save
 	rm -f bserialize.xml
-	$(R) < xml_serialize.R
-	$(R) < xml_deserialize.R > xml_s11n.fail
-	sed -e "s|$(FIND)|$(REPLACE)|g" xml_s11n.save | $(RDIFF) - xml_s11n.fail 1
+	$(R) < $(srcdir)/xml_serialize.R
+	$(R) < $(srcdir)/xml_deserialize.R > xml_s11n.fail
+	$(RDIFF) $(srcdir)/xml_s11n.save xml_s11n.fail 1
 	rm -f bserialize.xml xml_s11n.fail
 	touch $@
 
 xml_s11n_2.ts : $(REXEC) xml_serialize_2.R xml_deserialize_2.R
 	rm -f bserialize.xml
-	$(R) < xml_serialize_2.R > /dev/null 2>&1
-	$(R) < xml_deserialize_2.R
+	$(R) < $(srcdir)/xml_serialize_2.R > /dev/null 2>&1
+	$(R) < $(srcdir)/xml_deserialize_2.R
 	diff xml_serialize_2.pre xml_serialize_2.post
 	rm -f xml_serialize_2.pre xml_serialize_2.post reg-tests-2.pdf
 	touch $@
 
-Makefile : Makefile.in
-	cp $< $@
+Makefile : $(srcdir)/Makefile.in $(top_builddir)/config.status
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 
 clean:
 	rm -f *.ts
