@@ -691,7 +691,7 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
  * length as an inline function within the namespace CXXR.  The
  * relevant definition is at the end of this file.
  */
-#define length                  Rf_length
+#define length(x)               Rf_length(x)
 #endif
 
 #define lengthgets		Rf_lengthgets
