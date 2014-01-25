@@ -456,6 +456,16 @@ SEXP attribute_hidden R_binary(SEXP call, SEXP op, SEXP xarg, SEXP yarg)
     if (! xattr && ! yattr)
 	return val;
 
+    /* Copy attributes from longer argument. */
+    if (nx > ny)
+	copyMostAttrib(x, val);
+    else if (nx == ny) {
+	copyMostAttrib(y, val);
+	copyMostAttrib(x, val);
+    }
+    else
+	copyMostAttrib(y, val);
+
     GCStackRoot<> dims, xnames, ynames;
 
     if (xarray) {
@@ -778,22 +788,6 @@ static SEXP integer_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2, SEXP lcall)
 	break;
     }
 
-
-    /* quick return if there are no attributes */
-    if (ATTRIB(s1) == R_NilValue && ATTRIB(s2) == R_NilValue)
-	return ans;
-
-    /* Copy attributes from longer argument. */
-
-    if (n1 > n2)
-	copyMostAttrib(s1, ans);
-    else if (n1 == n2) {
-	copyMostAttrib(s2, ans);
-	copyMostAttrib(s1, ans);
-    }
-    else
-	copyMostAttrib(s2, ans);
-
     return ans;
 }
 
@@ -993,23 +987,6 @@ static SEXP real_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2)
 	}
 	break;
     }
-
-    /* quick return if there are no attributes */
-    if (ATTRIB(s1) == R_NilValue && ATTRIB(s2) == R_NilValue) {
-	UNPROTECT(1);
-	return ans;
-    }
-
-    /* Copy attributes from longer argument. */
-
-    if (n1 > n2)
-	copyMostAttrib(s1, ans);
-    else if (n1 == n2) {
-	copyMostAttrib(s2, ans);
-	copyMostAttrib(s1, ans);
-    }
-    else
-	copyMostAttrib(s2, ans);
 
     UNPROTECT(1);
     return ans;
